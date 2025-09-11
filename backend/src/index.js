@@ -660,6 +660,17 @@ async function bootstrap() {
   // Crie as tabelas antes de qualquer alteração
   // Ordem correta de criação das tabelas para respeitar dependências
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS usuario (
+      id SERIAL PRIMARY KEY,
+      nome TEXT NOT NULL,
+      email TEXT,
+      senha TEXT,
+      tipo TEXT,
+      autorizado BOOLEAN DEFAULT FALSE,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS bolao (
       id SERIAL PRIMARY KEY,
       nome TEXT NOT NULL,
@@ -707,17 +718,6 @@ async function bootstrap() {
       ip VARCHAR(45) PRIMARY KEY,
       bloqueado_em TIMESTAMP DEFAULT NOW(),
       desbloqueado BOOLEAN DEFAULT FALSE
-    )
-  `);
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS usuario (
-      id SERIAL PRIMARY KEY,
-      nome TEXT NOT NULL,
-      email TEXT,
-      senha TEXT,
-      tipo TEXT,
-      autorizado BOOLEAN DEFAULT FALSE,
-      criado_em TIMESTAMP DEFAULT NOW()
     )
   `);
   await pool.query(`
