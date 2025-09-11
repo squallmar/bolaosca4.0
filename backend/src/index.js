@@ -658,21 +658,21 @@ printRoutes(app);
 
 async function bootstrap() {
   // Crie as tabelas antes de qualquer alteração
+  // Ordem correta de criação das tabelas para respeitar dependências
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS palpite (
+    CREATE TABLE IF NOT EXISTS bolao (
       id SERIAL PRIMARY KEY,
-      partida_id INTEGER REFERENCES partida(id) ON DELETE CASCADE,
-      usuario_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
-      palpite TEXT,
-      pontos INTEGER DEFAULT 0,
+      nome TEXT NOT NULL,
+      admin_id INTEGER,
       criado_em TIMESTAMP DEFAULT NOW()
     )
   `);
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS login_blocked_ip (
-      ip VARCHAR(45) PRIMARY KEY,
-      bloqueado_em TIMESTAMP DEFAULT NOW(),
-      desbloqueado BOOLEAN DEFAULT FALSE
+    CREATE TABLE IF NOT EXISTS campeonato (
+      id SERIAL PRIMARY KEY,
+      nome TEXT NOT NULL,
+      bolao_id INTEGER REFERENCES bolao(id) ON DELETE CASCADE,
+      criado_em TIMESTAMP DEFAULT NOW()
     )
   `);
   await pool.query(`
@@ -693,19 +693,20 @@ async function bootstrap() {
     )
   `);
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS campeonato (
+    CREATE TABLE IF NOT EXISTS palpite (
       id SERIAL PRIMARY KEY,
-      nome TEXT NOT NULL,
-      bolao_id INTEGER REFERENCES bolao(id) ON DELETE CASCADE,
+      partida_id INTEGER REFERENCES partida(id) ON DELETE CASCADE,
+      usuario_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
+      palpite TEXT,
+      pontos INTEGER DEFAULT 0,
       criado_em TIMESTAMP DEFAULT NOW()
     )
   `);
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS bolao (
-      id SERIAL PRIMARY KEY,
-      nome TEXT NOT NULL,
-      admin_id INTEGER,
-      criado_em TIMESTAMP DEFAULT NOW()
+    CREATE TABLE IF NOT EXISTS login_blocked_ip (
+      ip VARCHAR(45) PRIMARY KEY,
+      bloqueado_em TIMESTAMP DEFAULT NOW(),
+      desbloqueado BOOLEAN DEFAULT FALSE
     )
   `);
   await pool.query(`
