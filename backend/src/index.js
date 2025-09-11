@@ -1,6 +1,4 @@
 console.log('[BOOT] Carregando backend index.js');
-import dotenv from 'dotenv';
-dotenv.config(); // DEVE SER A PRIMEIRA LINHA
 
 import express from 'express';
 import cors from 'cors';
