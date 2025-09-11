@@ -657,14 +657,51 @@ function printRoutes(app) {
 printRoutes(app);
 
 async function bootstrap() {
-  // Ensure flags used by code exist
-  await pool.query(`ALTER TABLE rodada ADD COLUMN IF NOT EXISTS finalizada boolean DEFAULT false`);
-  await pool.query(`ALTER TABLE partida ADD COLUMN IF NOT EXISTS finalizada boolean DEFAULT false`);
-  await pool.query(`ALTER TABLE campeonato ADD COLUMN IF NOT EXISTS finalizado boolean DEFAULT false`);
-  await pool.query(`ALTER TABLE bolao ADD COLUMN IF NOT EXISTS finalizado boolean DEFAULT false`);
-  await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS desistiu boolean DEFAULT false`);
-  await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS avatar_url text`);
-  await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS apelido text`);
+  // Crie as tabelas antes de qualquer alteração
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS rodada (
+      id SERIAL PRIMARY KEY,
+      nome TEXT NOT NULL,
+      campeonato_id INTEGER REFERENCES campeonato(id) ON DELETE CASCADE,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS partida (
+      id SERIAL PRIMARY KEY,
+      rodada_id INTEGER REFERENCES rodada(id) ON DELETE CASCADE,
+      time1 TEXT,
+      time2 TEXT,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS campeonato (
+      id SERIAL PRIMARY KEY,
+      nome TEXT NOT NULL,
+      bolao_id INTEGER REFERENCES bolao(id) ON DELETE CASCADE,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS bolao (
+      id SERIAL PRIMARY KEY,
+      nome TEXT NOT NULL,
+      admin_id INTEGER,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS usuario (
+      id SERIAL PRIMARY KEY,
+      nome TEXT NOT NULL,
+      email TEXT,
+      senha TEXT,
+      tipo TEXT,
+      autorizado BOOLEAN DEFAULT FALSE,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS time (
       id           SERIAL PRIMARY KEY,
@@ -685,6 +722,15 @@ async function bootstrap() {
       atualizado_em TIMESTAMP DEFAULT NOW()
     )
   `);
+
+  // Ensure flags used by code exist
+  await pool.query(`ALTER TABLE rodada ADD COLUMN IF NOT EXISTS finalizada boolean DEFAULT false`);
+  await pool.query(`ALTER TABLE partida ADD COLUMN IF NOT EXISTS finalizada boolean DEFAULT false`);
+  await pool.query(`ALTER TABLE campeonato ADD COLUMN IF NOT EXISTS finalizado boolean DEFAULT false`);
+  await pool.query(`ALTER TABLE bolao ADD COLUMN IF NOT EXISTS finalizado boolean DEFAULT false`);
+  await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS desistiu boolean DEFAULT false`);
+  await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS avatar_url text`);
+  await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS apelido text`);
 
   // Unique palpite per (usuario, partida)
   await pool.query(`
