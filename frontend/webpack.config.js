@@ -33,6 +33,7 @@ module.exports = {
       filename: 'index.html',
     }),
     new webpack.DefinePlugin({
+      'process.env.REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL || ''),
       'process.env.REACT_APP_WHATSAPP_GROUP_URL': JSON.stringify(process.env.REACT_APP_WHATSAPP_GROUP_URL || ''),
     }),
   ],
