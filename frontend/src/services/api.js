@@ -1,7 +1,8 @@
 import axios from 'axios';
 
+const API_BASE = process.env.REACT_APP_API_URL || '';
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE,
   withCredentials: true, // necessário se usa sessão/cookie httpOnly
 });
 
@@ -12,7 +13,7 @@ let _csrfFetching = null;
 async function ensureCsrf() {
   if (_csrfToken) return _csrfToken;
   if (_csrfFetching) return _csrfFetching;
-  _csrfFetching = fetch('/api/csrf-token', { credentials: 'include' })
+  _csrfFetching = fetch(`${API_BASE}/csrf-token`, { credentials: 'include' })
     .then(r => r.json())
     .then(d => { _csrfToken = d.csrfToken; return _csrfToken; })
     .catch(() => null)

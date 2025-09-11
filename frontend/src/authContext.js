@@ -15,7 +15,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     // Pré-busca CSRF para reduzir risco de primeira falha 403
     (async () => {
-      try { await fetch('/api/csrf-token', { credentials: 'include' }); } catch {}
+      try {
+        const API_BASE = process.env.REACT_APP_API_URL || '';
+        await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' });
+      } catch {}
     })();
     (async () => {
       try {

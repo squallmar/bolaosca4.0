@@ -162,13 +162,13 @@ export default function AdminTeams() {
             <img
               src={(t.escudo_url && t.escudo_url.trim())
                 ? t.escudo_url
-                : `/api/uploads/escudos/_default.png`}
+                : `${process.env.REACT_APP_API_URL}/uploads/escudos/_default.png`}
               alt={t.nome}
               width={56} height={56}
               style={escudo}
               onError={(e) => {
                 e.currentTarget.onerror = null;
-                e.currentTarget.src = `/api/uploads/escudos/_default.png`;
+                e.currentTarget.src = `${process.env.REACT_APP_API_URL}/uploads/escudos/_default.png`;
               }}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
