@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "webpack serve --mode development --open",
-    "build": "webpack --mode production"
+  "build": "npx webpack --mode production"
   },
   "devDependencies": {
     "@babel/core": "^7.24.5",
