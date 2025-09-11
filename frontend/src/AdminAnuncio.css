@@ -1,0 +1,39 @@
+.admin-anuncio-container {
+  max-width: 500px;
+  margin: 2em auto;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 2em;
+}
+.admin-anuncio-form label {
+  font-weight: bold;
+  margin-bottom: 0.2em;
+  display: block;
+}
+.admin-anuncio-form input,
+.admin-anuncio-form textarea {
+  width: 100%;
+  padding: 0.5em;
+  margin-bottom: 1em;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1em;
+}
+.admin-anuncio-form button {
+  background: #4CAF50;
+  color: #fff;
+  border: none;
+  padding: 0.7em 1.5em;
+  border-radius: 5px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.admin-anuncio-form button:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+.admin-anuncio-form div {
+  margin-bottom: 1em;
+}

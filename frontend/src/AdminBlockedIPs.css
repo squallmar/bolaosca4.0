@@ -1,0 +1,43 @@
+.admin-blocked-ips {
+  max-width: 600px;
+  margin: 32px auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #0002;
+  padding: 24px;
+}
+.admin-blocked-ips h2 {
+  margin-bottom: 16px;
+}
+.admin-blocked-ips table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  overflow-x: auto;
+  display: block;
+  max-width: 100%;
+}
+.admin-blocked-ips th, .admin-blocked-ips td {
+  border: 1px solid #eee;
+  padding: 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+.admin-blocked-ips .msg {
+  background: #ffe0e0;
+  color: #a00;
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+.admin-blocked-ips button {
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.admin-blocked-ips button:hover {
+  background: #1565c0;
+}
