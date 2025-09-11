@@ -1,5 +1,6 @@
 const path = require('path');
 const webpack = require('webpack');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   entry: './src/index.js',
@@ -27,6 +28,10 @@ module.exports = {
     extensions: ['.js', '.jsx'],
   },
   plugins: [
+    new HtmlWebpackPlugin({
+      template: './public/index.html',
+      filename: 'index.html',
+    }),
     new webpack.DefinePlugin({
       'process.env.REACT_APP_WHATSAPP_GROUP_URL': JSON.stringify(process.env.REACT_APP_WHATSAPP_GROUP_URL || ''),
     }),
