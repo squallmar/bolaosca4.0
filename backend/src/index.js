@@ -659,6 +659,23 @@ printRoutes(app);
 async function bootstrap() {
   // Crie as tabelas antes de qualquer alteração
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS palpite (
+      id SERIAL PRIMARY KEY,
+      partida_id INTEGER REFERENCES partida(id) ON DELETE CASCADE,
+      usuario_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
+      palpite TEXT,
+      pontos INTEGER DEFAULT 0,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS login_blocked_ip (
+      ip VARCHAR(45) PRIMARY KEY,
+      bloqueado_em TIMESTAMP DEFAULT NOW(),
+      desbloqueado BOOLEAN DEFAULT FALSE
+    )
+  `);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS rodada (
       id SERIAL PRIMARY KEY,
       nome TEXT NOT NULL,
