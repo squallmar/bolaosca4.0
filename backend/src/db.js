@@ -1,10 +1,12 @@
 import { Pool } from 'pg';
-import dotenv from 'dotenv';
-dotenv.config();
-console.log('DATABASE_URL usado pelo backend:', process.env.DATABASE_URL);
+
+const connectionString = process.env.DATABASE_URL || 'postgres://usuario:mM202038@localhost:5432/bolao_db';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 export default pool;
