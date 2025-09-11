@@ -62,10 +62,10 @@ function validateEmailEnv() {
 validateEmailEnv();
 
 // ---------- CORS Global ----------
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3002')
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean);
+const allowedOrigins = [
+  'https://bolaosca4-0.vercel.app', // frontend Vercel
+  // Adicione outros domínios se necessário
+];
 
 app.use(cors({
   origin(origin, cb) {
