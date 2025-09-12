@@ -130,30 +130,69 @@ async function blockIp(ip, email, nome_usuario) {
 
 function setAuthCookie(res, token, req) {
 
+  const isProduction = process.env.NODE_ENV === 'production';
+  // Domínio do frontend para cross-domain cookie
+  const frontendDomain = isProduction ? '.vercel.app' : undefined;
   res.cookie('token', token, {
     httpOnly: true,
-    secure: true,           // sempre true em produção
-    sameSite: 'none',       // obrigatório para cross-site
-    maxAge: 1000 * 60 * 60 * 8, // 8 horas
+    secure: true,
+    sameSite: 'none',
+    maxAge: 1000 * 60 * 60 * 8,
     path: '/',
-    domain: '.onrender.com' // se backend está em onrender.com
+    domain: frontendDomain
   });
 }
-
-
-// Cadastro de usuário
-router.post('/register', uploadLocalAvatar.single('avatar'), async (req, res) => {
-  const origin = req.headers.origin || '';
-  const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://localhost:3002').split(',').map(o=>o.trim());
-  if (origin && !allowedOrigins.includes(origin)) {
-    return res.status(403).json({ erro: 'Origin não permitida' });
-  }
-  const { nome, email, senha, tipo, apelido, contato } = req.body;
   try {
-    if (!senha) {
-      return res.status(400).json({ erro: 'Senha ausente' });
+    console.log('=== PRODUCTION AUTH DEBUG ===');
+    console.log('Request origin:', req.headers.origin);
+    console.log('Request host:', req.headers.host);
+    console.log('Cookies received:', req.cookies);
+    console.log('Auth header:', req.headers.authorization);
+
+    const token = pegarToken(req);
+    if (!token) {
+      console.log('DEBUG: Nenhum token encontrado');
+      return res.status(401).json({ erro: 'Token não fornecido' });
     }
-    const devRelaxed = process.env.NODE_ENV !== 'production' && process.env.RELAX_PWD === 'true';
+
+    let payload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+      console.error('Erro de autenticação:', error.message);
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({ erro: 'Token expirado' });
+      }
+      if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({ erro: 'Token inválido' });
+      }
+      return res.status(401).json({ erro: 'Erro de autenticação' });
+    }
+
+    if (payload?.jti && revokedJti.has(payload.jti)) {
+      return res.status(401).json({ erro: 'Sessão expirada' });
+    }
+
+    // Buscar usuário no banco para verificar se ainda existe e está autorizado
+    const { rows } = await pool.query(
+      'SELECT id, nome, email, tipo, autorizado FROM usuario WHERE id = $1',
+      [payload.id]
+    );
+    if (!rows[0] || !rows[0].autorizado) {
+      return res.status(401).json({ erro: 'Usuário não autorizado' });
+    }
+
+    req.user = {
+      id: rows[0].id,
+      role: rows[0].tipo,
+      autorizado: rows[0].autorizado,
+      email: rows[0].email,
+      nome: rows[0].nome
+    };
+    next();
+  } catch (error) {
+    console.error('Erro de autenticação:', error.message);
+    return res.status(401).json({ erro: 'Erro de autenticação' });
     if (!devRelaxed) {
       if (senha.length < 10 || !/[A-Z]/.test(senha) || !/[a-z]/.test(senha) || !/[0-9]/.test(senha)) {
         return res.status(400).json({ erro: 'Senha fraca. Requisitos: mínimo 10 caracteres, incluir maiúscula, minúscula e número.' });
