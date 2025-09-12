@@ -104,7 +104,9 @@ function AnunciosTV() {
                 e.currentTarget.style.boxShadow = '0 2px 8px 0px #2228';
               }}
               onError={e => {
-                e.currentTarget.src = 'https://via.placeholder.com/200x110?text=Imagem+Indisponível';
+                // Usa imagem local para evitar dependência externa
+                e.currentTarget.onerror = null; // evita loop
+                e.currentTarget.src = '/medals/4pessoas.png';
                 e.currentTarget.style.opacity = 0.5;
                 console.log('Erro ao carregar imagem:', e.currentTarget.src);
               }}
