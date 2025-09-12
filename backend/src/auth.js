@@ -161,24 +161,13 @@ async function blockIp(ip, email, nome_usuario) {
 
 function setAuthCookie(res, token, req) {
   const isProduction = process.env.NODE_ENV === 'production';
-  let frontendDomain;
-  if (isProduction) {
-    const host = (req.headers.origin || req.hostname || '').toLowerCase();
-    if (host.includes('onrender.com')) {
-      frontendDomain = '.onrender.com';
-    } else if (host.includes('vercel.app')) {
-      frontendDomain = '.vercel.app';
-    } else {
-      frontendDomain = undefined;
-    }
-  }
+  // Não force o domínio; permita que o navegador aceite como cookie de site cruzado via SameSite=None
   res.cookie('token', token, {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 1000 * 60 * 60 * 8,
-    path: '/',
-    domain: frontendDomain
+    path: '/'
   });
 }
 
@@ -426,7 +415,8 @@ router.post('/logout', (req, res) => {
         if (decoded?.jti) revokedJti.add(decoded.jti);
       } catch {}
     }
-    res.clearCookie('token', { httpOnly: true, sameSite: 'none', secure: true, path: '/' });
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.clearCookie('token', { httpOnly: true, sameSite: isProduction ? 'none' : 'lax', secure: isProduction, path: '/' });
     return res.json({ ok: true });
   } catch (err) {
     logger.error('logout_error', { error: err.message });

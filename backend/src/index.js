@@ -195,13 +195,24 @@ app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 const blogWriteLimiter = rateLimit({ windowMs: 5*60*1000, max: 30, message: { erro: 'Muitas operações de blog.' } });
 
 // Inicializa proteção CSRF (cookie-based)
-const csrfProtection = csurf({ cookie: { httpOnly: true, sameSite: 'lax' } });
+// Em produção precisamos permitir envio cross-site (front em Vercel, API em Render)
+const csrfProtection = csurf({
+  cookie: {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === 'production'
+  }
+});
 
 // Rota dedicada para obter token CSRF com CORS explícito
 app.get('/csrf-token', cors({ origin: flexibleOrigin, credentials: true }), csrfProtection, (req, res) => {
   const token = req.csrfToken();
   // Envia também em cookie legível pelo frontend
-  res.cookie('XSRF-TOKEN', token, { httpOnly: false, sameSite: 'lax' });
+  res.cookie('XSRF-TOKEN', token, {
+    httpOnly: false,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === 'production'
+  });
   res.json({ csrfToken: token });
 });
 
@@ -213,6 +224,7 @@ app.use((req, res, next) => {
     '/auth/login',
     '/auth/register',
   '/auth/refresh',
+  '/auth/logout',
     '/csrf-token',
     '/upload/avatar',
     '/upload/escudo'
@@ -413,9 +425,16 @@ app.use((req,res,next)=>{
   const isLocal = host.startsWith('localhost') || host.startsWith('127.0.0.1');
   const forwardedProto = (req.headers['x-forwarded-proto'] || '').toString().toLowerCase();
   const isHttps = req.protocol === 'https' || forwardedProto.includes('https');
+  const isUploads = (req.path || '').startsWith('/uploads');
   if (isHttps || isLocal) {
     res.setHeader('Cross-Origin-Opener-Policy','same-origin');
-    res.setHeader('Cross-Origin-Resource-Policy','same-origin');
+    // Para arquivos estáticos que serão embutidos em outra origem (frontend hospedado em outro domínio),
+    // não bloqueie com CORP same-origin.
+    if (isUploads) {
+      res.setHeader('Cross-Origin-Resource-Policy','cross-origin');
+    } else {
+      res.setHeader('Cross-Origin-Resource-Policy','same-origin');
+    }
   }
   res.setHeader('X-Download-Options','noopen');
   res.setHeader('X-Permitted-Cross-Domain-Policies','none');
