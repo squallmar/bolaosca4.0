@@ -85,7 +85,8 @@ const allowedOrigins = [
   'https://bolaosca4-0.vercel.app',
   'https://bolaosca4-0.onrender.com',
   'http://localhost:3000',
-  'http://localhost:3001'
+  'http://localhost:3001',
+  'http://127.0.0.1:3000'
 ];
 
 const corsOptions = {
@@ -95,7 +96,9 @@ const corsOptions = {
     if (
       allowedOrigins.includes(origin) ||
       origin.endsWith('.vercel.app') ||
-      origin.startsWith('http://localhost')
+      origin.endsWith('.onrender.com') ||
+      origin.startsWith('http://localhost') ||
+      origin.startsWith('http://127.0.0.1')
     ) {
       callback(null, true);
     } else {
@@ -235,8 +238,6 @@ import apoioRouter from './apoio.js';
 import regrasRouter from './regras.js';
 import pool from './db.js';
 import bcrypt from 'bcrypt';
-
-// ...existing code...
 
 // pastas de upload
 const uploadsDir = path.join(__dirname, '..', 'uploads');
