@@ -70,7 +70,7 @@ function pegarToken(req) {
 }
 
 // MIDDLEWARE DE AUTENTICAÇÃO CORRIGIDO
-export async function exigirAutenticacao(req, res, next) {
+async function exigirAutenticacao(req, res, next) {
   try {
     console.log('=== AUTH DEBUG ===');
     console.log('Origin:', req.headers.origin);
@@ -131,7 +131,7 @@ export async function exigirAutenticacao(req, res, next) {
   }
 }
 
-export function exigirRole(role) {
+function exigirRole(role) {
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ erro: 'Sessão expirada' });
     if ((req.user.role || '').toLowerCase() !== role.toLowerCase()) {
@@ -282,7 +282,7 @@ router.post('/login', async (req, res) => {
         tipo: usuario.tipo, 
         autorizado: usuario.autorizado 
       },
-      JWT_SECRET, // CORRIGIDO: usar JWT_SECRET, não ACCESS_TOKEN_SECRET
+      JWT_SECRET,
       { expiresIn: '8h' }
     );
 
@@ -309,7 +309,180 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ... (restante das rotas permanece igual)
+// Obter dados do próprio usuário
+router.get('/me', exigirAutenticacao, async (req, res) => {
+  try {
+    logger.debug('auth_me_hit', { hasUser: !!req.user, userId: req.user?.id });
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
+    const rows = await safeQuery(pool, 'SELECT id, nome, email, tipo, autorizado, avatar_url, apelido FROM usuario WHERE id = $1', [userId]);
+    const u = rows[0];
+    if (!u) return res.status(404).json({ erro: 'Usuário não encontrado' });
+    return res.json({ id: u.id, nome: u.nome, email: u.email, tipo: u.tipo, autorizado: u.autorizado, avatarUrl: u.avatar_url, apelido: u.apelido });
+  } catch (err) {
+    console.error('GET /auth/me', err);
+    return res.status(500).json({ erro: 'Falha ao obter perfil' });
+  }
+});
 
-export default router;
+// Atualizar dados do próprio usuário (nome, email)
+router.put('/me', exigirAutenticacao, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
+    const { nome, email, apelido } = req.body || {};
+    const rows = await safeQuery(
+      pool,
+      `UPDATE usuario
+         SET nome = COALESCE($1, nome),
+             email = COALESCE($2, email),
+             apelido = COALESCE($3, apelido)
+       WHERE id = $4
+       RETURNING id, nome, email, tipo, autorizado, avatar_url, apelido`,
+      [nome ?? null, email ?? null, apelido ?? null, userId]
+    );
+    const u = rows[0];
+    return res.json({ id: u.id, nome: u.nome, email: u.email, tipo: u.tipo, autorizado: u.autorizado, avatarUrl: u.avatar_url, apelido: u.apelido });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ erro: 'Email já cadastrado. Use outro email.' });
+    }
+    console.error('PUT /auth/me', err);
+    return res.status(500).json({ erro: 'Falha ao atualizar perfil' });
+  }
+});
+
+// Alterar senha do próprio usuário
+router.patch('/me/senha', exigirAutenticacao, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
+    const { senhaAtual, novaSenha } = req.body || {};
+    if (!senhaAtual || !novaSenha || novaSenha.length < 10 || !/[A-Z]/.test(novaSenha) || !/[a-z]/.test(novaSenha) || !/[0-9]/.test(novaSenha)) {
+      return res.status(400).json({ erro: 'Nova senha fraca. Requisitos: mínimo 10 caracteres, incluir maiúscula, minúscula e número.' });
+    }
+    const rows = await safeQuery(pool, 'SELECT senha FROM usuario WHERE id = $1', [userId]);
+    const hash = rows[0]?.senha;
+    if (!hash) return res.status(404).json({ erro: 'Usuário não encontrado' });
+    const ok = await bcrypt.compare(senhaAtual, hash);
+    if (!ok) return res.status(401).json({ erro: 'Senha atual incorreta' });
+    const cost = Number(process.env.BCRYPT_COST) >= 10 && Number(process.env.BCRYPT_COST) <= 14 ? Number(process.env.BCRYPT_COST) : 12;
+    const newHash = await bcrypt.hash(novaSenha, cost);
+    await safeQuery(pool, 'UPDATE usuario SET senha = $1 WHERE id = $2', [newHash, userId]);
+    logger.info('audit_password_change', { userId });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('PATCH /auth/me/senha', err);
+    return res.status(500).json({ erro: 'Falha ao alterar senha' });
+  }
+});
+
+// Atualizar avatar do próprio usuário (autenticado)
+router.post('/me/avatar', exigirAutenticacao, uploadLocalAvatar.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ erro: 'Nenhum arquivo enviado' });
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
+    const url = `${baseUrl}/uploads/avatars/${req.file.filename}`;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
+    await safeQuery(pool, 'UPDATE usuario SET avatar_url = $1 WHERE id = $2', [url, userId]);
+    return res.json({ avatarUrl: url });
+  } catch (err) {
+    console.error('Erro ao atualizar avatar:', err);
+    return res.status(500).json({ erro: 'Falha ao atualizar avatar' });
+  }
+});
+
+// Remover avatar do próprio usuário
+router.delete('/me/avatar', exigirAutenticacao, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
+    const rows = await safeQuery(pool, 'SELECT avatar_url FROM usuario WHERE id = $1', [userId]);
+    const current = rows[0]?.avatar_url || null;
+    if (current) {
+      try {
+        let pathPart = '';
+        try { pathPart = new URL(current).pathname; } catch { pathPart = current; }
+        const filename = path.basename(pathPart);
+        const full = path.join(avatarsDir, filename);
+        if (full.startsWith(avatarsDir) && fs.existsSync(full)) {
+          fs.unlinkSync(full);
+        }
+      } catch (e) {
+        console.warn('Falha ao remover arquivo de avatar:', e?.message);
+      }
+    }
+    await safeQuery(pool, 'UPDATE usuario SET avatar_url = NULL WHERE id = $1', [userId]);
+    return res.json({ avatarUrl: null });
+  } catch (err) {
+    console.error('Erro ao remover avatar:', err);
+    return res.status(500).json({ erro: 'Falha ao remover avatar' });
+  }
+});
+
+// Logout (invalida cookie)
+router.post('/logout', (req, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded?.jti) revokedJti.add(decoded.jti);
+      } catch {}
+    }
+    res.clearCookie('token', { httpOnly: true, sameSite: 'none', secure: true, path: '/' });
+    return res.json({ ok: true });
+  } catch (err) {
+    logger.error('logout_error', { error: err.message });
+    return res.status(500).json({ erro: 'Falha ao encerrar sessão' });
+  }
+});
+
+// Refresh de sessão
+router.post('/refresh', (req, res) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      logger.debug('refresh_no_cookie');
+      return res.status(401).json({ erro: 'Sem sessão' });
+    }
+    let payload;
+    try {
+      payload = jwt.verify(token, JWT_SECRET, { ignoreExpiration: false });
+    } catch {
+      logger.debug('refresh_token_expired');
+      return res.status(401).json({ erro: 'Sessão expirada' });
+    }
+    const now = Math.floor(Date.now() / 1000);
+    const exp = payload.exp || 0;
+    const remaining = exp - now;
+    if (remaining > 7200) {
+      logger.debug('refresh_not_needed', { remaining });
+      return res.json({ ok: true, refreshed: false });
+    }
+    const { token: newToken, jti: newJti } = signToken({ id: payload.id, tipo: payload.tipo, autorizado: payload.autorizado });
+    setAuthCookie(res, newToken, req);
+    return res.json({ ok: true, refreshed: true });
+  } catch (err) {
+    logger.error('refresh_error', { error: err.message });
+    return res.status(500).json({ erro: 'Falha ao renovar sessão' });
+  }
+});
+
+// Rota de debug para verificar recebimento de cookie
+function handleDebugCookie(req, res) {
+  const token = req.cookies?.token;
+  if (!token) return res.status(200).json({ hasCookie: false });
+  try {
+    const payload = jwt.decode(token) || null;
+    res.json({ hasCookie: true, payload });
+  } catch {
+    res.json({ hasCookie: true, payload: null });
+  }
+}
+router.get('/debug-cookie', handleDebugCookie);
+
+// EXPORTAÇÃO ÚNICA NO FINAL - SEM DUPLICAÇÕES
 export { exigirAutenticacao, exigirRole, handleDebugCookie };
+export default router;
