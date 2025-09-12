@@ -62,6 +62,8 @@ function validateEmailEnv() {
 validateEmailEnv();
 
 // ---------- CORS Global ----------
+
+// ---------- CORS Global e Rota de Opções ----------
 const allowedOrigins = [
   'https://bolaosca4-0.vercel.app',
   'https://bolaosca4-0.onrender.com'
@@ -83,13 +85,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-  app.use(compression());
-app.options('*', cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','X-CSRF-Token']
-}));
+app.use(compression());
+app.options('*', cors(corsOptions));
 
 // Servir uploads (somente GET) com CORS explícito
 app.use('/uploads', cors({
