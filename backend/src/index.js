@@ -349,7 +349,7 @@ const uploadAvatar = multer({
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
 });
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
+const BASE_URL = process.env.BASE_URL || 'https://bolaosca4-0.vercel.app';
 
 // rota de upload de escudo
 import { verifyImageSignature, sanitizeText, verifyImageIntegrity } from './utils.js';

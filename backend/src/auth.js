@@ -18,19 +18,8 @@ const uploadsDir = path.join(__dirname, '..', 'uploads');
 const avatarsDir = path.join(uploadsDir, 'avatars');
 if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
 
-const storageAvatarLocal = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, avatarsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || '.png').toLowerCase();
-    const base = path
-      .basename(file.originalname || 'avatar', ext)
-      .toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\-]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    cb(null, `${Date.now()}-${base}${ext || '.png'}`);
-  },
-});
+// Usar memoryStorage para produção (Vercel/Render não tem filesystem)
+const storageAvatarLocal = multer.memoryStorage();
 
 const uploadLocalAvatar = multer({
   storage: storageAvatarLocal,
@@ -208,8 +197,8 @@ router.post('/register', uploadLocalAvatar.single('avatar'), async (req, res) =>
 
     let avatarUrl = null;
     if (req.file) {
-      const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
-      avatarUrl = `${baseUrl}/uploads/avatars/${req.file.filename}`;
+      const baseUrl = process.env.BASE_URL || 'https://bolaosca4-0.vercel.app';
+      avatarUrl = `${baseUrl}/uploads/placeholder-avatar.png`;
     } else if (req.body.avatarUrl) {
       avatarUrl = req.body.avatarUrl;
     }
@@ -381,8 +370,8 @@ router.patch('/me/senha', exigirAutenticacao, async (req, res) => {
 router.post('/me/avatar', exigirAutenticacao, uploadLocalAvatar.single('avatar'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ erro: 'Nenhum arquivo enviado' });
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
-    const url = `${baseUrl}/uploads/avatars/${req.file.filename}`;
+  const baseUrl = process.env.BASE_URL || 'https://bolaosca4-0.vercel.app';
+  const url = `${baseUrl}/uploads/placeholder-avatar.png`;
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
     await safeQuery(pool, 'UPDATE usuario SET avatar_url = $1 WHERE id = $2', [url, userId]);
