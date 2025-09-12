@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import api from './services/api';
 import api from './services/api';
 import { useNavigate } from 'react-router-dom';
 import AdminSubMenu from './AdminSubMenu';
@@ -183,7 +183,7 @@ export default function AdminBoloes() {
   // Ações (mesmos endpoints da BolaoList)
   async function editarBolao(id, nome) {
     if (!nome?.trim()) return;
-    await axios.put(`${API_BASE}/bolao/${id}`, { nome });
+  await api.put(`/bolao/${id}`, { nome });
     fetchAll();
   }
   async function excluirBolao(id) {
@@ -204,7 +204,7 @@ export default function AdminBoloes() {
   }
   async function editarCampeonato(id, nome) {
     if (!nome?.trim()) return;
-    await axios.put(`${API_BASE}/bolao/campeonato/${id}`, { nome });
+  await api.put(`/bolao/campeonato/${id}`, { nome });
     fetchAll();
   }
   async function excluirCampeonato(id) {
@@ -219,7 +219,7 @@ export default function AdminBoloes() {
   }
   async function editarRodada(id, nome) {
     if (!nome?.trim()) return;
-    await axios.put(`${API_BASE}/bolao/rodada/${id}`, { nome });
+  await api.put(`/bolao/rodada/${id}`, { nome });
     fetchAll();
   }
   async function excluirRodada(id) {
@@ -229,7 +229,7 @@ export default function AdminBoloes() {
   }
   async function editarPartida(id, t1, t2) {
     if (!t1?.trim() || !t2?.trim()) return;
-    await axios.put(`${API_BASE}/bolao/partida/${id}`, { time1: t1, time2: t2 });
+  await api.put(`/bolao/partida/${id}`, { time1: t1, time2: t2 });
     fetchAll();
   }
   async function excluirPartida(id) {
