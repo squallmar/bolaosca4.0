@@ -6,6 +6,15 @@ const api = axios.create({
   withCredentials: true, // necessário se usa sessão/cookie httpOnly
 });
 
+// Permite configurar Authorization Bearer globalmente (fallback quando cookie cross-site for bloqueado)
+export function setAuthToken(token) {
+  if (token) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common['Authorization'];
+  }
+}
+
 // Cache simples em memória para evitar buscar CSRF a cada request
 let _csrfToken = null;
 let _csrfFetching = null;
@@ -29,6 +38,14 @@ api.interceptors.request.use(async (config) => {
     if (t) {
       config.headers['X-CSRF-Token'] = t; // backend aceita este header
     }
+    // fallback: alguns setups preferem cookie não-HttpOnly XSRF-TOKEN -> cabeçalho X-XSRF-TOKEN
+    try {
+      const xsrf = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='));
+      if (xsrf) {
+        const val = decodeURIComponent(xsrf.split('=')[1] || '');
+        if (val && !config.headers['X-CSRF-Token']) config.headers['X-XSRF-TOKEN'] = val;
+      }
+    } catch {}
   }
   return config;
 });

@@ -25,8 +25,9 @@ function Login() {
   const res = await api.post('/auth/login', { email, senha });
   const u = res.data?.usuario || {};
   const avatarUrlFromApi = u.avatarUrl || u.avatar_url || u.foto || u.fotoUrl || u.foto_url || u.imageUrl || null;
-  // token não é mais retornado; cookie já está setado
-  login(null, u.tipo, u.nome, u.autorizado, avatarUrlFromApi, u.apelido);
+  // usa token retornado (se presente) como fallback Bearer quando cookie cross-site for bloqueado
+  const token = res.data?.token || null;
+  login(token, u.tipo, u.nome, u.autorizado, avatarUrlFromApi, u.apelido);
       if (res.data.usuario.tipo === 'admin') {
         if (!res.data.usuario.autorizado) {
           navigate('/', { state: { erro: 'Seu cadastro foi feito como administrador, mas ainda não está liberado! Solicite a liberação do acesso ao painel admin para outro administrador.' } });

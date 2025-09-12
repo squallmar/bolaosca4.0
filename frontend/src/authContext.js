@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from './services/api';
+import api, { setAuthToken } from './services/api';
 
 const AuthContext = createContext();
 
@@ -64,6 +64,8 @@ export function AuthProvider({ children }) {
   const login = (tokenValue, tipoVal, nomeVal, autorizadoVal, avatarUrlOptional, apelidoOptional) => {
     // tokenValue ignorado para storage inseguro; já está em cookie httpOnly
     setToken(tokenValue || null);
+  // fallback: também usa Authorization Bearer se fornecido (caso cookie seja bloqueado)
+  setAuthToken(tokenValue || null);
     setTipo(tipoVal);
     setNome(nomeVal);
     setAutorizado(!!autorizadoVal);
@@ -78,6 +80,7 @@ export function AuthProvider({ children }) {
       // ignora erro – sessão pode já estar inválida
     }
     setToken(null);
+  setAuthToken(null);
     setTipo(null);
     setNome(null);
     setAutorizado(false);
