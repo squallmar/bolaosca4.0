@@ -312,4 +312,3 @@ router.post('/login', async (req, res) => {
 // ... (restante das rotas permanece igual)
 
 export default router;
-export { exigirAutenticacao, exigirRole, handleDebugCookie };
