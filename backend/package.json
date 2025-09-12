@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-  "db:setup": "psql -U bolao_db_egz0_user -d bolao_db_egz0 -f ./db_schema.sql",
+  "db:setup": "psql \"postgresql://bolao_db_egz0_user:qPeMfgPKYEe4pCDObpRXaTLSYnANcQcx@dpg-d313bammcj7s7380g0jg-a/bolao_db_egz0\" -f ./db_schema.sql",
   "start": "npm run db:setup && node src/index.js",
   "dev": "nodemon src/index.js"
   },
