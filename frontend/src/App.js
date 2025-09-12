@@ -62,9 +62,20 @@ function Menu() {
     // normaliza avatar: se vier relativo (ex: /uploads/arquivo.png), prefixa o backend
     const buildAvatar = (url) => {
       if (!url) return null;
-      const u = String(url).trim();
+      let u = String(url).trim();
+      // Se vier poluído com múltiplos hosts separados por ';', pega a última parte útil
+      if (u.includes(';')) {
+        const parts = u.split(';').map(s => s.trim()).filter(Boolean);
+        u = parts[parts.length - 1];
+      }
+      // Normaliza caminho relativo começando por /uploads
+      if (u.startsWith('/uploads/')) {
+        const filename = u.split('/').pop();
+        return `${API_BASE}/uploads/avatars/${filename}`;
+      }
+      // URL absoluta válida
       if (u.startsWith('http://') || u.startsWith('https://')) return u;
-      // sempre força /uploads/avatars
+      // Qualquer outra coisa: tenta tratar como filename
       const filename = u.split('/').pop();
       return `${API_BASE}/uploads/avatars/${filename}`;
     };

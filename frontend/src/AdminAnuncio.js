@@ -70,11 +70,23 @@ function AdminAnuncio() {
     setPreview(URL.createObjectURL(file));
   }
 
+  function toImageSrc(pathOrUrl) {
+    if (!pathOrUrl) return '';
+    let u = String(pathOrUrl).trim();
+    if (u.includes(';')) {
+      const parts = u.split(';').map(s=>s.trim()).filter(Boolean);
+      u = parts[parts.length-1];
+    }
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    if (!u.startsWith('/')) u = '/' + u;
+    return `${API_BASE}${u}`;
+  }
+
   function handleEdit(anuncio) {
     setEditId(anuncio.id);
     setTitulo(anuncio.titulo);
     setDescricao(anuncio.descricao);
-  setPreview(anuncio.imagem_url ? `${API_BASE}${anuncio.imagem_url}` : '');
+    setPreview(toImageSrc(anuncio.imagem_url));
     setImagem(null);
     setMsg('Editando anúncio...');
   }
@@ -236,9 +248,9 @@ function AdminAnuncio() {
             {anuncios.map(anuncio => (
               <li key={anuncio.id} style={{marginBottom:'1.5em',borderBottom:'1px solid #eee',paddingBottom:'1em'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'1em'}}>
-                  {anuncio.imagem_url && (
+          {anuncio.imagem_url && (
                     <img 
-                      src={`${API_BASE}${anuncio.imagem_url}`}
+            src={toImageSrc(anuncio.imagem_url)}
                       alt={anuncio.titulo} 
                       style={{width:64,height:64,objectFit:'cover',borderRadius:8,border:'1px solid #43cea2'}} 
                     />
