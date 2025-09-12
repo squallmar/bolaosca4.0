@@ -1,14 +1,5 @@
--- Remove tabelas antigas para evitar erro de duplicidade
-DROP TABLE IF EXISTS login_blocked_ip CASCADE;
-DROP TABLE IF EXISTS anuncio_tv CASCADE;
-DROP TABLE IF EXISTS palpite CASCADE;
-DROP TABLE IF EXISTS partida CASCADE;
-DROP TABLE IF EXISTS rodada CASCADE;
-DROP TABLE IF EXISTS campeonato CASCADE;
-DROP TABLE IF EXISTS bolao CASCADE;
-DROP TABLE IF EXISTS usuario CASCADE;
--- Tabela de usuários
-CREATE TABLE usuario (
+-- Criação segura das tabelas (não apaga dados)
+CREATE TABLE IF NOT EXISTS usuario (
   id SERIAL PRIMARY KEY,
   nome VARCHAR(100),
   email VARCHAR(100) UNIQUE,
@@ -20,28 +11,28 @@ CREATE TABLE usuario (
 );
 
 -- Tabela de bolão
-CREATE TABLE bolao (
+CREATE TABLE IF NOT EXISTS bolao (
   id SERIAL PRIMARY KEY,
   nome VARCHAR(100),
   admin_id INTEGER REFERENCES usuario(id)
 );
 
 -- Tabela de campeonato
-CREATE TABLE campeonato (
+CREATE TABLE IF NOT EXISTS campeonato (
   id SERIAL PRIMARY KEY,
   nome VARCHAR(100),
   bolao_id INTEGER REFERENCES bolao(id)
 );
 
 -- Tabela de rodada
-CREATE TABLE rodada (
+CREATE TABLE IF NOT EXISTS rodada (
   id SERIAL PRIMARY KEY,
   nome VARCHAR(100),
   campeonato_id INTEGER REFERENCES campeonato(id)
 );
 
 -- Tabela de partida
-CREATE TABLE partida (
+CREATE TABLE IF NOT EXISTS partida (
   id SERIAL PRIMARY KEY,
   rodada_id INTEGER REFERENCES rodada(id),
   time1 VARCHAR(100),
@@ -50,7 +41,7 @@ CREATE TABLE partida (
 );
 
 -- Tabela de palpite
-CREATE TABLE palpite (
+CREATE TABLE IF NOT EXISTS palpite (
   id SERIAL PRIMARY KEY,
   partida_id INTEGER REFERENCES partida(id),
   usuario_id INTEGER REFERENCES usuario(id),
@@ -58,7 +49,7 @@ CREATE TABLE palpite (
   pontos INTEGER DEFAULT 0
 );
 
-CREATE TABLE anuncio_tv (
+CREATE TABLE IF NOT EXISTS anuncio_tv (
   id SERIAL PRIMARY KEY,
   titulo VARCHAR(100) NOT NULL,
   descricao TEXT NOT NULL,
@@ -68,7 +59,7 @@ CREATE TABLE anuncio_tv (
 );
 
 -- Tabela de IPs bloqueados para login
-CREATE TABLE login_blocked_ip (
+CREATE TABLE IF NOT EXISTS login_blocked_ip (
   ip VARCHAR(45) PRIMARY KEY,
   bloqueado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   desbloqueado BOOLEAN DEFAULT FALSE,

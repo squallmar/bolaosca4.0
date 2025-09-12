@@ -63,6 +63,22 @@ validateEmailEnv();
 
 // ---------- CORS Global ----------
 
+// Função flexível para aceitar todos subdomínios .vercel.app e localhost
+const flexibleOrigin = (origin, callback) => {
+  const allowedOrigins = [
+    'https://bolaosca4-0.vercel.app',
+    'https://bolaosca4-0.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ];
+  if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.startsWith('http://localhost')) {
+    callback(null, true);
+  } else {
+    console.log('Origin não permitida: ' + origin);
+    callback(new Error('Origin não permitida: ' + origin), false);
+  }
+};
+
 
 // Configuração CORS Corrigida
 const allowedOrigins = [
