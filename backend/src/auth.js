@@ -242,14 +242,24 @@ router.post('/login', async (req, res) => {
       }
       return res.status(401).json({ erro: 'Credenciais inválidas' });
     }
-  const { token, jti } = signToken({ id: usuario.id, tipo: usuario.tipo, autorizado: usuario.autorizado });
-    setAuthCookie(res, token, req);
-  const userOut = { ...usuario, avatarUrl: usuario.avatar_url };
-  loginAttempts[ip] = 0; // reset ao logar com sucesso
-  captchaChallenges.delete(ip);
-  logger.info('login_success', { userId: usuario.id, email, ip });
-  logger.info('audit_login', { userId: usuario.id, email, ip });
-    return res.json({ usuario: userOut });
+    // Gerar accessToken e refreshToken
+    const accessToken = require('jsonwebtoken').sign(
+      { id: usuario.id, email: usuario.email, tipo: usuario.tipo, autorizado: usuario.autorizado },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: '15m' }
+    );
+    const refreshToken = require('jsonwebtoken').sign(
+      { id: usuario.id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: '7d' }
+    );
+    setAuthCookie(res, accessToken, req);
+    const userOut = { ...usuario, avatarUrl: usuario.avatar_url };
+    loginAttempts[ip] = 0; // reset ao logar com sucesso
+    captchaChallenges.delete(ip);
+    logger.info('login_success', { userId: usuario.id, email, ip });
+    logger.info('audit_login', { userId: usuario.id, email, ip });
+    return res.json({ accessToken, refreshToken, usuario: userOut });
   } catch (err) {
   logger.warn('login_error', { email, error: err.message, ip });
     loginAttempts[ip]++;
