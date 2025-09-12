@@ -82,9 +82,9 @@ router.post('/anuncio', isAdmin, upload.single('imagem'), async (req, res) => {
   try {
     let imagem_url = null;
     if (req.file) {
-  // Em produção, usar armazenamento em nuvem. Aqui retorna placeholder seguro.
-  const baseUrl = process.env.BASE_URL || 'https://bolaosca4-0.vercel.app';
-  imagem_url = `${baseUrl}/uploads/placeholder-image.jpg`;
+      // Em produção, usar armazenamento em nuvem. Aqui usamos um placeholder local conhecido do backend
+      // Retornamos caminho relativo para ser prefixado por API_BASE no frontend
+      imagem_url = '/uploads/escudos/_default.png';
     }
     await pool.query('INSERT INTO anuncio_tv (titulo, descricao, admin_id, imagem_url) VALUES ($1, $2, $3, $4)', [titulo, descricao, req.adminId, imagem_url]);
     return res.json({ sucesso: true });

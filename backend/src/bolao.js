@@ -298,6 +298,29 @@ router.get('/rodadas-todas', async (req, res) => {
   }
 });
 
+// Listar rodadas de um campeonato específico
+router.get('/campeonato/:campeonatoId/rodadas', async (req, res) => {
+  const { campeonatoId } = req.params;
+  try {
+    const sql = `
+      SELECT r.id, r.nome, r.campeonato_id,
+             CASE 
+               WHEN COUNT(p.id) > 0 
+                    AND COUNT(CASE WHEN p.resultado IS NOT NULL THEN 1 END) = COUNT(p.id) 
+               THEN true ELSE false END AS finalizada
+        FROM rodada r
+        LEFT JOIN partida p ON p.rodada_id = r.id
+        WHERE r.campeonato_id = $1
+        GROUP BY r.id
+        ORDER BY r.id ASC`;
+    const { rows } = await pool.query(sql, [campeonatoId]);
+    const enriched = rows.map(r => ({ ...r, finalizado: r.finalizada }));
+    res.json(enriched);
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao buscar rodadas do campeonato', detalhes: err.message });
+  }
+});
+
 // Listar partidas de uma rodada
 // util local para normalizar nomes (sem acento, minúsculo, sem pontuação)
 function slugifyLocal(s = '') {
