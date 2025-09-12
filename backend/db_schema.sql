@@ -1,3 +1,12 @@
+-- Remove tabelas antigas para evitar erro de duplicidade
+DROP TABLE IF EXISTS login_blocked_ip CASCADE;
+DROP TABLE IF EXISTS anuncio_tv CASCADE;
+DROP TABLE IF EXISTS palpite CASCADE;
+DROP TABLE IF EXISTS partida CASCADE;
+DROP TABLE IF EXISTS rodada CASCADE;
+DROP TABLE IF EXISTS campeonato CASCADE;
+DROP TABLE IF EXISTS bolao CASCADE;
+DROP TABLE IF EXISTS usuario CASCADE;
 -- Tabela de usuários
 CREATE TABLE usuario (
   id SERIAL PRIMARY KEY,
