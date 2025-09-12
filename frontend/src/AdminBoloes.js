@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from './services/api';
-import api from './services/api';
 import { useNavigate } from 'react-router-dom';
 import AdminSubMenu from './AdminSubMenu';
 import { API_BASE, API_BASE as IMG_BASE } from './config';
