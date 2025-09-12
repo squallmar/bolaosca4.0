@@ -62,6 +62,28 @@ function validateEmailEnv() {
 validateEmailEnv();
 
 // ---------- CORS Global ----------
+// Lista principal de origens permitidas
+const allowedOrigins = [
+  'https://bolaosca4-0.vercel.app',
+  'https://bolaosca4-0.onrender.com'
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.startsWith('http://localhost')) {
+      callback(null, true);
+    } else {
+      console.log('Origin não permitida: ' + origin);
+      callback(new Error('Origin não permitida: ' + origin), false);
+    }
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','X-CSRF-Token'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(cors({
   origin(origin, cb) {
     if (!origin) return cb(null, true); // server-side / curl
