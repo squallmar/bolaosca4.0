@@ -62,7 +62,6 @@ function validateEmailEnv() {
 validateEmailEnv();
 
 // ---------- CORS Global ----------
-// Lista principal de origens permitidas
 const allowedOrigins = [
   'https://bolaosca4-0.vercel.app',
   'https://bolaosca4-0.onrender.com'
@@ -84,26 +83,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(cors({
-  origin(origin, cb) {
-    if (!origin) return cb(null, true); // server-side / curl
-    // Permite todos os subdomínios .vercel.app
-    if (/^https:\/\/[a-zA-Z0-9\-]+\.vercel\.app$/.test(origin)) return cb(null, true);
-    // Permite acesso via IP local (LAN) em ambiente não-produtivo (ex: celular testando)
-    if (process.env.NODE_ENV !== 'production') {
-      if (/^http:\/\/192\.168\.[0-9]+\.[0-9]+:3002$/.test(origin)) {
-        return cb(null, true);
-      }
-      if (/^http:\/\/10\.[0-9]+\.[0-9]+\.[0-9]+:3002$/.test(origin)) {
-        return cb(null, true);
-      }
-    }
-    return cb(new Error('Origin não permitido: ' + origin));
-  },
-  credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','X-CSRF-Token']
-}));
   app.use(compression());
 app.options('*', cors({
   origin: allowedOrigins,
