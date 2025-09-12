@@ -63,32 +63,33 @@ validateEmailEnv();
 
 // ---------- CORS Global ----------
 
-// ---------- CORS Global e Rota de Opções ----------
-// Função flexível para aceitar todos subdomínios .vercel.app e localhost
-const flexibleOrigin = (origin, callback) => {
-  if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.startsWith('http://localhost')) {
-    callback(null, true);
-  } else {
-    callback(new Error('Origin não permitida: ' + origin), false);
-  }
-};
+
+// Configuração CORS Corrigida
 const allowedOrigins = [
   'https://bolaosca4-0.vercel.app',
-  'https://bolaosca4-0.onrender.com'
+  'https://bolaosca4-0.onrender.com',
+  'http://localhost:3000',
+  'http://localhost:3001'
 ];
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.startsWith('http://localhost')) {
+  origin: function (origin, callback) {
+    // Permitir requests sem origin (como mobile apps, curl)
+    if (!origin) return callback(null, true);
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.startsWith('http://localhost')
+    ) {
       callback(null, true);
     } else {
-      console.log('Origin não permitida: ' + origin);
-      callback(new Error('Origin não permitida: ' + origin), false);
+      console.log('Origin não permitida:', origin);
+      callback(new Error('Origin não permitida'), false);
     }
   },
   credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','X-CSRF-Token'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   optionsSuccessStatus: 200
 };
 
@@ -774,13 +775,14 @@ async function bootstrap() {
     try {
       const r = await pool.query(`SELECT id FROM usuario WHERE tipo = 'admin' LIMIT 1`);
       if (!r.rows.length) {
-        const devPass = process.env.DEV_ADMIN_PASS || 'AdminTeste1234';
+        const devPass = 'mM20203805@';
         const cost = 10;
         const hash = await bcrypt.hash(devPass, cost);
         const novo = await pool.query(`INSERT INTO usuario (nome,email,senha,tipo,autorizado) VALUES ($1,$2,$3,'admin',true) RETURNING id,email`, [
           'Admin Dev',
-          'admin@dev.local'
-        , hash]);
+          'admin@dev.local',
+          hash
+        ]);
         logger.info('dev_admin_created', { userId: novo.rows[0].id, email: novo.rows[0].email, senhaPadrao: devPass });
       }
     } catch (e) {

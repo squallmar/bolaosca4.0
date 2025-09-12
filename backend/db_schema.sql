@@ -78,4 +78,4 @@ CREATE TABLE login_blocked_ip (
 
 -- Usuário admin inicial
 INSERT INTO usuario (nome, email, senha, tipo, autorizado, apelido, contato)
-VALUES ('Admin', 'marcelmendes05@gmail.com', '$2b$10$wQwQwQwQwQwQwQwQwQwQwOeQwQwQwQwQwQwQwQwQwQwQwQwQwQwQw', 'admin', TRUE, 'admin', '');
+VALUES ('Admin', 'marcelmendes05@gmail.com', '$2b$10$1BfvaLxcILr7gJPvQ323beRCTibjtq2JYDvbWDrtgvpavnfwSd2Vu', 'admin', TRUE, 'admin', '');

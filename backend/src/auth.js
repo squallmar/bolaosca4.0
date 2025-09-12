@@ -129,31 +129,19 @@ async function blockIp(ip, email, nome_usuario) {
 }
 
 function setAuthCookie(res, token, req) {
-  const rawHost = (req?.headers?.host || '').toLowerCase();
-  const originHeader = (req?.headers?.origin || '').toLowerCase();
-  let originHost = '';
-  try { originHost = new URL(originHeader).hostname.toLowerCase(); } catch { originHost = originHeader.replace(/^[a-z]+:\/\//,'').split('/')?.[0] || originHeader; }
-  const privatePattern = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/;
-  const hostOnly = rawHost.split(':')[0];
-  const isLocal = privatePattern.test(hostOnly) || privatePattern.test(originHost);
-  const isProdEnv = process.env.NODE_ENV === 'production';
-  const isProd = isProdEnv && !isLocal;
-  const forwardedProto = (req.headers['x-forwarded-proto'] || '').toString().toLowerCase();
-  const isHttps = (req.protocol === 'https') || forwardedProto.includes('https');
-  // Só marca secure se realmente estiver em HTTPS; em IP público sem TLS precisamos permitir cookie em HTTP
-  const secureFlag = isProd && isHttps;
-  const sameSite = isProd ? 'strict' : 'lax';
-  const cookieOpts = {
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isHttps = req.protocol === 'https' || (req.headers['x-forwarded-proto'] || '').includes('https');
+  res.cookie('token', token, {
     httpOnly: true,
-    sameSite,
-    secure: secureFlag,
-    maxAge: 1000 * 60 * 60 * 8,
+    secure: isProduction && isHttps,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 1000 * 60 * 60 * 8, // 8 horas
     path: '/',
-    // Não definir domain para permitir que o browser aplique automaticamente (melhor para IPs)
-  };
-  res.cookie('token', token, cookieOpts);
-  logger.debug('auth_cookie_set', { isProd, isProdEnv, isLocal, sameSite, secure: secureFlag, httpsDetected: isHttps, hostOnly, originHost });
+    domain: isProduction ? '.onrender.com' : undefined
+  });
 }
+
 
 // Cadastro de usuário
 router.post('/register', uploadLocalAvatar.single('avatar'), async (req, res) => {

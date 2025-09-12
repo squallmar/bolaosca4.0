@@ -4,9 +4,9 @@ const connectionString = process.env.DATABASE_URL || 'postgres://usuario:mM20203
 
 const pool = new Pool({
   connectionString,
-  ssl: {
+  ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
-  }
+  } : false
 });
 
 export default pool;
