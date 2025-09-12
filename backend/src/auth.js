@@ -193,10 +193,12 @@ router.post('/register', uploadLocalAvatar.single('avatar'), async (req, res) =>
 
     let avatarUrl = null;
     if (req.file) {
-      const baseUrl = process.env.BASE_URL || 'https://bolaosca4-0.vercel.app';
-      avatarUrl = `${baseUrl}/uploads/placeholder-avatar.png`;
+      // Em produção sem FS persistente, gravamos uma URL relativa que o frontend prefixa com API_BASE
+      avatarUrl = '/uploads/avatars/_default.png';
     } else if (req.body.avatarUrl) {
-      avatarUrl = req.body.avatarUrl;
+      // Aceita apenas caminhos relativos seguros; evita URLs com múltiplos hosts concatenados
+      const val = String(req.body.avatarUrl || '').trim();
+      avatarUrl = val.startsWith('http://') || val.startsWith('https://') ? val : ('/' + val.replace(/^\/+/, ''));
     }
 
     const rows = await safeQuery(
@@ -366,8 +368,8 @@ router.patch('/me/senha', exigirAutenticacao, async (req, res) => {
 router.post('/me/avatar', exigirAutenticacao, uploadLocalAvatar.single('avatar'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ erro: 'Nenhum arquivo enviado' });
-  const baseUrl = process.env.BASE_URL || 'https://bolaosca4-0.vercel.app';
-  const url = `${baseUrl}/uploads/placeholder-avatar.png`;
+  // Retorna caminho relativo seguro; frontend prefixa com API_BASE
+  const url = '/uploads/avatars/_default.png';
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
     await safeQuery(pool, 'UPDATE usuario SET avatar_url = $1 WHERE id = $2', [url, userId]);

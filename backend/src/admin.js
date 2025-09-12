@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { sanitizeText, verifyImageSignature } from './utils.js';
+import { sanitizeText } from './utils.js';
 
 const router = express.Router();
 
@@ -34,23 +34,7 @@ async function isAdmin(req, res, next) {
 const storage = multer.memoryStorage();
 // ...existing code...
 
-const upload = multer({ 
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // Limite de 5MB
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Apenas imagens são permitidas'));
-    }
-  }
-});
+const upload = multer({ storage });
 
 // Listar usuários não autorizados
 router.get('/usuarios-pendentes', isAdmin, async (req, res) => {
@@ -113,24 +97,13 @@ router.put('/anuncios/:id', isAdmin, upload.single('imagem'), async (req, res) =
   descricao = sanitizeText(descricao || '').slice(0, 2000);
   if (!titulo || !descricao) return res.status(400).json({ erro: 'Título e descrição obrigatórios.' });
   try {
-    let query = 'UPDATE anuncio_tv SET titulo = $1, descricao = $2';
-    const params = [titulo, descricao];
-    let paramIndex = 3;
-    if (req.file) {
-      const full = path.join(process.cwd(), 'uploads', 'anuncios', req.file.filename);
-      const ok = await verifyImageSignature(full).catch(()=>false);
-      if (!ok) {
-        try { fs.unlinkSync(full); } catch {}
-        return res.status(400).json({ erro: 'Arquivo de imagem inválido (assinatura).' });
-      }
-      const imagem_url = '/uploads/anuncios/' + req.file.filename;
-      query += ', imagem_url = $' + paramIndex;
-      params.push(imagem_url);
-      paramIndex++;
+    // Em ambiente atual, não persistimos arquivo; se veio imagem, seta placeholder conhecido
+    const imagemUrl = req.file ? '/uploads/escudos/_default.png' : undefined;
+    if (typeof imagemUrl !== 'undefined') {
+      await pool.query('UPDATE anuncio_tv SET titulo = $1, descricao = $2, imagem_url = $3 WHERE id = $4', [titulo, descricao, imagemUrl, id]);
+    } else {
+      await pool.query('UPDATE anuncio_tv SET titulo = $1, descricao = $2 WHERE id = $3', [titulo, descricao, id]);
     }
-    query += ' WHERE id = $' + paramIndex;
-    params.push(id);
-    await pool.query(query, params);
     return res.json({ sucesso: true });
   } catch (err) {
     return res.status(500).json({ erro: 'Erro ao atualizar anúncio.' });

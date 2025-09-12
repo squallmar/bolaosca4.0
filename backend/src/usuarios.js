@@ -110,7 +110,7 @@ router.put('/:id', auth, async (req, res) => {
       [nome ?? null, apelido ?? null, tipo ?? null, autorizado ?? null, banido ?? null, foto_url ?? null, id]
     );
     if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado' });
-  logger.info('audit_user_ban', { adminId: req.user.id, targetUserId: id, banido: !!banir });
+    logger.info('audit_user_ban', { adminId: req.user.id, targetUserId: id, banido: !!(banido ?? rows[0].banido) });
   res.json(rows[0]);
   } catch (e) {
     console.error('Erro atualizar usuario:', e);
@@ -136,7 +136,7 @@ router.post('/:id/banir', auth, exigirRole('admin'), async (req, res) => {
       [!!banir, id]
     );
     if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado' });
-  logger.info('audit_user_desist', { adminId: req.user.id, targetUserId: id, desistiu: !!desistiu });
+  logger.info('audit_user_ban', { adminId: req.user.id, targetUserId: id, banido: !!banir });
   res.json(rows[0]);
   } catch (e) {
     console.error('Erro banir usuario:', e);
