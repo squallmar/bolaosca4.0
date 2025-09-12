@@ -130,15 +130,13 @@ async function blockIp(ip, email, nome_usuario) {
 
 function setAuthCookie(res, token, req) {
 
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isHttps = req.protocol === 'https' || (req.headers['x-forwarded-proto'] || '').includes('https');
   res.cookie('token', token, {
     httpOnly: true,
-    secure: isProduction && isHttps,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: true,           // sempre true em produção
+    sameSite: 'none',       // obrigatório para cross-site
     maxAge: 1000 * 60 * 60 * 8, // 8 horas
     path: '/',
-    domain: isProduction ? '.onrender.com' : undefined
+    domain: '.onrender.com' // se backend está em onrender.com
   });
 }
 
