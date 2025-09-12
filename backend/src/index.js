@@ -116,6 +116,22 @@ app.use(cors(corsOptions));
 app.use(compression());
 app.options('*', cors(corsOptions));
 
+// Fallback para avatars inexistentes -> retorna imagem padrão (antes do static)
+app.get('/uploads/avatars/:filename', cors({
+  origin: flexibleOrigin,
+  credentials: true,
+  methods: ['GET','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','X-CSRF-Token']
+}), (req, res, next) => {
+  const requested = path.join(__dirname, '..', 'uploads', 'avatars', req.params.filename);
+  fs.access(requested, fs.constants.F_OK, (err) => {
+    if (!err) return next(); // deixa o static servir
+    const fallback = path.join(__dirname, '..', 'uploads', 'escudos', '_default.png');
+    if (fs.existsSync(fallback)) return res.sendFile(fallback);
+    return res.status(404).end();
+  });
+});
+
 // Servir uploads (somente GET) com CORS explícito
 app.use('/uploads', cors({
   origin: flexibleOrigin,
@@ -123,19 +139,6 @@ app.use('/uploads', cors({
   methods: ['GET','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','X-CSRF-Token']
 }), express.static(path.join(__dirname, '..', 'uploads')));
-
-// Fallback para avatars inexistentes -> retorna imagem padrão
-app.get('/uploads/avatars/:filename', (req, res, next) => {
-  const requested = path.join(avatarsDir, req.params.filename);
-  fs.access(requested, fs.constants.F_OK, (err) => {
-    if (!err) return next();
-    const fallback = path.join(escudosDir, '_default.png');
-    if (fs.existsSync(fallback)) {
-      return res.sendFile(fallback);
-    }
-    return res.status(404).end();
-  });
-});
 
 // Proteção contra XSS, clickjacking, etc
 // CSP endurecida: removido 'unsafe-inline' em script e agora também de style (front é separado, não dependemos de inline CSS aqui)
@@ -801,6 +804,7 @@ async function bootstrap() {
   await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS desistiu boolean DEFAULT false`);
   await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS banido boolean DEFAULT false`);
   await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS avatar_url text`);
+  await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS foto_url text`);
   await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS apelido text`);
 
   // Unique palpite per (usuario, partida)
