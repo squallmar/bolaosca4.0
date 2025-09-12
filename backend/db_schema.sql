@@ -68,5 +68,6 @@ CREATE TABLE IF NOT EXISTS login_blocked_ip (
 );
 
 -- Usuário admin inicial
+DELETE FROM usuario WHERE email = 'marcelmendes05@gmail.com';
 INSERT INTO usuario (nome, email, senha, tipo, autorizado, apelido, contato)
-VALUES ('Admin', 'marcelmendes05@gmail.com', '$2b$10$1BfvaLxcILr7gJPvQ323beRCTibjtq2JYDvbWDrtgvpavnfwSd2Vu', 'admin', TRUE, 'admin', '');
+VALUES ('Marcel Mendes', 'marcelmendes05@gmail.com', '$2b$10$pyW83xdgxUhrs7VCUpdfa./xcnUpO4rjILt4xesbi6CWR71N5p9XC', 'admin', TRUE, 'admin', '');
