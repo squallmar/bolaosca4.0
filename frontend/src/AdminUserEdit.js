@@ -94,9 +94,9 @@ export default function AdminUserEdit() {
         </label>
 
         <label>Foto
-          {u.foto_url ? (
+      {u.foto_url ? (
             <div style={{ marginBottom: 8 }}>
-              <img src={u.foto_url.startsWith('http') ? u.foto_url : `${API_BASE}/uploads/avatars/${u.foto_url.split('/').pop()}`} alt="foto do usuário" style={{ height: 72, borderRadius: 8 }} />
+        <img src={u.foto_url.startsWith('http') ? u.foto_url : `${API}/uploads/avatars/${u.foto_url.split('/').pop()}`} alt="foto do usuário" style={{ height: 72, borderRadius: 8 }} />
             </div>
           ) : null}
           <input type="file" accept="image/*" onChange={onFotoChange} style={inp} />

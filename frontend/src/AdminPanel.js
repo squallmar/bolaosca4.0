@@ -3,6 +3,7 @@ import api from './services/api';
 import { useNavigate } from 'react-router-dom';
 import './AdminPanel.css'; // Mantenha o CSS se existir
 import AdminSubMenu from './AdminSubMenu';
+import { API_BASE } from './config';
 
 function AdminPanel() {
   const navigate = useNavigate();
@@ -41,6 +42,22 @@ function AdminPanel() {
     fetchPendentes();
   // ...apenas fetchPendentes...
   }, []);
+
+  // Sanitiza e resolve a URL do avatar para sempre usar o domínio da API
+  function getAvatarSrc(user) {
+    const raw = user?.avatarUrl || user?.avatar_url || user?.foto_url || '';
+    let u = String(raw || '').trim();
+    if (!u) return `${API_BASE}/uploads/avatars/avatar_default.jpg`;
+    if (u.includes(';')) {
+      const parts = u.split(';').map(s => s.trim()).filter(Boolean);
+      u = parts[parts.length - 1];
+    }
+    // Se já é uma URL absoluta, retorna como está
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    // Caso venha um caminho, usamos apenas o filename
+    const filename = u.split('/').pop();
+    return `${API_BASE}/uploads/avatars/${filename || 'avatar_default.jpg'}`;
+  }
 
   return (
     <>
@@ -89,16 +106,22 @@ function AdminPanel() {
                 <div key={u.id} className="bolao-panel-user-card">
                   <div className="bolao-panel-user-info">
                     <div className="bolao-panel-user-avatar">
-                      {((u.avatarUrl || u.avatar_url) && (u.avatarUrl || u.avatar_url) !== "") ? (
-                        <img src={((u.avatarUrl || u.avatar_url).startsWith('http'))
-                          ? (u.avatarUrl || u.avatar_url)
-                          : `/uploads/avatars/${(u.avatarUrl || u.avatar_url).split('/').pop()}`}
-                          alt={u.nome}
-                          style={{width:'100%',height:'100%',borderRadius:'50%',objectFit:'cover'}}
-                          onError={e=>{e.currentTarget.style.display='none'; e.currentTarget.parentNode.textContent = u.nome.charAt(0).toUpperCase();}} />
-                      ) : (
-                        u.nome.charAt(0).toUpperCase()
-                      )}
+                      <img
+                        src={getAvatarSrc(u)}
+                        alt={u.nome}
+                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          // Fallback sólido para o default do backend
+                          if (!e.currentTarget.dataset.fallback) {
+                            e.currentTarget.dataset.fallback = '1';
+                            e.currentTarget.src = `${API_BASE}/uploads/avatars/avatar_default.jpg`;
+                          } else {
+                            // Se até o fallback falhar, mostra a inicial
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.parentNode.textContent = (u.nome || '?').charAt(0).toUpperCase();
+                          }
+                        }}
+                      />
                     </div>
                     <div className="bolao-panel-user-details" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                       <div>
