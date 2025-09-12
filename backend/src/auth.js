@@ -194,7 +194,7 @@ router.post('/register', uploadLocalAvatar.single('avatar'), async (req, res) =>
     let avatarUrl = null;
     if (req.file) {
       // Em produção sem FS persistente, gravamos uma URL relativa que o frontend prefixa com API_BASE
-      avatarUrl = '/uploads/avatars/_default.png';
+      avatarUrl = '/uploads/avatars/avatar_default.jpg';
     } else if (req.body.avatarUrl) {
       // Aceita apenas caminhos relativos seguros; evita URLs com múltiplos hosts concatenados
       const val = String(req.body.avatarUrl || '').trim();
@@ -281,7 +281,7 @@ router.post('/login', async (req, res) => {
       email: usuario.email,
       tipo: usuario.tipo,
       autorizado: usuario.autorizado,
-      avatarUrl: usuario.avatar_url
+      avatarUrl: usuario.avatar_url || '/uploads/avatars/avatar_default.jpg'
     };
 
     loginAttempts[ip] = 0;
@@ -302,10 +302,10 @@ router.get('/me', exigirAutenticacao, async (req, res) => {
     logger.debug('auth_me_hit', { hasUser: !!req.user, userId: req.user?.id });
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
-    const rows = await safeQuery(pool, 'SELECT id, nome, email, tipo, autorizado, avatar_url, apelido FROM usuario WHERE id = $1', [userId]);
+  const rows = await safeQuery(pool, 'SELECT id, nome, email, tipo, autorizado, avatar_url, apelido FROM usuario WHERE id = $1', [userId]);
     const u = rows[0];
     if (!u) return res.status(404).json({ erro: 'Usuário não encontrado' });
-    return res.json({ id: u.id, nome: u.nome, email: u.email, tipo: u.tipo, autorizado: u.autorizado, avatarUrl: u.avatar_url, apelido: u.apelido });
+  return res.json({ id: u.id, nome: u.nome, email: u.email, tipo: u.tipo, autorizado: u.autorizado, avatarUrl: u.avatar_url || '/uploads/avatars/avatar_default.jpg', apelido: u.apelido });
   } catch (err) {
     console.error('GET /auth/me', err);
     return res.status(500).json({ erro: 'Falha ao obter perfil' });
@@ -369,7 +369,7 @@ router.post('/me/avatar', exigirAutenticacao, uploadLocalAvatar.single('avatar')
   try {
     if (!req.file) return res.status(400).json({ erro: 'Nenhum arquivo enviado' });
   // Retorna caminho relativo seguro; frontend prefixa com API_BASE
-  const url = '/uploads/avatars/_default.png';
+  const url = '/uploads/avatars/avatar_default.jpg';
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
     await safeQuery(pool, 'UPDATE usuario SET avatar_url = $1 WHERE id = $2', [url, userId]);

@@ -4,6 +4,7 @@ import api from './services/api';
 import { useAuth } from './authContext';
 import './Profile.css';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE } from './config';
 
 export default function Profile() {
   const { nome, avatarUrl, login } = useAuth() || {};
@@ -165,7 +166,22 @@ export default function Profile() {
     }
   };
 
-  const displayAvatar = preview || current || `https://ui-avatars.com/api/?name=${encodeURIComponent((nome || 'User').split(' ')[0])}`;
+  // Normaliza URL do avatar atual (relativo -> prefixa API; absoluto mantém)
+  const normalizedCurrent = useMemo(() => {
+    if (!current) return '';
+    let u = String(current).trim();
+    if (u.includes(';')) {
+      const parts = u.split(';').map(s => s.trim()).filter(Boolean);
+      u = parts[parts.length - 1];
+    }
+    if (u.startsWith('/uploads/')) return `${API_BASE}${u}`;
+    if (/^uploads\//i.test(u)) return `${API_BASE}/${u}`;
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    const file = u.split('/').pop();
+    return file ? `${API_BASE}/uploads/avatars/${file}` : '';
+  }, [current]);
+
+  const displayAvatar = preview || normalizedCurrent || `${API_BASE}/uploads/avatars/avatar_default.jpg`;
 
   return (
     <div className="profile-container">

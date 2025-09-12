@@ -31,6 +31,8 @@ function UserAvatar({ user, size = 56 }) {
   if (file) candidates.push(`${API}/uploads/avatars/${file}`);
   // fallback final: tenta usar o valor cru com base
   candidates.push(`${API}/uploads/avatars/${noQS}`);
+  // último fallback garantido
+  candidates.push(`${API}/uploads/avatars/avatar_default.jpg`);
 
   const [idx, setIdx] = React.useState(0);
   if (idx >= candidates.length) {

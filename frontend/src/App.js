@@ -80,8 +80,8 @@ function Menu() {
       return `${API_BASE}/uploads/avatars/${filename}`;
     };
 
-    const preferred = buildAvatar(avatarFromCtx);
-    const avatarSrc = preferred || `https://ui-avatars.com/api/?name=${encodeURIComponent(primeiroNome)}`;
+  const preferred = buildAvatar(avatarFromCtx);
+  const avatarSrc = preferred || `${API_BASE}/uploads/avatars/avatar_default.jpg`;
 
     userInfo = (
       <Link to="/perfil" className="user-info" style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 16, textDecoration: 'none' }}>
@@ -90,6 +90,7 @@ function Menu() {
           alt="avatar"
           style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover' }}
           onError={(e) => {
+            // se falhar, cai para gerador de iniciais como último recurso
             e.currentTarget.onerror = null;
             e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(primeiroNome)}`;
           }}

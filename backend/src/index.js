@@ -126,7 +126,7 @@ app.get('/uploads/avatars/:filename', cors({
   const requested = path.join(__dirname, '..', 'uploads', 'avatars', req.params.filename);
   fs.access(requested, fs.constants.F_OK, (err) => {
     if (!err) return next(); // deixa o static servir
-    const fallback = path.join(__dirname, '..', 'uploads', 'escudos', '_default.png');
+  const fallback = path.join(__dirname, '..', 'uploads', 'avatars', 'avatar_default.jpg');
     if (fs.existsSync(fallback)) return res.sendFile(fallback);
     return res.status(404).end();
   });
