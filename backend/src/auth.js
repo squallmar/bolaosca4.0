@@ -65,18 +65,18 @@ async function exigirAutenticacao(req, res, next) {
     console.log('Origin:', req.headers.origin);
     console.log('Cookies:', req.cookies);
     console.log('Auth Header:', req.headers.authorization);
-
+    console.log('Session:', req.session);
     const token = pegarToken(req);
     if (!token) {
       console.log('DEBUG: Nenhum token encontrado');
       return res.status(401).json({ erro: 'Token não fornecido' });
     }
-
     let payload;
     try {
       payload = jwt.verify(token, JWT_SECRET);
+      console.log('DEBUG: Payload JWT:', payload);
     } catch (error) {
-      console.error('Erro de verificação JWT:', error.message);
+      console.error('Erro de verificação JWT:', error.message, error);
       if (error.name === 'TokenExpiredError') {
         return res.status(401).json({ erro: 'Token expirado' });
       }
@@ -85,25 +85,23 @@ async function exigirAutenticacao(req, res, next) {
       }
       return res.status(401).json({ erro: 'Erro de autenticação' });
     }
-
     if (payload?.jti && revokedJti.has(payload.jti)) {
+      console.log('DEBUG: Sessão expirada pelo jti:', payload.jti);
       return res.status(401).json({ erro: 'Sessão expirada' });
     }
-
     // Buscar usuário no banco
     const { rows } = await pool.query(
       'SELECT id, nome, email, tipo, autorizado FROM usuario WHERE id = $1',
       [payload.id]
     );
-    
     if (!rows[0]) {
+      console.log('DEBUG: Usuário não encontrado no banco:', payload.id);
       return res.status(401).json({ erro: 'Usuário não encontrado' });
     }
-
     if (!rows[0].autorizado) {
+      console.log('DEBUG: Usuário não autorizado:', rows[0]);
       return res.status(401).json({ erro: 'Usuário não autorizado' });
     }
-
     req.user = {
       id: rows[0].id,
       role: rows[0].tipo,
@@ -111,8 +109,7 @@ async function exigirAutenticacao(req, res, next) {
       email: rows[0].email,
       nome: rows[0].nome
     };
-    
-    console.log('DEBUG: Autenticação bem-sucedida para usuário:', req.user.id);
+    console.log('DEBUG: Autenticação bem-sucedida para usuário:', req.user);
     next();
   } catch (error) {
     console.error('Erro geral de autenticação:', error);
