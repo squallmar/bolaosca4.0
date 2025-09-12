@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminSubMenu from './AdminSubMenu';
 import { API_BASE, API_BASE as IMG_BASE } from './config';
 
-// Garante envio de cookies (auth via httpOnly) nas chamadas diretas com axios
-axios.defaults.withCredentials = true;
+// ...existing code...
 
 // Autenticação agora via cookie httpOnly; não precisamos mais injetar Authorization manual
 async function tryGet(urls, config = {}) {
@@ -13,7 +12,7 @@ async function tryGet(urls, config = {}) {
   const merged = { ...config }; // sem headers extras
   for (const url of urls) {
     try {
-      const res = await axios.get(url, merged);
+  const res = await api.get(url, merged);
       return { data: res.data, urlOk: url };
     } catch (err) {
       lastErr = err;
@@ -188,7 +187,7 @@ export default function AdminBoloes() {
   async function excluirBolao(id) {
     if (!window.confirm('Excluir bolão?')) return;
     try {
-      await axios.delete(`${API_BASE}/bolao/${id}`);
+  await api.delete(`${API_BASE}/bolao/${id}`);
       fetchAll();
     } catch (e) {
       const msg = e?.response?.data?.erro || e?.message || 'Erro ao excluir bolão';
@@ -198,7 +197,7 @@ export default function AdminBoloes() {
   }
   async function finalizarBolao(id) {
     if (!window.confirm('Finalizar bolão?')) return;
-    await axios.post(`${API_BASE}/bolao/${id}/finalizar`, {});
+  await api.post(`${API_BASE}/bolao/${id}/finalizar`, {});
     fetchAll();
   }
   async function editarCampeonato(id, nome) {
@@ -208,12 +207,12 @@ export default function AdminBoloes() {
   }
   async function excluirCampeonato(id) {
     if (!window.confirm('Excluir campeonato?')) return;
-    await axios.delete(`${API_BASE}/bolao/campeonato/${id}`);
+  await api.delete(`${API_BASE}/bolao/campeonato/${id}`);
     fetchAll();
   }
   async function finalizarCampeonato(id) {
     if (!window.confirm('Finalizar campeonato?')) return;
-    await axios.post(`${API_BASE}/bolao/campeonato/${id}/finalizar`, {});
+  await api.post(`${API_BASE}/bolao/campeonato/${id}/finalizar`, {});
     fetchAll();
   }
   async function editarRodada(id, nome) {
@@ -223,7 +222,7 @@ export default function AdminBoloes() {
   }
   async function excluirRodada(id) {
     if (!window.confirm('Excluir rodada?')) return;
-    await axios.delete(`${API_BASE}/bolao/rodada/${id}`);
+  await api.delete(`${API_BASE}/bolao/rodada/${id}`);
     fetchAll();
   }
   async function editarPartida(id, t1, t2) {
@@ -233,7 +232,7 @@ export default function AdminBoloes() {
   }
   async function excluirPartida(id) {
     if (!window.confirm('Excluir partida?')) return;
-    await axios.delete(`${API_BASE}/bolao/partida/${id}`);
+  await api.delete(`${API_BASE}/bolao/partida/${id}`);
     fetchAll();
   }
 
