@@ -32,23 +32,7 @@ async function isAdmin(req, res, next) {
 // Configuração do multer para uploads de imagem (apenas uma declaração)
 // Usar memoryStorage para produção (Vercel/Render não tem filesystem)
 const storage = multer.memoryStorage();
-
-const upload = multer({ 
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // Limite de 5MB
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Apenas imagens são permitidas'));
-    }
-  }
-});
+// ...existing code...
 
 const upload = multer({ 
   storage,
