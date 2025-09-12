@@ -124,6 +124,19 @@ app.use('/uploads', cors({
   allowedHeaders: ['Content-Type','Authorization','X-CSRF-Token']
 }), express.static(path.join(__dirname, '..', 'uploads')));
 
+// Fallback para avatars inexistentes -> retorna imagem padrão
+app.get('/uploads/avatars/:filename', (req, res, next) => {
+  const requested = path.join(avatarsDir, req.params.filename);
+  fs.access(requested, fs.constants.F_OK, (err) => {
+    if (!err) return next();
+    const fallback = path.join(escudosDir, '_default.png');
+    if (fs.existsSync(fallback)) {
+      return res.sendFile(fallback);
+    }
+    return res.status(404).end();
+  });
+});
+
 // Proteção contra XSS, clickjacking, etc
 // CSP endurecida: removido 'unsafe-inline' em script e agora também de style (front é separado, não dependemos de inline CSS aqui)
 app.use(helmet({
