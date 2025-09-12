@@ -786,6 +786,7 @@ async function bootstrap() {
   await pool.query(`ALTER TABLE campeonato ADD COLUMN IF NOT EXISTS finalizado boolean DEFAULT false`);
   await pool.query(`ALTER TABLE bolao ADD COLUMN IF NOT EXISTS finalizado boolean DEFAULT false`);
   await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS desistiu boolean DEFAULT false`);
+  await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS banido boolean DEFAULT false`);
   await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS avatar_url text`);
   await pool.query(`ALTER TABLE usuario ADD COLUMN IF NOT EXISTS apelido text`);
 
