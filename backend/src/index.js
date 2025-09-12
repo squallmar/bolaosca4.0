@@ -62,15 +62,11 @@ function validateEmailEnv() {
 validateEmailEnv();
 
 // ---------- CORS Global ----------
-const allowedOrigins = [
-  'https://bolaosca4-0.vercel.app', // frontend Vercel
-  // Adicione outros domínios se necessário
-];
-
 app.use(cors({
   origin(origin, cb) {
     if (!origin) return cb(null, true); // server-side / curl
-    if (allowedOrigins.includes(origin)) return cb(null, true);
+    // Permite todos os subdomínios .vercel.app
+    if (/^https:\/\/[a-zA-Z0-9\-]+\.vercel\.app$/.test(origin)) return cb(null, true);
     // Permite acesso via IP local (LAN) em ambiente não-produtivo (ex: celular testando)
     if (process.env.NODE_ENV !== 'production') {
       if (/^http:\/\/192\.168\.[0-9]+\.[0-9]+:3002$/.test(origin)) {
