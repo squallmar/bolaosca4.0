@@ -161,13 +161,24 @@ async function blockIp(ip, email, nome_usuario) {
 
 function setAuthCookie(res, token, req) {
   const isProduction = process.env.NODE_ENV === 'production';
+  let frontendDomain;
+  if (isProduction) {
+    const host = (req.headers.origin || req.hostname || '').toLowerCase();
+    if (host.includes('onrender.com')) {
+      frontendDomain = '.onrender.com';
+    } else if (host.includes('vercel.app')) {
+      frontendDomain = '.vercel.app';
+    } else {
+      frontendDomain = undefined;
+    }
+  }
   res.cookie('token', token, {
     httpOnly: true,
     secure: true,
     sameSite: 'none',
     maxAge: 1000 * 60 * 60 * 8,
     path: '/',
-    domain: isProduction ? '.vercel.app' : undefined
+    domain: frontendDomain
   });
 }
 
