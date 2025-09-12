@@ -222,9 +222,9 @@ app.use((req, res, next) => {
   // Demais rotas mutáveis exigem CSRF
   return csrfProtection(req, res, next);
 });
-import authRouter, { handleDebugCookie } from './auth.js';
+import authRouter from './auth.js';
 // Rota debug-cookie exposta diretamente
-app.get('/auth/debug-cookie', handleDebugCookie);
+// app.get('/auth/debug-cookie', handleDebugCookie);
 import adminRouter from './admin.js';
 import bolaoRouter from './bolao.js';
 import palpiteRouter from './palpite.js';
