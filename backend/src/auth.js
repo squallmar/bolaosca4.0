@@ -166,6 +166,7 @@ function setAuthCookie(res, token, req) {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
+  partitioned: isProduction ? true : undefined,
     maxAge: 1000 * 60 * 60 * 8,
     path: '/'
   });
@@ -416,7 +417,7 @@ router.post('/logout', (req, res) => {
       } catch {}
     }
   const isProduction = process.env.NODE_ENV === 'production';
-  res.clearCookie('token', { httpOnly: true, sameSite: isProduction ? 'none' : 'lax', secure: isProduction, path: '/' });
+  res.clearCookie('token', { httpOnly: true, sameSite: isProduction ? 'none' : 'lax', secure: isProduction, path: '/', partitioned: isProduction ? true : undefined });
     return res.json({ ok: true });
   } catch (err) {
     logger.error('logout_error', { error: err.message });
