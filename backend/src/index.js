@@ -64,6 +64,14 @@ validateEmailEnv();
 // ---------- CORS Global ----------
 
 // ---------- CORS Global e Rota de Opções ----------
+// Função flexível para aceitar todos subdomínios .vercel.app e localhost
+const flexibleOrigin = (origin, callback) => {
+  if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.startsWith('http://localhost')) {
+    callback(null, true);
+  } else {
+    callback(new Error('Origin não permitida: ' + origin), false);
+  }
+};
 const allowedOrigins = [
   'https://bolaosca4-0.vercel.app',
   'https://bolaosca4-0.onrender.com'
@@ -90,7 +98,7 @@ app.options('*', cors(corsOptions));
 
 // Servir uploads (somente GET) com CORS explícito
 app.use('/uploads', cors({
-  origin: allowedOrigins,
+  origin: flexibleOrigin,
   credentials: true,
   methods: ['GET','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','X-CSRF-Token']
@@ -170,7 +178,7 @@ const blogWriteLimiter = rateLimit({ windowMs: 5*60*1000, max: 30, message: { er
 const csrfProtection = csurf({ cookie: { httpOnly: true, sameSite: 'lax' } });
 
 // Rota dedicada para obter token CSRF com CORS explícito
-app.get('/csrf-token', cors({ origin: allowedOrigins, credentials: true }), csrfProtection, (req, res) => {
+app.get('/csrf-token', cors({ origin: flexibleOrigin, credentials: true }), csrfProtection, (req, res) => {
   const token = req.csrfToken();
   // Envia também em cookie legível pelo frontend
   res.cookie('XSRF-TOKEN', token, { httpOnly: false, sameSite: 'lax' });
