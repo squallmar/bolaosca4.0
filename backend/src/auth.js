@@ -164,15 +164,13 @@ async function blockIp(ip, email, nome_usuario) {
 
 function setAuthCookie(res, token, req) {
   const isProduction = process.env.NODE_ENV === 'production';
-  const frontendDomain = isProduction ? '.vercel.app' : undefined;
-  
   res.cookie('token', token, {
     httpOnly: true,
     secure: true,
     sameSite: 'none',
     maxAge: 1000 * 60 * 60 * 8,
     path: '/',
-    domain: frontendDomain
+    domain: isProduction ? '.vercel.app' : undefined
   });
 }
 
