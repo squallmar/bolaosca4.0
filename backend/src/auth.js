@@ -243,12 +243,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ erro: 'Credenciais inválidas' });
     }
     // Gerar accessToken e refreshToken
-    const accessToken = require('jsonwebtoken').sign(
+    const accessToken = jwt.sign(
       { id: usuario.id, email: usuario.email, tipo: usuario.tipo, autorizado: usuario.autorizado },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: '15m' }
     );
-    const refreshToken = require('jsonwebtoken').sign(
+    const refreshToken = jwt.sign(
       { id: usuario.id },
       process.env.REFRESH_TOKEN_SECRET,
       { expiresIn: '7d' }
