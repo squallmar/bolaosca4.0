@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './services/api';
 
 // API Base URL
 import { API_BASE } from './config';

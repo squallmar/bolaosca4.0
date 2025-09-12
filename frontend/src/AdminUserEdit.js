@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from './services/api';
 
@@ -63,7 +63,7 @@ export default function AdminUserEdit() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-  const { data } = await axios.post(`${API}/upload/avatar`, fd, { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true });
+  const { data } = await api.post(`${API}/upload/avatar`, fd, { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true });
       setU({ ...u, foto_url: data.url });
       setMsg('Foto enviada');
       setTimeout(() => setMsg(''), 1500);

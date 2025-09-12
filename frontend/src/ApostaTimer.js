@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './services/api';
 import { formatDistanceStrict } from 'date-fns';
 import { API_BASE } from './config';
 
@@ -37,7 +37,7 @@ const ApostaTimer = () => {
 
   useEffect(() => {
     // Busca rodadas abertas
-    axios.get(`${API_BASE}/bolao/rodadas-todas`)
+  api.get(`${API_BASE}/bolao/rodadas-todas`)
       .then(res => {
         const rodadas = Array.isArray(res.data) ? res.data : (res.data.rodadas || []);
         console.log('Rodadas recebidas:', rodadas);

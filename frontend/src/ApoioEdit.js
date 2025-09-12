@@ -3,7 +3,7 @@ import { API_BASE } from './config';
 import { Link } from 'react-router-dom';
 import AdminSubMenu from './AdminSubMenu';
 import { useAuth } from './authContext';
-import axios from 'axios';
+import api from './services/api';
 
 export default function ApoioEdit() {
   const [pixImg, setPixImg] = React.useState(null);
@@ -17,7 +17,7 @@ export default function ApoioEdit() {
     async function fetchApoio() {
       setLoading(true);
       try {
-        const { data } = await axios.get(`${API_BASE}/apoio/conteudo`);
+  const { data } = await api.get(`${API_BASE}/apoio/conteudo`);
         setPreview(data.imgUrl ? `${API_BASE}${data.imgUrl}` : '');
         setMsg(data.msg || '');
       } catch (e) {
@@ -50,7 +50,7 @@ export default function ApoioEdit() {
       const formData = new FormData();
       if (pixImg) formData.append('file', pixImg);
       formData.append('msg', msg);
-      const { data } = await axios.post(`${API_BASE}/apoio/upload`, formData);
+  const { data } = await api.post(`${API_BASE}/apoio/upload`, formData);
       setSuccess('Conteúdo salvo com sucesso!');
       setPreview(data.url ? `${API_BASE}${data.url}` : preview);
     } catch (e) {

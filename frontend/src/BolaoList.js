@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import ApostaTimer from './ApostaTimer';
-import axios from 'axios';
+import api from './services/api';
 import api from './services/api';
 import { useAuth } from './authContext';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +16,7 @@ async function tryGet(urls, config = {}) {
 
   for (const url of urls) {
     try {
-      const res = await axios.get(url, merged);
+  const res = await api.get(url, merged);
       return { data: res.data, urlOk: url };
     } catch (err) {
       lastErr = err;
