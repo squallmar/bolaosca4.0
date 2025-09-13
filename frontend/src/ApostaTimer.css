@@ -85,8 +85,8 @@
   50% { box-shadow: 0 0 16px 6px #b71c1c88; }
   100% { box-shadow: 0 0 0 0 #b71c1c44; }
 }
-@media (max-width: 600px) {
-  .aposta-timer-visual {
+@media (max-width: 600px) {  
+  .aposta-timer-visual {  
     left: 50%;
     top: auto;
     right: auto;
@@ -96,7 +96,7 @@
     min-width: 90px;
     padding: 0.07em 0.01em;
     font-size: 0.78em;
-    margin-top: 12px;
+    margin-top: 8px;
   }
   .aposta-timer-close {
     top: 2px;
