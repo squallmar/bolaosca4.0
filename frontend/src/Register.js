@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import api from './services/api';
 import { Link, useNavigate } from 'react-router-dom';
 import './Auth.css';
+import { useAuth } from './authContext';
 
 const Register = () => {
+  const auth = useAuth();
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -69,13 +71,19 @@ const Register = () => {
         foto_url = data.url;
       }
       // Envia dados do usuário com foto_url
-      await api.post('/auth/register', {
+      const resp = await api.post('/auth/register', {
         ...formData,
         foto_url
       });
-
-      alert('Cadastro realizado com sucesso! Você já pode fazer login.');
-      navigate('/login');
+      // login automático após cadastro
+      const user = resp.data?.usuario;
+      if (user) {
+        await auth.login(null, user.tipo, user.nome, user.autorizado, user.avatar_url || user.foto_url, user.apelido);
+        navigate('/perfil');
+      } else {
+        alert('Cadastro realizado! Você já pode fazer login.');
+        navigate('/login');
+      }
     } catch (error) {
       const resp = error?.response;
       if (resp) {
