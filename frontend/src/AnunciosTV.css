@@ -1,8 +1,8 @@
+/* Desktop: card no canto direito */
 .tv-anuncios-card {
   position: fixed;
   top: 110px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 24px;
   z-index: 1000;
   width: 180px;
   min-height: 110px;
@@ -48,19 +48,21 @@
 @media (max-width: 600px) {
   .tv-anuncios-card {
     left: 50%;
-    top: 70px;
+    top: auto;
+    right: auto;
     transform: translateX(-50%);
-    width: 90vw;
-    max-width: 96vw;
-    min-width: 140px;
-    padding: 0.18em 0.04em;
-    font-size: 0.88em;
+    width: 80vw;
+    max-width: 88vw;
+    min-width: 110px;
+    padding: 0.10em 0.02em;
+    font-size: 0.82em;
+    margin-top: 32px;
   }
   .tv-anuncios-close {
     top: 4px;
     right: 6px;
-    width: 22px;
-    height: 22px;
-    font-size: 15px;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
   }
 }
