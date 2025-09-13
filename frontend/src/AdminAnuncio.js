@@ -197,7 +197,7 @@ function AdminAnuncio() {
             />
       {preview && (
               <div style={{marginTop:'0.5em',textAlign:'center'}}>
-        <img src={preview} alt="preview" style={{maxWidth:180, borderRadius:12, boxShadow:'0 2px 12px #185a9d22',border:'2px solid #43cea2'}} onError={(e)=>{ e.currentTarget.onerror=null; e.currentTarget.src=`${API_BASE}/uploads/escudos/_default.png`; }} />
+    <img src={preview} alt="preview" style={{maxWidth:180, borderRadius:12, boxShadow:'0 2px 12px #185a9d22',border:'2px solid #43cea2'}} onError={(e)=>{ e.currentTarget.onerror=null; e.currentTarget.src=`${API_BASE}/uploads/anuncios/_default_anunciosca.png`; }} />
               </div>
             )}
           </div>
@@ -258,7 +258,7 @@ function AdminAnuncio() {
             src={toImageSrc(anuncio.imagem_url)}
                       alt={anuncio.titulo} 
                               style={{width:64,height:64,objectFit:'cover',borderRadius:8,border:'1px solid #43cea2'}} 
-                              onError={(e)=>{ e.currentTarget.onerror=null; e.currentTarget.src=`${API_BASE}/uploads/escudos/_default.png`; }}
+                              onError={(e)=>{ e.currentTarget.onerror=null; e.currentTarget.src=`${API_BASE}/uploads/anuncios/_default_anunciosca.png`; }}
                     />
                   )}
                   <div style={{flex:1}}>
