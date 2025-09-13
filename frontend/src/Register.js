@@ -79,7 +79,7 @@ const Register = () => {
       const user = resp.data?.usuario;
       if (user) {
         await auth.login(null, user.tipo, user.nome, user.autorizado, user.avatar_url || user.foto_url, user.apelido);
-        navigate('/perfil');
+        navigate('/');
       } else {
         alert('Cadastro realizado! Você já pode fazer login.');
         navigate('/login');
