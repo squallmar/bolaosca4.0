@@ -78,22 +78,23 @@ const ApostaTimer = () => {
         .aposta-timer-visual {
           position: fixed;
           top: 110px;
-          left: 24px;
+          left: 50%;
+          transform: translateX(-50%);
           z-index: 1000;
-          width: 200px;
-          min-height: 80px;
-          max-width: 200px;
+          width: 170px;
+          min-height: 70px;
+          max-width: 170px;
           border-radius: 12px;
           box-sizing: border-box;
           font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
           font-weight: 700;
-          font-size: 0.95em;
+          font-size: 0.92em;
           letter-spacing: 0.35px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 0.38em 0.22em;
+          padding: 0.28em 0.12em;
           box-shadow: 0 4px 16px 1px #b71c1c88;
           border: 2px solid #fff;
           overflow: hidden;
@@ -104,20 +105,21 @@ const ApostaTimer = () => {
         }
         @media (max-width: 600px) {
           .aposta-timer-visual {
-            left: 8px;
+            left: 50%;
             top: 70px;
-            width: 95vw;
-            max-width: 98vw;
-            min-width: 160px;
-            padding: 0.25em 0.08em;
-            font-size: 0.92em;
+            transform: translateX(-50%);
+            width: 90vw;
+            max-width: 96vw;
+            min-width: 120px;
+            padding: 0.12em 0.02em;
+            font-size: 0.88em;
           }
           .aposta-timer-close {
             top: 4px;
             right: 6px;
-            width: 24px;
-            height: 24px;
-            font-size: 16px;
+            width: 20px;
+            height: 20px;
+            font-size: 14px;
           }
         }
         .aposta-timer-close {

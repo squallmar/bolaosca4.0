@@ -59,24 +59,25 @@ function AnunciosTV() {
         .tv-anuncios-card {
           position: fixed;
           top: 110px;
-          right: 24px;
+          left: 50%;
+          transform: translateX(-50%);
           z-index: 1000;
-          width: 220px;
-          min-height: 130px;
-          max-width: 220px;
-          border-radius: 20px;
+          width: 180px;
+          min-height: 110px;
+          max-width: 180px;
+          border-radius: 16px;
           box-sizing: border-box;
           font-family: 'Segoe UI', Arial, sans-serif;
           font-weight: bold;
-          font-size: 0.92em;
+          font-size: 0.90em;
           letter-spacing: 0.3px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 0.7em 0.4em;
+          padding: 0.5em 0.2em;
           box-shadow: 0 4px 24px 2px #2228;
-          border: 4px solid #222;
+          border: 3px solid #222;
           overflow: visible;
           background: linear-gradient(135deg,#222 0%,#444 100%);
           color: #fff;
@@ -84,20 +85,21 @@ function AnunciosTV() {
         }
         @media (max-width: 600px) {
           .tv-anuncios-card {
-            right: 8px;
+            left: 50%;
             top: 70px;
-            width: 95vw;
-            max-width: 98vw;
-            min-width: 160px;
-            padding: 0.25em 0.08em;
-            font-size: 0.90em;
+            transform: translateX(-50%);
+            width: 90vw;
+            max-width: 96vw;
+            min-width: 140px;
+            padding: 0.18em 0.04em;
+            font-size: 0.88em;
           }
           .tv-anuncios-close {
             top: 4px;
             right: 6px;
-            width: 24px;
-            height: 24px;
-            font-size: 16px;
+            width: 22px;
+            height: 22px;
+            font-size: 15px;
           }
         }
         .tv-anuncios-close {
