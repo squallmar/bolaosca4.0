@@ -63,11 +63,12 @@ function Menu() {
     const buildAvatar = (url) => {
       if (!url) return null;
       let u = String(url).trim();
-      // Se vier poluído com múltiplos hosts separados por ';', pega a última parte útil
       if (u.includes(';')) {
         const parts = u.split(';').map(s => s.trim()).filter(Boolean);
         u = parts[parts.length - 1];
       }
+      // Prioriza Cloudinary
+      if (/^https?:\/\/res\.cloudinary\.com\//i.test(u)) return u;
       // Normaliza caminho relativo começando por /uploads
       if (u.startsWith('/uploads/')) {
         const filename = u.split('/').pop();
@@ -81,7 +82,7 @@ function Menu() {
     };
 
   const preferred = buildAvatar(avatarFromCtx);
-  const avatarSrc = preferred || `${API_BASE}/uploads/avatars/avatar_default.jpg`;
+  const avatarSrc = preferred || 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg';
 
     userInfo = (
       <Link to="/perfil" className="user-info" style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 16, textDecoration: 'none' }}>
@@ -90,9 +91,9 @@ function Menu() {
           alt="avatar"
           style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover' }}
           onError={(e) => {
-            // se falhar, cai para gerador de iniciais como último recurso
+            // se falhar, cai para avatar padrão do Cloudinary
             e.currentTarget.onerror = null;
-            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(primeiroNome)}`;
+            e.currentTarget.src = 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg';
           }}
         />
         <span style={{ fontWeight: 'bold', color: 'white' }}>{primeiroNome}</span>
