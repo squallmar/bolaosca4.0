@@ -282,7 +282,7 @@
     min-width: 0;
     .bolao-panel-content {
       display: flex;
-      flex-direction: column-reverse;
+      flex-direction: column;
       gap: 18px;
       align-items: center;
       width: 100%;
@@ -291,36 +291,38 @@
       padding: 0;
     }
     .bolao-panel-card {
-      padding: 16px 8px;
+      padding: 18px 10px;
       min-width: 0;
       font-size: 1em;
       margin: 0 0 18px 0;
-      box-shadow: 0 1px 8px rgba(0,0,0,0.10);
-      width: 98vw;
-      max-width: 98vw;
-      border-radius: 16px;
-      border: none;
+      width: 96vw;
+      max-width: 420px;
+      border-radius: 10px;
+      border: 3px solid #000;
       box-sizing: border-box;
       align-self: center;
+      background: #fff;
     }
     .admin-stats {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 18px;
       justify-content: flex-start;
       margin-top: 0;
-      width: 98vw;
-      max-width: 98vw;
+      width: 96vw;
+      max-width: 420px;
       align-items: center;
-      order: 2;
+      align-self: center;
     }
     .stat-card {
       width: 100%;
-      max-width: 98vw;
-      margin: 0 0 10px 0;
-      border-radius: 12px;
+      max-width: 420px;
+      margin: 0 0 18px 0;
+      border-radius: 10px;
       box-sizing: border-box;
       align-self: center;
+      border: 3px solid #000;
+      background: #fff;
     }
     .bolao-panel-user-card {
       padding: 14px 12px;
