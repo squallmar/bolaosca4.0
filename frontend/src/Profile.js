@@ -212,7 +212,7 @@ export default function Profile() {
               alt="avatar"
               onError={(e)=>{
                 e.currentTarget.onerror=null;
-                e.currentTarget.src = `${API_BASE}/uploads/avatars/avatar_default.jpg`;
+                e.currentTarget.src = 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg';
               }}
             />
           </div>
