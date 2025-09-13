@@ -201,8 +201,21 @@ router.post('/register', uploadLocalAvatar.single('avatar'), async (req, res) =>
 
     let avatarUrl = null;
     if (req.file) {
-      // Em produção sem FS persistente, gravamos uma URL relativa que o frontend prefixa com API_BASE
-      avatarUrl = '/uploads/avatars/avatar_default.jpg';
+      // Upload para Cloudinary
+      const buffer = req.file.buffer;
+      const uploadPromise = new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.v2.uploader.upload_stream({
+          folder: 'usuarios',
+          resource_type: 'image',
+          public_id: `avatar_${email}_${Date.now()}`,
+          overwrite: true,
+        }, (error, result) => {
+          if (error || !result) return reject(error || new Error('Erro Cloudinary'));
+          resolve(result.secure_url);
+        });
+        uploadStream.end(buffer);
+      });
+      avatarUrl = await uploadPromise;
     } else if (req.body.avatarUrl) {
       // Aceita apenas caminhos relativos seguros; evita URLs com múltiplos hosts concatenados
       const val = String(req.body.avatarUrl || '').trim();
