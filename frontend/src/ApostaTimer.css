@@ -89,19 +89,21 @@
 @media (max-width: 600px) {
   .aposta-timer-visual {
     left: 50%;
-    top: 70px;
+    top: auto;
+    right: auto;
     transform: translateX(-50%);
-    width: 90vw;
-    max-width: 96vw;
-    min-width: 120px;
-    padding: 0.12em 0.02em;
-    font-size: 0.88em;
+    width: 65vw;
+    max-width: 75vw;
+    min-width: 90px;
+    padding: 0.07em 0.01em;
+    font-size: 0.78em;
+    margin-top: 38px;
   }
   .aposta-timer-close {
-    top: 4px;
-    right: 6px;
-    width: 20px;
-    height: 20px;
-    font-size: 14px;
+    top: 2px;
+    right: 4px;
+    width: 28px;
+    height: 28px;
+    font-size: 22px;
   }
 }
