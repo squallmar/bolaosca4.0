@@ -66,8 +66,18 @@ router.post('/anuncio', isAdmin, upload.single('imagem'), async (req, res) => {
   try {
     let imagem_url = null;
     if (req.file) {
-      // Em produção sem FS, por enquanto guardamos apenas um placeholder relativo
-      imagem_url = '/uploads/anuncios/placeholder.png';
+      // Envia para Cloudinary na pasta 'anuncios'
+      const { v2: cloudinary } = await import('cloudinary');
+      try {
+        const result = await cloudinary.uploader.upload_stream({ folder: 'anuncios' }, (error, result) => {
+          if (error || !result) throw error || new Error('Falha no upload Cloudinary');
+          imagem_url = result.secure_url;
+        });
+        // Como estamos usando memoryStorage, precisamos enviar o buffer
+        result.end(req.file.buffer);
+      } catch (err) {
+        return res.status(500).json({ erro: 'Falha ao enviar imagem para Cloudinary.' });
+      }
     }
     await pool.query('INSERT INTO anuncio_tv (titulo, descricao, admin_id, imagem_url) VALUES ($1, $2, $3, $4)', [titulo, descricao, req.adminId, imagem_url]);
     return res.json({ sucesso: true });
@@ -100,10 +110,22 @@ router.put('/anuncios/:id', isAdmin, upload.single('imagem'), async (req, res) =
   descricao = sanitizeText(descricao || '').slice(0, 2000);
   if (!titulo || !descricao) return res.status(400).json({ erro: 'Título e descrição obrigatórios.' });
   try {
-    // Não persistimos arquivo; se veio imagem, usa placeholder relativo em /uploads/anuncios
-    const imagemUrl = req.file ? '/uploads/anuncios/placeholder.png' : undefined;
-    if (typeof imagemUrl !== 'undefined') {
-      await pool.query('UPDATE anuncio_tv SET titulo = $1, descricao = $2, imagem_url = $3 WHERE id = $4', [titulo, descricao, imagemUrl, id]);
+    let imagem_url = undefined;
+    if (req.file) {
+      // Envia para Cloudinary na pasta 'anuncios'
+      const { v2: cloudinary } = await import('cloudinary');
+      try {
+        const result = await cloudinary.uploader.upload_stream({ folder: 'anuncios' }, (error, result) => {
+          if (error || !result) throw error || new Error('Falha no upload Cloudinary');
+          imagem_url = result.secure_url;
+        });
+        result.end(req.file.buffer);
+      } catch (err) {
+        return res.status(500).json({ erro: 'Falha ao enviar imagem para Cloudinary.' });
+      }
+    }
+    if (typeof imagem_url !== 'undefined') {
+      await pool.query('UPDATE anuncio_tv SET titulo = $1, descricao = $2, imagem_url = $3 WHERE id = $4', [titulo, descricao, imagem_url, id]);
     } else {
       await pool.query('UPDATE anuncio_tv SET titulo = $1, descricao = $2 WHERE id = $3', [titulo, descricao, id]);
     }

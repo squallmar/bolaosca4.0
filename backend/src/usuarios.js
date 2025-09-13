@@ -1,3 +1,17 @@
+// Cadastro de usuário com foto_url
+router.post('/register', async (req, res) => {
+  try {
+    const { nome, email, senha, foto_url } = req.body;
+    if (!nome || !email || !senha) return res.status(400).json({ erro: 'Campos obrigatórios ausentes' });
+    const hash = await bcrypt.hash(senha, 12);
+    const sql = `INSERT INTO usuario (nome, email, senha, foto_url) VALUES ($1, $2, $3, $4) RETURNING id, nome, email, foto_url`;
+    const { rows } = await pool.query(sql, [nome, email, hash, foto_url || null]);
+    return res.status(201).json(rows[0]);
+  } catch (e) {
+    logger.error('usuario_register_error', { error: e.message });
+    return res.status(500).json({ erro: 'Falha ao cadastrar usuário' });
+  }
+});
 import express from 'express';
 import pool from './db.js';
 import { exigirAutenticacao, exigirRole } from './auth.js';
@@ -95,7 +109,7 @@ router.put('/:id', auth, async (req, res) => {
   if (!perm.ok) return res.status(perm.status).json({ erro: perm.msg });
   try {
     const { id } = req.params;
-    const { nome, apelido, tipo, autorizado, banido, foto_url } = req.body || {};
+  const { nome, apelido, tipo, autorizado, banido, foto_url } = req.body || {};
     if (tipo && !['admin', 'user'].includes(tipo)) return res.status(400).json({ erro: 'Tipo inválido' });
 
     const rows = await safeQuery(

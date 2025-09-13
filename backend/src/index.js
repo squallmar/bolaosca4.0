@@ -409,14 +409,75 @@ app.post('/upload/avatar', uploadLimiter, uploadAvatar.single('file'), async (re
   if (origin && !allowedOrigins.includes(origin)) return res.status(403).json({ erro: 'Origin não permitida' });
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo' });
   try {
-  const ok = await verifyImageSignature(req.file.path);
-  const ok2 = ok ? await verifyImageIntegrity(req.file.path) : false;
-  if (!ok2) {
+    const ok = await verifyImageSignature(req.file.path);
+    const ok2 = ok ? await verifyImageIntegrity(req.file.path) : false;
+    if (!ok2) {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({ erro: 'Arquivo inválido (assinatura)' });
     }
-    const url = `${BASE_URL}/uploads/avatars/${req.file.filename}`;
-    logger.info('audit_upload_avatar', { userId: req.user?.id, filename: req.file.filename });
+    // Upload para Cloudinary na pasta 'usuarios'
+    const { v2: cloudinary } = await import('cloudinary');
+    let url;
+    try {
+      const result = await cloudinary.uploader.upload(req.file.path, { folder: 'usuarios' });
+      url = result.secure_url;
+      fs.unlinkSync(req.file.path);
+    } catch (err) {
+      logger.error('cloudinary_avatar_upload_error', { error: err.message });
+      return res.status(500).json({ erro: 'Falha ao enviar avatar para Cloudinary' });
+    }
+    logger.info('audit_upload_avatar', { userId: req.user?.id, url });
+    return res.json({ url });
+  } catch (e) {
+    return res.status(500).json({ erro: 'Falha ao validar imagem' });
+  }
+});
+
+// rota de upload de imagem de anúncio TV
+const anunciosDir = path.join(uploadsDir, 'anuncios');
+if (!fs.existsSync(anunciosDir)) fs.mkdirSync(anunciosDir, { recursive: true });
+const storageAnuncio = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, anunciosDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || '.png').toLowerCase();
+    const base = path
+      .basename(file.originalname || 'anuncio', ext)
+      .toLowerCase()
+      .normalize('NFD').replace(/[ -\u007f]/g, '')
+      .replace(/[^a-z0-9\-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    cb(null, `${Date.now()}-${base}${ext || '.png'}`);
+  },
+});
+const uploadAnuncio = multer({
+  storage: storageAnuncio,
+  fileFilter: imageFilter,
+  limits: { fileSize: 2 * 1024 * 1024 },
+});
+
+app.post('/upload/anuncio', uploadLimiter, uploadAnuncio.single('file'), async (req, res) => {
+  const origin = req.headers.origin || '';
+  if (origin && !allowedOrigins.includes(origin)) return res.status(403).json({ erro: 'Origin não permitida' });
+  if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo' });
+  try {
+    const ok = await verifyImageSignature(req.file.path);
+    const ok2 = ok ? await verifyImageIntegrity(req.file.path) : false;
+    if (!ok2) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ erro: 'Arquivo inválido (assinatura)' });
+    }
+    // Upload para Cloudinary na pasta 'anuncios'
+    const { v2: cloudinary } = await import('cloudinary');
+    let url;
+    try {
+      const result = await cloudinary.uploader.upload(req.file.path, { folder: 'anuncios' });
+      url = result.secure_url;
+      fs.unlinkSync(req.file.path);
+    } catch (err) {
+      logger.error('cloudinary_anuncio_upload_error', { error: err.message });
+      return res.status(500).json({ erro: 'Falha ao enviar imagem de anúncio para Cloudinary' });
+    }
+    logger.info('audit_upload_anuncio', { userId: req.user?.id, url });
     return res.json({ url });
   } catch (e) {
     return res.status(500).json({ erro: 'Falha ao validar imagem' });
