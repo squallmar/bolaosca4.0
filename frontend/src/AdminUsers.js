@@ -13,44 +13,41 @@ function UserAvatar({ user, size = 56 }) {
   const initials = (user.nome || 'U').charAt(0).toUpperCase();
   const style = { width: size, height: size, borderRadius: '50%', objectFit: 'cover' };
 
-  if (!raw) {
+  // Prioriza Cloudinary
+  if (raw && /^https?:\/\/res\.cloudinary\.com\//i.test(raw)) {
     return (
-      <div style={{ width: size, height: size, borderRadius: '50%', background: '#1976d2', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: size * 0.43 }}>
-        {initials}
-      </div>
+      <img
+        src={raw}
+        alt={user.nome}
+        width={size}
+        height={size}
+        style={style}
+        onError={e => { e.currentTarget.onerror=null; e.currentTarget.src = 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg'; }}
+      />
     );
   }
-
-  const strip = (s) => s.split('?')[0].split('#')[0];
-  const noQS = strip(raw);
-  const file = noQS.split('/').pop();
-  const candidates = [];
-  if (/^https?:\/\//i.test(noQS)) candidates.push(noQS);
-  if (noQS.startsWith('/uploads/')) candidates.push(`${API}${noQS}`);
-  if (/^uploads\//i.test(noQS)) candidates.push(`${API}/${noQS}`);
-  if (file) candidates.push(`${API}/uploads/avatars/${file}`);
-  // fallback final: tenta usar o valor cru com base
-  candidates.push(`${API}/uploads/avatars/${noQS}`);
-  // último fallback garantido
-  candidates.push(`${API}/uploads/avatars/avatar_default.jpg`);
-
-  const [idx, setIdx] = React.useState(0);
-  if (idx >= candidates.length) {
+  // Se for upload local
+  if (raw && (raw.startsWith('/uploads/') || /^uploads\//i.test(raw))) {
+    const src = raw.startsWith('/uploads/') ? `${API}${raw}` : `${API}/${raw}`;
     return (
-      <div style={{ width: size, height: size, borderRadius: '50%', background: '#1976d2', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: size * 0.43 }}>
-        {initials}
-      </div>
+      <img
+        src={src}
+        alt={user.nome}
+        width={size}
+        height={size}
+        style={style}
+        onError={e => { e.currentTarget.onerror=null; e.currentTarget.src = 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg'; }}
+      />
     );
   }
-  const src = candidates[idx];
+  // Fallback: avatar padrão Cloudinary
   return (
     <img
-      src={src}
+      src={'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg'}
       alt={user.nome}
       width={size}
       height={size}
       style={style}
-      onError={() => setIdx((i) => i + 1)}
     />
   );
 }
