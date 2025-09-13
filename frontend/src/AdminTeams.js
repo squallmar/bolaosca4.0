@@ -32,7 +32,13 @@ export default function AdminTeams() {
   async function load() {
     setLoading(true); setErr('');
     try {
-  const { data } = await api.get(`/times`, { params });
+      const { data } = await api.get(`/times`, { params });
+      // Log para debug: mostrar escudo_url recebido
+      if (data.items) {
+        data.items.forEach(t => {
+          console.log(`Time: ${t.nome}, escudo_url: ${t.escudo_url}`);
+        });
+      }
       setList(data.items || []);
       setTotal(data.total || 0);
     } catch (e) {
