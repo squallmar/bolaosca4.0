@@ -41,7 +41,8 @@ export function sanitizeText(str) {
 export function sanitizeMediaUrl(input, kind = 'avatar') {
     const AVATAR_DEFAULT = '/uploads/avatars/avatar_default.jpg';
     const ESCUDO_DEFAULT = '/uploads/escudos/_default.png';
-    const def = kind === 'escudo' ? ESCUDO_DEFAULT : AVATAR_DEFAULT;
+    const ANUNCIO_DEFAULT = ESCUDO_DEFAULT; // pode ter um default específico no futuro
+    const def = kind === 'escudo' ? ESCUDO_DEFAULT : (kind === 'anuncio' ? ANUNCIO_DEFAULT : AVATAR_DEFAULT);
     if (!input) return def;
     let u = String(input).trim();
     if (!u) return def;
@@ -65,12 +66,14 @@ export function sanitizeMediaUrl(input, kind = 'avatar') {
         const filename = u.split('/').pop() || '';
         if (!filename) return def;
         if (kind === 'escudo') return `/uploads/escudos/${filename}`;
+        if (kind === 'anuncio') return `/uploads/anuncios/${filename}`;
         return `/uploads/avatars/${filename}`;
     }
     // Caso esteja apenas o filename
     const looksLikeFile = /\.[a-z0-9]{2,5}$/i.test(u);
     if (looksLikeFile) {
         if (kind === 'escudo') return `/uploads/escudos/${u.split('/').pop()}`;
+        if (kind === 'anuncio') return `/uploads/anuncios/${u.split('/').pop()}`;
         return `/uploads/avatars/${u.split('/').pop()}`;
     }
     return def;

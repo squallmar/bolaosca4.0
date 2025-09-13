@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { sanitizeText } from './utils.js';
+import { sanitizeText, sanitizeMediaUrl } from './utils.js';
 
 const router = express.Router();
 
@@ -66,9 +66,8 @@ router.post('/anuncio', isAdmin, upload.single('imagem'), async (req, res) => {
   try {
     let imagem_url = null;
     if (req.file) {
-      // Em produção, usar armazenamento em nuvem. Aqui usamos um placeholder local conhecido do backend
-      // Retornamos caminho relativo para ser prefixado por API_BASE no frontend
-      imagem_url = '/uploads/escudos/_default.png';
+      // Em produção sem FS, por enquanto guardamos apenas um placeholder relativo
+      imagem_url = '/uploads/anuncios/placeholder.png';
     }
     await pool.query('INSERT INTO anuncio_tv (titulo, descricao, admin_id, imagem_url) VALUES ($1, $2, $3, $4)', [titulo, descricao, req.adminId, imagem_url]);
     return res.json({ sucesso: true });
@@ -83,7 +82,11 @@ router.get('/anuncios', async (req, res) => {
     const result = await pool.query(
       'SELECT id, titulo, descricao, criado_em, imagem_url FROM anuncio_tv ORDER BY criado_em DESC LIMIT 20'
     );
-    res.json(result.rows);
+    const rows = result.rows.map(r => ({
+      ...r,
+      imagem_url: sanitizeMediaUrl(r.imagem_url, 'anuncio')
+    }));
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ erro: 'Erro ao buscar anúncios.' });
   }
@@ -97,8 +100,8 @@ router.put('/anuncios/:id', isAdmin, upload.single('imagem'), async (req, res) =
   descricao = sanitizeText(descricao || '').slice(0, 2000);
   if (!titulo || !descricao) return res.status(400).json({ erro: 'Título e descrição obrigatórios.' });
   try {
-    // Em ambiente atual, não persistimos arquivo; se veio imagem, seta placeholder conhecido
-    const imagemUrl = req.file ? '/uploads/escudos/_default.png' : undefined;
+    // Não persistimos arquivo; se veio imagem, usa placeholder relativo em /uploads/anuncios
+    const imagemUrl = req.file ? '/uploads/anuncios/placeholder.png' : undefined;
     if (typeof imagemUrl !== 'undefined') {
       await pool.query('UPDATE anuncio_tv SET titulo = $1, descricao = $2, imagem_url = $3 WHERE id = $4', [titulo, descricao, imagemUrl, id]);
     } else {
