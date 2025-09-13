@@ -70,7 +70,8 @@ const ApostaTimer = () => {
     return () => clearInterval(interval);
   }, [hasOpenRodada]);
 
-  // Sempre mostra o cronômetro, para teste
+  const [visivel, setVisivel] = useState(true);
+  if (!visivel) return null;
   return (
     <>
       <style>{`
@@ -100,6 +101,26 @@ const ApostaTimer = () => {
           color: #fff;
           transition: box-shadow 0.2s;
           animation: apostaPulse 1.2s infinite;
+        }
+        .aposta-timer-close {
+          position: absolute;
+          top: 8px;
+          right: 12px;
+          background: #b71c1cdd;
+          color: #fff;
+          border: none;
+          border-radius: 50%;
+          width: 28px;
+          height: 28px;
+          font-size: 18px;
+          font-weight: bold;
+          cursor: pointer;
+          z-index: 1100;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 8px 0px #b71c1c88;
+          transition: background 0.2s;
         }
         .aposta-timer-icon {
           font-size: 1.2em; 
@@ -142,7 +163,15 @@ const ApostaTimer = () => {
           100% { box-shadow: 0 0 0 0 #b71c1c44; }
         }
       `}</style>
-      <div className="aposta-timer-visual">
+      <div className="aposta-timer-visual" style={{position:'relative'}}>
+        <button
+          className="aposta-timer-close"
+          aria-label="Fechar aviso"
+          onClick={() => setVisivel(false)}
+          tabIndex={0}
+        >
+          ×
+        </button>
         <span className="aposta-timer-icon">⚠️</span>
         <span className="aposta-timer-title">URGENTE! Prazo final para apostas</span>
         <span className="aposta-timer-badge">{timeLeft}</span>

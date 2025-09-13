@@ -5,6 +5,7 @@ function AnunciosTV() {
   const [anuncios, setAnuncios] = useState([]);
   const [atual, setAtual] = useState(0);
   const [slide, setSlide] = useState(true);
+  const [visivel, setVisivel] = useState(true);
   const intervalRef = useRef();
 
   useEffect(() => {
@@ -51,6 +52,7 @@ function AnunciosTV() {
     return `${API_BASE}${u}`;
   };
 
+  if (!visivel) return null;
   return (
     <div className="tv-anuncios-card" style={{
       position: 'fixed',
@@ -78,6 +80,34 @@ function AnunciosTV() {
       color: '#fff',
       transition: 'box-shadow 0.2s',
     }}>
+      {/* Botão X para fechar */}
+      <button
+        aria-label="Fechar anúncio"
+        onClick={() => setVisivel(false)}
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 12,
+          background: '#222c',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '50%',
+          width: 28,
+          height: 28,
+          fontSize: 18,
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          zIndex: 1100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 2px 8px 0px #2228',
+          transition: 'background 0.2s',
+        }}
+        tabIndex={0}
+      >
+        ×
+      </button>
       {anuncio && anuncio.imagem_url ? (
         <div style={{
           width: '98%',
