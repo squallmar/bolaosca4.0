@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import AnunciosTV from './AnunciosTV';
 import api from './services/api';
 import { useAuth } from './authContext';
 import './Profile.css';
@@ -194,10 +193,16 @@ export default function Profile() {
           </div>
         </div>
         <div className="profile-body">
-          {/* TV de Anúncios */}
-          <AnunciosTV />
+          {/* Removido AnunciosTV do perfil para evitar sobreposição/TV na área do usuário */}
           <div className="profile-avatar">
-            <img src={displayAvatar} alt="avatar" />
+            <img
+              src={displayAvatar}
+              alt="avatar"
+              onError={(e)=>{
+                e.currentTarget.onerror=null;
+                e.currentTarget.src = `${API_BASE}/uploads/avatars/avatar_default.jpg`;
+              }}
+            />
           </div>
           {/* Editar dados */}
           <form className="profile-edit" onSubmit={onSaveProfile}>

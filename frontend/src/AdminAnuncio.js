@@ -79,6 +79,11 @@ function AdminAnuncio() {
     }
     if (u.startsWith('http://') || u.startsWith('https://')) return u;
     if (!u.startsWith('/')) u = '/' + u;
+    // força caminho em /uploads/anuncios para imagens de anúncios
+    if (u.startsWith('/uploads/')) {
+      const filename = u.split('/').pop();
+      u = `/uploads/anuncios/${filename}`;
+    }
     return `${API_BASE}${u}`;
   }
 
@@ -190,9 +195,9 @@ function AdminAnuncio() {
               style={{marginTop:'0.3em'}} 
               onChange={e=>handleImagem(e.target.files[0])} 
             />
-            {preview && (
+      {preview && (
               <div style={{marginTop:'0.5em',textAlign:'center'}}>
-                <img src={preview} alt="preview" style={{maxWidth:180, borderRadius:12, boxShadow:'0 2px 12px #185a9d22',border:'2px solid #43cea2'}} />
+        <img src={preview} alt="preview" style={{maxWidth:180, borderRadius:12, boxShadow:'0 2px 12px #185a9d22',border:'2px solid #43cea2'}} onError={(e)=>{ e.currentTarget.onerror=null; e.currentTarget.src=`${API_BASE}/uploads/escudos/_default.png`; }} />
               </div>
             )}
           </div>
