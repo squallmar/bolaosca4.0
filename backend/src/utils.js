@@ -51,7 +51,11 @@ export function sanitizeMediaUrl(input, kind = 'avatar') {
         const parts = u.split(';').map(s => s.trim()).filter(Boolean);
         u = parts[parts.length - 1] || u;
     }
-    // Se for absoluta, extrai apenas o pathname
+    // Se for URL do Cloudinary, retorna como está
+    if (/^https?:\/\/.+cloudinary\.com\//i.test(u)) {
+        return u;
+    }
+    // Se for absoluta mas não Cloudinary, extrai apenas o pathname
     try {
         if (/^https?:\/\//i.test(u)) {
             const url = new URL(u);
