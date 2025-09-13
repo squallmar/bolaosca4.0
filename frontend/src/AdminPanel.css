@@ -31,23 +31,23 @@
   font-size: 1.15rem;
 }
 
-.bolao-panel-content {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 32px;
-  align-items: flex-start;
-}
+  .bolao-panel-content {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 32px;
+    align-items: flex-start;
+  }
 
-.bolao-panel-card {
-  grid-column: 1;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  padding: 28px 22px;
-  flex: 2;
-  min-width: 320px;
-  border: 1px solid #e2e8f0;
-}
+  .bolao-panel-card {
+    grid-column: 1;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 28px 22px;
+    flex: 2;
+    min-width: 320px;
+    border: 1px solid #e2e8f0;
+  }
 
 .bolao-panel-card-header {
   display: flex;
@@ -278,12 +278,15 @@
   font-weight: 600;
 }
 @media (max-width: 900px) {
-  /* ---- Celulares ---- */
-  .bolao-panel-container {
-    max-width: 100vw;
-    padding: 18px 6px;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  .bolao-panel-card {
+    padding: 16px 8px;
+    min-width: 0;
+    font-size: 1em;
+    margin: 0 auto 18px auto;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.10);
+    width: 98vw;
+    max-width: 480px;
+    border-radius: 14px;
   }
   .bolao-panel-header {
     margin-bottom: 18px;
@@ -323,19 +326,18 @@
     border-radius: 10px;
   }
   .bolao-panel-user-card {
-    padding: 12px 10px;
-    font-size: 1em;
-    border-radius: 10px;
-    margin-bottom: 8px;
+    padding: 14px 10px;
+    font-size: 1.08em;
+    border-radius: 12px;
+    margin-bottom: 0;
+    width: 96vw;
+    max-width: 440px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .bolao-panel-user-avatar {
-    width: 44px;
-    height: 44px;
-    font-size: 1.2rem;
-  }
-  .bolao-panel-user-avatar img {
-    width: 44px;
-    height: 44px;
+  /* Corrigido: Removidas regras soltas que causavam erro de sintaxe */
   }
   .bolao-panel-user-details h4 {
     font-size: 1.08rem;
@@ -359,4 +361,3 @@
     border-radius: 8px;
   }
   /* ---- Fim Celulares ---- */
-}
