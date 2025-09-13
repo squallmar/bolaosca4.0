@@ -79,9 +79,9 @@ const Register = () => {
       const user = resp.data?.usuario;
       if (user) {
       await auth.login(null, user.tipo, user.nome, user.autorizado, user.avatar_url || user.foto_url, user.apelido);
-      if (!user.autorizado) {
-        alert('Você precisa ser autorizado pelo admin para apostar. Aguarde a liberação.');
-      }
+        if (!user.autorizado) {
+          alert('Usuário não autorizado para apostar');
+        }
       navigate('/');
       } else {
         alert('Cadastro realizado! Você já pode fazer login.');
