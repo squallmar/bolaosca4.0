@@ -1,8 +1,7 @@
 .aposta-timer-visual {
   position: fixed;
   top: 110px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 24px;
   z-index: 1000;
   width: 170px;
   min-height: 70px;
