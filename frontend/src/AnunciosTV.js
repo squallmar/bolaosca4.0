@@ -117,10 +117,10 @@ function AnunciosTV() {
                 e.currentTarget.style.boxShadow = '0 2px 8px 0px #2228';
               }}
               onError={e => {
-                // Fallback estável para arquivo servido pelo backend
+                // Fallback para imagem padrão de anúncio do Cloudinary
                 if (!e.currentTarget.dataset.fallback) {
                   e.currentTarget.dataset.fallback = '1';
-                  e.currentTarget.src = `${API_BASE}/uploads/escudos/_default.png`;
+                  e.currentTarget.src = 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757737452/anuncios/hfhgkdbrh1odlgnvtnza.png';
                 } else {
                   e.currentTarget.style.opacity = 0.5;
                   console.log('Erro ao carregar imagem:', e.currentTarget.src);
