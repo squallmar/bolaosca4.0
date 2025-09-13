@@ -3,7 +3,7 @@ import pool from './db.js';
 import { exigirAutenticacao, exigirRole } from './auth.js';
 import bcrypt from 'bcrypt';
 import { logger } from './logger.js';
-import { getPagination, safeQuery } from './utils.js';
+import { getPagination, safeQuery, sanitizeMediaUrl } from './utils.js';
 
 const auth = exigirAutenticacao;
 const router = express.Router();
@@ -50,7 +50,12 @@ router.get('/', auth, exigirRole('admin'), async (req, res) => {
       params
     );
 
-    return res.json({ items: rows, total, page, pageSize });
+    const items = rows.map(r => ({
+      ...r,
+      foto_url: sanitizeMediaUrl(r.foto_url, 'avatar')
+    }));
+
+    return res.json({ items, total, page, pageSize });
   } catch (e) {
     console.error('Lista usuarios pag:', e);
     res.status(500).json({ erro: 'Falha ao listar usuários' });
@@ -74,9 +79,10 @@ router.get('/:id', auth, async (req, res) => {
        WHERE id = $1`,
       [id]
     );
-    if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado' });
+  if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado' });
   logger.info('audit_user_update', { adminId: req.user.id, targetUserId: id });
-  res.json(rows[0]);
+  const out = { ...rows[0], foto_url: sanitizeMediaUrl(rows[0].foto_url, 'avatar') };
+  res.json(out);
   } catch (e) {
     console.error('Erro obter usuario:', e);
     res.status(500).json({ erro: 'Falha ao obter usuário' });
@@ -109,9 +115,10 @@ router.put('/:id', auth, async (req, res) => {
          COALESCE(foto_url, avatar_url) AS foto_url`,
       [nome ?? null, apelido ?? null, tipo ?? null, autorizado ?? null, banido ?? null, foto_url ?? null, id]
     );
-    if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado' });
-    logger.info('audit_user_ban', { adminId: req.user.id, targetUserId: id, banido: !!(banido ?? rows[0].banido) });
-  res.json(rows[0]);
+  if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado' });
+  logger.info('audit_user_ban', { adminId: req.user.id, targetUserId: id, banido: !!(banido ?? rows[0].banido) });
+  const out = { ...rows[0], foto_url: sanitizeMediaUrl(rows[0].foto_url, 'avatar') };
+  res.json(out);
   } catch (e) {
     console.error('Erro atualizar usuario:', e);
     res.status(500).json({ erro: 'Falha ao atualizar usuário' });
@@ -135,9 +142,10 @@ router.post('/:id/banir', auth, exigirRole('admin'), async (req, res) => {
          COALESCE(foto_url, avatar_url) AS foto_url`,
       [!!banir, id]
     );
-    if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado' });
+  if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado' });
   logger.info('audit_user_ban', { adminId: req.user.id, targetUserId: id, banido: !!banir });
-  res.json(rows[0]);
+  const out = { ...rows[0], foto_url: sanitizeMediaUrl(rows[0].foto_url, 'avatar') };
+  res.json(out);
   } catch (e) {
     console.error('Erro banir usuario:', e);
     res.status(500).json({ erro: 'Falha ao banir/desbanir usuário' });
@@ -161,8 +169,9 @@ router.post('/:id/desistir', auth, exigirRole('admin'), async (req, res) => {
          COALESCE(foto_url, avatar_url) AS foto_url`,
       [!!desistiu, id]
     );
-    if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado' });
-    res.json(rows[0]);
+  if (!rows[0]) return res.status(404).json({ erro: 'Usuário não encontrado' });
+  const out = { ...rows[0], foto_url: sanitizeMediaUrl(rows[0].foto_url, 'avatar') };
+  res.json(out);
   } catch (e) {
     console.error('Erro marcar desistiu:', e);
     res.status(500).json({ erro: 'Falha ao marcar desistência' });

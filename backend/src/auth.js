@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import pool from './db.js';
-import { safeQuery } from './utils.js';
+import { safeQuery, sanitizeMediaUrl } from './utils.js';
 import multer from 'multer';
 import { logger } from './logger.js';
 import path from 'path';
@@ -281,7 +281,7 @@ router.post('/login', async (req, res) => {
       email: usuario.email,
       tipo: usuario.tipo,
       autorizado: usuario.autorizado,
-      avatarUrl: usuario.avatar_url || '/uploads/avatars/avatar_default.jpg'
+      avatarUrl: sanitizeMediaUrl(usuario.avatar_url || '/uploads/avatars/avatar_default.jpg', 'avatar')
     };
 
     loginAttempts[ip] = 0;
@@ -305,7 +305,7 @@ router.get('/me', exigirAutenticacao, async (req, res) => {
   const rows = await safeQuery(pool, 'SELECT id, nome, email, tipo, autorizado, avatar_url, apelido FROM usuario WHERE id = $1', [userId]);
     const u = rows[0];
     if (!u) return res.status(404).json({ erro: 'Usuário não encontrado' });
-  return res.json({ id: u.id, nome: u.nome, email: u.email, tipo: u.tipo, autorizado: u.autorizado, avatarUrl: u.avatar_url || '/uploads/avatars/avatar_default.jpg', apelido: u.apelido });
+  return res.json({ id: u.id, nome: u.nome, email: u.email, tipo: u.tipo, autorizado: u.autorizado, avatarUrl: sanitizeMediaUrl(u.avatar_url || '/uploads/avatars/avatar_default.jpg', 'avatar'), apelido: u.apelido });
   } catch (err) {
     console.error('GET /auth/me', err);
     return res.status(500).json({ erro: 'Falha ao obter perfil' });
@@ -328,8 +328,8 @@ router.put('/me', exigirAutenticacao, async (req, res) => {
        RETURNING id, nome, email, tipo, autorizado, avatar_url, apelido`,
       [nome ?? null, email ?? null, apelido ?? null, userId]
     );
-    const u = rows[0];
-    return res.json({ id: u.id, nome: u.nome, email: u.email, tipo: u.tipo, autorizado: u.autorizado, avatarUrl: u.avatar_url, apelido: u.apelido });
+  const u = rows[0];
+  return res.json({ id: u.id, nome: u.nome, email: u.email, tipo: u.tipo, autorizado: u.autorizado, avatarUrl: sanitizeMediaUrl(u.avatar_url, 'avatar'), apelido: u.apelido });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(400).json({ erro: 'Email já cadastrado. Use outro email.' });

@@ -37,6 +37,45 @@ export function sanitizeText(str) {
     }).trim();
 }
 
+// Normaliza URLs de mídia (avatar/escudo) para caminhos relativos em /uploads
+export function sanitizeMediaUrl(input, kind = 'avatar') {
+    const AVATAR_DEFAULT = '/uploads/avatars/avatar_default.jpg';
+    const ESCUDO_DEFAULT = '/uploads/escudos/_default.png';
+    const def = kind === 'escudo' ? ESCUDO_DEFAULT : AVATAR_DEFAULT;
+    if (!input) return def;
+    let u = String(input).trim();
+    if (!u) return def;
+    // Se vier concatenado com ';', pega a última parte
+    if (u.includes(';')) {
+        const parts = u.split(';').map(s => s.trim()).filter(Boolean);
+        u = parts[parts.length - 1] || u;
+    }
+    // Se for absoluta, extrai apenas o pathname
+    try {
+        if (/^https?:\/\//i.test(u)) {
+            const url = new URL(u);
+            u = url.pathname || u;
+        }
+    } catch {}
+    // Se contiver '/uploads/', preserve a partir daí
+    const idx = u.indexOf('/uploads/');
+    if (idx >= 0) u = u.slice(idx);
+    // Se já está em /uploads, garanta pasta correta para o tipo
+    if (u.startsWith('/uploads/')) {
+        const filename = u.split('/').pop() || '';
+        if (!filename) return def;
+        if (kind === 'escudo') return `/uploads/escudos/${filename}`;
+        return `/uploads/avatars/${filename}`;
+    }
+    // Caso esteja apenas o filename
+    const looksLikeFile = /\.[a-z0-9]{2,5}$/i.test(u);
+    if (looksLikeFile) {
+        if (kind === 'escudo') return `/uploads/escudos/${u.split('/').pop()}`;
+        return `/uploads/avatars/${u.split('/').pop()}`;
+    }
+    return def;
+}
+
 // Verificação aprofundada de imagem (decode) usando sharp
 export async function verifyImageIntegrity(filePath) {
     try {
