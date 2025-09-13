@@ -54,56 +54,77 @@ function AnunciosTV() {
 
   if (!visivel) return null;
   return (
-    <div className="tv-anuncios-card" style={{
-      position: 'fixed',
-      top: 110,
-      right: 24,
-      zIndex: 1000,
-      width: 220,
-      minHeight: 130,
-      maxWidth: 220,
-      borderRadius: 20,
-      boxSizing: 'border-box',
-      fontFamily: 'Segoe UI, Arial, sans-serif',
-      fontWeight: 'bold',
-      fontSize: '0.92em',
-      letterSpacing: '0.3px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '0.7em 0.4em',
-      boxShadow: '0 4px 24px 2px #2228',
-      border: '4px solid #222',
-      overflow: 'visible',
-      background: 'linear-gradient(135deg,#222 0%,#444 100%)',
-      color: '#fff',
-      transition: 'box-shadow 0.2s',
-    }}>
-      {/* Botão X para fechar */}
+    <div className="tv-anuncios-card" style={{position:'relative'}}>
+      <style>{`
+        .tv-anuncios-card {
+          position: fixed;
+          top: 110px;
+          right: 24px;
+          z-index: 1000;
+          width: 220px;
+          min-height: 130px;
+          max-width: 220px;
+          border-radius: 20px;
+          box-sizing: border-box;
+          font-family: 'Segoe UI', Arial, sans-serif;
+          font-weight: bold;
+          font-size: 0.92em;
+          letter-spacing: 0.3px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 0.7em 0.4em;
+          box-shadow: 0 4px 24px 2px #2228;
+          border: 4px solid #222;
+          overflow: visible;
+          background: linear-gradient(135deg,#222 0%,#444 100%);
+          color: #fff;
+          transition: box-shadow 0.2s;
+        }
+        @media (max-width: 600px) {
+          .tv-anuncios-card {
+            right: 8px;
+            top: 70px;
+            width: 95vw;
+            max-width: 98vw;
+            min-width: 160px;
+            padding: 0.25em 0.08em;
+            font-size: 0.90em;
+          }
+          .tv-anuncios-close {
+            top: 4px;
+            right: 6px;
+            width: 24px;
+            height: 24px;
+            font-size: 16px;
+          }
+        }
+        .tv-anuncios-close {
+          position: absolute;
+          top: 8px;
+          right: 12px;
+          background: #222c;
+          color: #fff;
+          border: none;
+          border-radius: 50%;
+          width: 28px;
+          height: 28px;
+          font-size: 18px;
+          font-weight: bold;
+          cursor: pointer;
+          z-index: 1100;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 8px 0px #2228;
+          transition: background 0.2s;
+        }
+      `}</style>
       <button
+        className="tv-anuncios-close"
         aria-label="Fechar anúncio"
         onClick={() => setVisivel(false)}
-        style={{
-          position: 'absolute',
-          top: 8,
-          right: 12,
-          background: '#222c',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '50%',
-          width: 28,
-          height: 28,
-          fontSize: 18,
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          zIndex: 1100,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 2px 8px 0px #2228',
-          transition: 'background 0.2s',
-        }}
         tabIndex={0}
       >
         ×

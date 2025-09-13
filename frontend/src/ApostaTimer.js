@@ -102,6 +102,24 @@ const ApostaTimer = () => {
           transition: box-shadow 0.2s;
           animation: apostaPulse 1.2s infinite;
         }
+        @media (max-width: 600px) {
+          .aposta-timer-visual {
+            left: 8px;
+            top: 70px;
+            width: 95vw;
+            max-width: 98vw;
+            min-width: 160px;
+            padding: 0.25em 0.08em;
+            font-size: 0.92em;
+          }
+          .aposta-timer-close {
+            top: 4px;
+            right: 6px;
+            width: 24px;
+            height: 24px;
+            font-size: 16px;
+          }
+        }
         .aposta-timer-close {
           position: absolute;
           top: 8px;
