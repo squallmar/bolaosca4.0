@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './ApostaTimer.css';
 import api from './services/api';
 import { formatDistanceStrict } from 'date-fns';
 import { API_BASE } from './config';
@@ -34,140 +35,30 @@ const ApostaTimer = () => {
   const [timeLeft, setTimeLeft] = useState('');
   const [isWarning, setIsWarning] = useState(false);
   const [hasOpenRodada, setHasOpenRodada] = useState(null);
-
-  useEffect(() => {
-    // Busca rodadas abertas
-  api.get(`${API_BASE}/bolao/rodadas-todas`)
-      .then(res => {
-        const rodadas = Array.isArray(res.data) ? res.data : (res.data.rodadas || []);
-        console.log('Rodadas recebidas:', rodadas);
-        const abertas = rodadas.filter(r => !r.finalizada && !r.finalizado);
-        console.log('Rodadas abertas:', abertas);
-        setHasOpenRodada(abertas.length > 0);
-      })
-      .catch((err) => {
-        console.error('Erro ao buscar rodadas:', err);
-        setHasOpenRodada(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (!hasOpenRodada) return;
-    const updateTimer = () => {
+    return (
+      <div className="aposta-timer-visual">
+        <button
+          className="aposta-timer-close"
+          aria-label="Fechar aviso"
+          onClick={() => setVisivel(false)}
+          tabIndex={0}
+        >
+          ×
+        </button>
+        <span className="aposta-timer-icon">⚠️</span>
+        <span className="aposta-timer-title">URGENTE! Prazo final para apostas</span>
+        <span className="aposta-timer-badge">{timeLeft}</span>
+        <span className="aposta-timer-desc">
+          Atenção! O tempo está acabando.<br />Faça seu palpite agora ou ficará de fora!
+        </span>
+      </div>
+    );
       const now = new Date();
       const deadline = getNextSaturday14h();
       const diffMs = deadline - now;
       if (diffMs <= 0) {
         setTimeLeft('Apostas encerradas!');
-        setIsWarning(true);
-        return;
-      }
-      setTimeLeft(formatCountdown(diffMs));
-      setIsWarning(diffMs < 15 * 60 * 1000); // menos de 15 minutos
-    };
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [hasOpenRodada]);
-
-  const [visivel, setVisivel] = useState(true);
-  if (!visivel) return null;
-  return (
-    <>
-      <style>{`
-        .aposta-timer-visual {
-          position: fixed;
-          top: 110px;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 1000;
-          width: 170px;
-          min-height: 70px;
-          max-width: 170px;
-          border-radius: 12px;
-          box-sizing: border-box;
-          font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
-          font-weight: 700;
-          font-size: 0.92em;
-          letter-spacing: 0.35px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 0.28em 0.12em;
-          box-shadow: 0 4px 16px 1px #b71c1c88;
-          border: 2px solid #fff;
-          overflow: hidden;
-          background: linear-gradient(135deg,#ff1744 0%,#b71c1c 100%);
-          color: #fff;
-          transition: box-shadow 0.2s;
-          animation: apostaPulse 1.2s infinite;
-        }
-        @media (max-width: 600px) {
-          .aposta-timer-visual {
-            left: 50%;
-            top: 70px;
-            transform: translateX(-50%);
-            width: 90vw;
-            max-width: 96vw;
-            min-width: 120px;
-            padding: 0.12em 0.02em;
-            font-size: 0.88em;
-          }
-          .aposta-timer-close {
-            top: 4px;
-            right: 6px;
-            width: 20px;
-            height: 20px;
-            font-size: 14px;
-          }
-        }
-        .aposta-timer-close {
-          position: absolute;
-          top: 8px;
-          right: 12px;
-          background: #b71c1cdd;
-          color: #fff;
-          border: none;
-          border-radius: 50%;
-          width: 28px;
-          height: 28px;
-          font-size: 18px;
-          font-weight: bold;
-          cursor: pointer;
-          z-index: 1100;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 8px 0px #b71c1c88;
-          transition: background 0.2s;
-        }
-        .aposta-timer-icon {
-          font-size: 1.2em; 
-          margin-bottom: 0.09em; 
-          filter: drop-shadow(0 2px 4px #fff8);
-          text-shadow: 0 1px 4px #b71c1c88;
-        }
-        .aposta-timer-title {
-          font-size: 0.98em; 
-          font-weight: 700;
-          text-align: center;
-          margin-bottom: 0.13em;
-          letter-spacing: 0.5px;
-          text-shadow: 0 1px 4px #fff6, 0 1px 0 #b71c1c;
-        }
-        .aposta-timer-badge {
-          background: #fff;
-          color: #b71c1c;
-          font-size: 1em;
-          font-weight: bold;
-          border-radius: 50%;
-          padding: 0.13em 0.38em;
-          margin-bottom: 0.13em;
-          box-shadow: 0 2px 8px #b71c1c88;
-          border: 2px solid #b71c1c;
-          display: inline-block;
-          transition: box-shadow 0.2s;
+        <div className="aposta-timer-visual" style={{position:'relative'}}>
         }
         .aposta-timer-desc {
           font-size: 0.9em; 

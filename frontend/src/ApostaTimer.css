@@ -1,0 +1,107 @@
+.aposta-timer-visual {
+  position: fixed;
+  top: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 170px;
+  min-height: 70px;
+  max-width: 170px;
+  border-radius: 12px;
+  box-sizing: border-box;
+  font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
+  font-weight: 700;
+  font-size: 0.92em;
+  letter-spacing: 0.35px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.28em 0.12em;
+  box-shadow: 0 4px 16px 1px #b71c1c88;
+  border: 2px solid #fff;
+  overflow: hidden;
+  background: linear-gradient(135deg,#ff1744 0%,#b71c1c 100%);
+  color: #fff;
+  transition: box-shadow 0.2s;
+  animation: apostaPulse 1.2s infinite;
+}
+.aposta-timer-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: #b71c1cdd;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px 0px #b71c1c88;
+  transition: background 0.2s;
+}
+.aposta-timer-icon {
+  font-size: 1.2em; 
+  margin-bottom: 0.09em; 
+  filter: drop-shadow(0 2px 4px #fff8);
+  text-shadow: 0 1px 4px #b71c1c88;
+}
+.aposta-timer-title {
+  font-size: 0.98em; 
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.13em;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 4px #fff6, 0 1px 0 #b71c1c;
+}
+.aposta-timer-badge {
+  background: #fff;
+  color: #b71c1c;
+  font-size: 1em;
+  font-weight: bold;
+  border-radius: 50%;
+  padding: 0.13em 0.38em;
+  margin-bottom: 0.13em;
+  box-shadow: 0 2px 8px #b71c1c88;
+  border: 2px solid #b71c1c;
+  display: inline-block;
+  transition: box-shadow 0.2s;
+}
+.aposta-timer-desc {
+  font-size: 0.9em; 
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.09em;
+  text-shadow: 0 1px 4px #b71c1c88;
+}
+@keyframes apostaPulse {
+  0% { box-shadow: 0 0 0 0 #b71c1c44; }
+  50% { box-shadow: 0 0 16px 6px #b71c1c88; }
+  100% { box-shadow: 0 0 0 0 #b71c1c44; }
+}
+@media (max-width: 600px) {
+  .aposta-timer-visual {
+    left: 50%;
+    top: 70px;
+    transform: translateX(-50%);
+    width: 90vw;
+    max-width: 96vw;
+    min-width: 120px;
+    padding: 0.12em 0.02em;
+    font-size: 0.88em;
+  }
+  .aposta-timer-close {
+    top: 4px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+  }
+}
