@@ -165,7 +165,7 @@ export default function Profile() {
     }
   };
 
-  // Normaliza URL do avatar atual (relativo -> prefixa API; absoluto mantém)
+  // Normaliza URL do avatar atual (Cloudinary, local, ou fallback)
   const normalizedCurrent = useMemo(() => {
     if (!current) return '';
     let u = String(current).trim();
@@ -173,14 +173,26 @@ export default function Profile() {
       const parts = u.split(';').map(s => s.trim()).filter(Boolean);
       u = parts[parts.length - 1];
     }
+    // Cloudinary URL
+    if (/res\.cloudinary\.com/.test(u) || (u.startsWith('http://') || u.startsWith('https://'))) return u;
+    // Local uploads
     if (u.startsWith('/uploads/')) return `${API_BASE}${u}`;
     if (/^uploads\//i.test(u)) return `${API_BASE}/${u}`;
-    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    // Fallback to default
     const file = u.split('/').pop();
     return file ? `${API_BASE}/uploads/avatars/${file}` : '';
   }, [current]);
 
-  const displayAvatar = preview || normalizedCurrent || `${API_BASE}/uploads/avatars/avatar_default.jpg`;
+  const displayAvatar = useMemo(() => {
+    // If preview (new upload), use it
+    if (preview) return preview;
+    // If normalizedCurrent is a valid Cloudinary or http(s) URL, use it
+    if (normalizedCurrent && (/res\.cloudinary\.com/.test(normalizedCurrent) || normalizedCurrent.startsWith('http'))) return normalizedCurrent;
+    // If normalizedCurrent is a valid local path, use it
+    if (normalizedCurrent) return normalizedCurrent;
+    // Fallback
+    return `${API_BASE}/uploads/avatars/avatar_default.jpg`;
+  }, [preview, normalizedCurrent]);
 
   return (
     <div className="profile-container">
