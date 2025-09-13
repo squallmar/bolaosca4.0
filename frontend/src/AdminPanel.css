@@ -277,94 +277,69 @@
   font-weight: 600;
 }
 @media (max-width: 900px) {
-  .bolao-panel-card {
-    padding: 16px 8px;
-    min-width: 0;
-      .bolao-panel-content {
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-        align-items: center;
-        width: 100%;
-        max-width: 100vw;
-        margin: 0 auto;
-        padding: 0;
-        position: static;
-      }
-      .bolao-panel-card {
-        padding: 18px 10px;
-        min-width: 0;
-        font-size: 1em;
-        margin-bottom: 18px;
-        width: 96vw;
-        max-width: 420px;
-        border-radius: 10px;
-        border: 3px solid #000;
-        box-sizing: border-box;
-        align-self: center;
-        background: #fff;
-        position: static;
-        float: none;
-      }
-      .admin-stats {
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-        justify-content: flex-start;
-        margin-top: 0;
-        width: 96vw;
-        max-width: 420px;
-        align-items: center;
-        align-self: center;
-        position: static;
-      }
-      .stat-card {
-        width: 100%;
-        max-width: 420px;
-        margin-bottom: 18px;
-        border-radius: 10px;
-        box-sizing: border-box;
-        align-self: center;
-        border: 3px solid #000;
-        background: #fff;
-        position: static;
-        float: none;
-      }
-    .bolao-panel-user-card {
-      padding: 14px 12px;
-      font-size: 1.08em;
-      border-radius: 12px;
-      margin-bottom: 10px;
-      width: 100%;
-      max-width: 440px;
-      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-      align-self: center;
-    }
-    justify-content: center;
-    margin-left: auto;
-    margin-right: auto;
-    box-sizing: border-box;
+  .bolao-panel-content {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    align-items: center;
+    width: 100%;
+    max-width: 100vw;
+    margin: 0 auto;
+    padding: 0;
+    position: static;
   }
-    min-width: 90px;
-    padding: 12px 6px;
+  .bolao-panel-card {
+    padding: 18px 10px;
+    min-width: 0;
     font-size: 1em;
+    margin-bottom: 18px;
+    width: 96vw;
+    max-width: 420px;
     border-radius: 10px;
+    border: 3px solid #000;
+    box-sizing: border-box;
+    align-self: center;
+    background: #fff;
+    position: static;
+    float: none;
+  }
+  .admin-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    justify-content: flex-start;
+    margin-top: 0;
+    width: 96vw;
+    max-width: 420px;
+    align-items: center;
+    align-self: center;
+    position: static;
+  }
+  .stat-card {
+    width: 100%;
+    max-width: 420px;
+    margin-bottom: 18px;
+    border-radius: 10px;
+    box-sizing: border-box;
+    align-self: center;
+    border: 3px solid #000;
+    background: #fff;
+    position: static;
+    float: none;
   }
   .bolao-panel-user-card {
-    padding: 14px 10px;
+    padding: 14px 12px;
     font-size: 1.08em;
     border-radius: 12px;
-    margin-bottom: 0;
-    width: 96vw;
+    margin-bottom: 10px;
+    width: 100%;
     max-width: 440px;
     box-shadow: 0 1px 6px rgba(0,0,0,0.08);
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
+    align-self: center;
   }
   /* Corrigido: Removidas regras soltas que causavam erro de sintaxe */
   }
@@ -390,3 +365,4 @@
     border-radius: 8px;
   }
   /* ---- Fim Celulares ---- */
+}
