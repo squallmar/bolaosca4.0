@@ -78,8 +78,8 @@ const Register = () => {
       // login automático após cadastro
       const user = resp.data?.usuario;
       if (user) {
-        await auth.login(null, user.tipo, user.nome, user.autorizado, user.avatar_url || user.foto_url, user.apelido);
-        navigate('/');
+    await auth.login(null, user.tipo, user.nome, user.autorizado, user.avatar_url || user.foto_url, user.apelido);
+    window.location.href = 'https://bolaosca4-0.vercel.app/';
       } else {
         alert('Cadastro realizado! Você já pode fazer login.');
         navigate('/login');
