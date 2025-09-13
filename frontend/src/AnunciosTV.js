@@ -38,6 +38,19 @@ function AnunciosTV() {
 
   const anuncio = anuncios[atual];
 
+  // Resolve URL de imagem do anúncio (aceita absoluta, limpa ';', e prefixa API quando relativo)
+  const resolveAnuncioSrc = (pathOrUrl) => {
+    if (!pathOrUrl) return '';
+    let u = String(pathOrUrl).trim();
+    if (u.includes(';')) {
+      const parts = u.split(';').map(s => s.trim()).filter(Boolean);
+      u = parts[parts.length - 1];
+    }
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    if (!u.startsWith('/')) u = '/' + u;
+    return `${API_BASE}${u}`;
+  };
+
   return (
     <div className="tv-anuncios-card" style={{
       position: 'fixed',
@@ -80,7 +93,7 @@ function AnunciosTV() {
         }}>
           <a href="/anuncie" target="_blank" rel="noopener noreferrer">
             <img 
-              src={`${API_BASE}${anuncio.imagem_url}`}
+              src={resolveAnuncioSrc(anuncio.imagem_url)}
               alt="Propaganda"
               style={{
                 width: '100%',
@@ -104,11 +117,14 @@ function AnunciosTV() {
                 e.currentTarget.style.boxShadow = '0 2px 8px 0px #2228';
               }}
               onError={e => {
-                // Usa imagem local para evitar dependência externa
-                e.currentTarget.onerror = null; // evita loop
-                e.currentTarget.src = '/medals/4pessoas.png';
-                e.currentTarget.style.opacity = 0.5;
-                console.log('Erro ao carregar imagem:', e.currentTarget.src);
+                // Fallback estável para arquivo servido pelo backend
+                if (!e.currentTarget.dataset.fallback) {
+                  e.currentTarget.dataset.fallback = '1';
+                  e.currentTarget.src = `${API_BASE}/uploads/escudos/_default.png`;
+                } else {
+                  e.currentTarget.style.opacity = 0.5;
+                  console.log('Erro ao carregar imagem:', e.currentTarget.src);
+                }
               }}
             />
           </a>

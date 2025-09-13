@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from './services/api';
+import { API_BASE as API } from './config';
 import { useNavigate } from 'react-router-dom'; // +
 import AdminSubMenu from './AdminSubMenu';
 
@@ -103,6 +104,19 @@ export default function AdminTeams() {
     }
   }
 
+  // Resolve URL do escudo (limpa ';', aceita absoluta, e monta via API quando relativo)
+  const resolveEscudo = (val) => {
+    let u = (val || '').toString().trim();
+    if (!u) return `${API}/uploads/escudos/_default.png`;
+    if (u.includes(';')) {
+      const parts = u.split(';').map(s => s.trim()).filter(Boolean);
+      u = parts[parts.length - 1];
+    }
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    const filename = u.split('/').pop();
+    return `${API}/uploads/escudos/${filename || '_default.png'}`;
+  };
+
   return (
     <>
       <AdminSubMenu />
@@ -160,15 +174,15 @@ export default function AdminTeams() {
         {list.map(t => (
           <div key={t.id} style={teamCard}>
             <img
-              src={(t.escudo_url && t.escudo_url.trim())
-                ? t.escudo_url
-                : `${process.env.REACT_APP_API_URL}/uploads/escudos/_default.png`}
+              src={resolveEscudo(t.escudo_url)}
               alt={t.nome}
               width={56} height={56}
               style={escudo}
               onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = `${process.env.REACT_APP_API_URL}/uploads/escudos/_default.png`;
+                if (!e.currentTarget.dataset.fallback) {
+                  e.currentTarget.dataset.fallback = '1';
+                  e.currentTarget.src = `${API}/uploads/escudos/_default.png`;
+                }
               }}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -185,9 +199,9 @@ export default function AdminTeams() {
                       Enviar Escudo
                       <input type="file" accept="image/*" onChange={onEscudoEditChange} style={{ display: 'none' }} />
                     </label>
-                    {edit.escudo_url && (
+          {edit.escudo_url && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <img src={edit.escudo_url} alt="Prévia escudo" style={escudo} />
+            <img src={resolveEscudo(edit.escudo_url)} alt="Prévia escudo" style={escudo} />
                         <span style={{ color: '#555' }}>{uploadingEdit ? 'Enviando...' : 'Prévia do escudo'}</span>
                       </div>
                     )}
