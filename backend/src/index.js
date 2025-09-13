@@ -149,7 +149,7 @@ app.use(helmet({
       "default-src": ["'self'"],
       "script-src": ["'self'"],
   // Permitindo Google Fonts (CSS) e mantendo self; se quiser remover depois, inlinar fontes locais
-  "style-src": ["'self'","https://fonts.googleapis.com"],
+  "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
   // Imagens locais + data/blob
   "img-src": ["'self'","data:","blob:"],
   // Fontes remotas usadas pelos Google Fonts + data URIs

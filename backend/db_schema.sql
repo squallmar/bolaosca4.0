@@ -75,3 +75,63 @@ WHERE escudo_url IS NULL
    OR escudo_url ~ '-\\.png$'
    OR escudo_url ~ '/uploads/escudos/$'
    OR escudo_url = '';
+
+UPDATE partida SET time1 = 'Atlético - MG' WHERE time1 ILIKE '%atletico%mg%';
+UPDATE partida SET time2 = 'Atlético - MG' WHERE time2 ILIKE '%atletico%mg%';
+
+UPDATE partida SET time1 = 'Bahia' WHERE time1 ILIKE '%bahia%';
+UPDATE partida SET time2 = 'Bahia' WHERE time2 ILIKE '%bahia%';
+
+UPDATE partida SET time1 = 'Botafogo' WHERE time1 ILIKE '%botafogo%';
+UPDATE partida SET time2 = 'Botafogo' WHERE time2 ILIKE '%botafogo%';
+
+UPDATE partida SET time1 = 'Bragantino - Red Bull' WHERE time1 ILIKE '%bragantino%red%bull%';
+UPDATE partida SET time2 = 'Bragantino - Red Bull' WHERE time2 ILIKE '%bragantino%red%bull%';
+
+UPDATE partida SET time1 = 'Ceará SC' WHERE time1 ILIKE '%ceara%sc%';
+UPDATE partida SET time2 = 'Ceará SC' WHERE time2 ILIKE '%ceara%sc%';
+
+UPDATE partida SET time1 = 'Corinthians - SP' WHERE time1 ILIKE '%corinthians%sp%';
+UPDATE partida SET time2 = 'Corinthians - SP' WHERE time2 ILIKE '%corinthians%sp%';
+
+UPDATE partida SET time1 = 'Cruzeiro' WHERE time1 ILIKE '%cruzeiro%';
+UPDATE partida SET time2 = 'Cruzeiro' WHERE time2 ILIKE '%cruzeiro%';
+
+UPDATE partida SET time1 = 'EC Vitória' WHERE time1 ILIKE '%vitoria%';
+UPDATE partida SET time2 = 'EC Vitória' WHERE time2 ILIKE '%vitoria%';
+
+UPDATE partida SET time1 = 'Flamengo - RJ' WHERE time1 ILIKE '%flamengo%rj%';
+UPDATE partida SET time2 = 'Flamengo - RJ' WHERE time2 ILIKE '%flamengo%rj%';
+
+UPDATE partida SET time1 = 'Fluminense - RJ' WHERE time1 ILIKE '%fluminense%rj%';
+UPDATE partida SET time2 = 'Fluminense - RJ' WHERE time2 ILIKE '%fluminense%rj%';
+
+UPDATE partida SET time1 = 'Fortaleza' WHERE time1 ILIKE '%fortaleza%';
+UPDATE partida SET time2 = 'Fortaleza' WHERE time2 ILIKE '%fortaleza%';
+
+UPDATE partida SET time1 = 'Grêmio' WHERE time1 ILIKE '%gremio%';
+UPDATE partida SET time2 = 'Grêmio' WHERE time2 ILIKE '%gremio%';
+
+UPDATE partida SET time1 = 'Internacional' WHERE time1 ILIKE '%internacional%';
+UPDATE partida SET time2 = 'Internacional' WHERE time2 ILIKE '%internacional%';
+
+UPDATE partida SET time1 = 'Juventude' WHERE time1 ILIKE '%juventude%';
+UPDATE partida SET time2 = 'Juventude' WHERE time2 ILIKE '%juventude%';
+
+UPDATE partida SET time1 = 'Mirassol' WHERE time1 ILIKE '%mirassol%';
+UPDATE partida SET time2 = 'Mirassol' WHERE time2 ILIKE '%mirassol%';
+
+UPDATE partida SET time1 = 'Palmeiras' WHERE time1 ILIKE '%palmeiras%';
+UPDATE partida SET time2 = 'Palmeiras' WHERE time2 ILIKE '%palmeiras%';
+
+UPDATE partida SET time1 = 'Santos' WHERE time1 ILIKE '%santos%';
+UPDATE partida SET time2 = 'Santos' WHERE time2 ILIKE '%santos%';
+
+UPDATE partida SET time1 = 'São Paulo' WHERE time1 ILIKE '%sao%paulo%';
+UPDATE partida SET time2 = 'São Paulo' WHERE time2 ILIKE '%sao%paulo%';
+
+UPDATE partida SET time1 = 'Sport Recife' WHERE time1 ILIKE '%sport%recife%';
+UPDATE partida SET time2 = 'Sport Recife' WHERE time2 ILIKE '%sport%recife%';
+
+UPDATE partida SET time1 = 'Vasco - RJ' WHERE time1 ILIKE '%vasco%rj%';
+UPDATE partida SET time2 = 'Vasco - RJ' WHERE time2 ILIKE '%vasco%rj%';
