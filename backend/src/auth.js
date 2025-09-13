@@ -1,4 +1,5 @@
 import express from 'express';
+import cloudinary from 'cloudinary';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
@@ -10,6 +11,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { notifyBlockedIP } from './admin.js';
+
+// Configuração Cloudinary
+cloudinary.v2.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // Configuração de upload
 const __filename = fileURLToPath(import.meta.url);
@@ -368,12 +376,27 @@ router.patch('/me/senha', exigirAutenticacao, async (req, res) => {
 router.post('/me/avatar', exigirAutenticacao, uploadLocalAvatar.single('avatar'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ erro: 'Nenhum arquivo enviado' });
-  // Retorna caminho relativo seguro; frontend prefixa com API_BASE
-  const url = '/uploads/avatars/avatar_default.jpg';
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
-    await safeQuery(pool, 'UPDATE usuario SET avatar_url = $1 WHERE id = $2', [url, userId]);
-    return res.json({ avatarUrl: url });
+
+    // Upload para Cloudinary
+    const buffer = req.file.buffer;
+    const uploadResult = await cloudinary.v2.uploader.upload_stream({
+      folder: 'usuarios',
+      resource_type: 'image',
+      public_id: `avatar_${userId}_${Date.now()}`,
+      overwrite: true,
+    }, async (error, result) => {
+      if (error || !result) {
+        console.error('Erro Cloudinary:', error);
+        return res.status(500).json({ erro: 'Falha ao enviar imagem para Cloudinary' });
+      }
+      const url = result.secure_url;
+      await safeQuery(pool, 'UPDATE usuario SET avatar_url = $1 WHERE id = $2', [url, userId]);
+      return res.json({ avatarUrl: url });
+    });
+    // Escreve o buffer no stream
+    uploadResult.end(buffer);
   } catch (err) {
     console.error('Erro ao atualizar avatar:', err);
     return res.status(500).json({ erro: 'Falha ao atualizar avatar' });
