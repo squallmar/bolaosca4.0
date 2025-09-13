@@ -278,56 +278,85 @@
   font-weight: 600;
 }
 @media (max-width: 900px) {
+  /* ---- Celulares ---- */
   .bolao-panel-container {
-    max-width: 100%;
-    padding: 10px 2px;
-    border-radius: 8px;
+    max-width: 100vw;
+    padding: 18px 6px;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  .bolao-panel-header {
+    margin-bottom: 18px;
   }
   .bolao-panel-header h1 {
-    font-size: 1.5rem;
-    margin-bottom: 6px;
+    font-size: 1.25rem;
+    margin-bottom: 4px;
+    text-align: center;
   }
   .bolao-panel-header p {
-    font-size: 1rem;
+    font-size: 0.98rem;
+    text-align: center;
   }
   .bolao-panel-content {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 18px;
+    align-items: center;
   }
   .bolao-panel-card {
-    padding: 12px 6px;
+    padding: 16px 8px;
     min-width: 0;
-    font-size: 0.98em;
+    font-size: 1em;
+    margin: 0 auto;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.10);
   }
   .admin-stats {
     flex-direction: row;
-    gap: 8px;
+    gap: 12px;
     justify-content: center;
-    margin-top: 14px;
+    margin-top: 10px;
   }
   .stat-card {
-    min-width: 80px;
-    padding: 8px 4px;
-    font-size: 0.95em;
+    min-width: 90px;
+    padding: 12px 6px;
+    font-size: 1em;
+    border-radius: 10px;
   }
   .bolao-panel-user-card {
-    padding: 8px 8px;
-    font-size: 0.95em;
+    padding: 12px 10px;
+    font-size: 1em;
+    border-radius: 10px;
+    margin-bottom: 8px;
   }
   .bolao-panel-user-avatar {
-    width: 38px;
-    height: 38px;
-    font-size: 1.1rem;
+    width: 44px;
+    height: 44px;
+    font-size: 1.2rem;
   }
   .bolao-panel-user-avatar img {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
   }
   .bolao-panel-user-details h4 {
-    font-size: 1rem;
+    font-size: 1.08rem;
   }
   .bolao-panel-user-details p {
-    font-size: 0.92em;
+    font-size: 0.97em;
   }
+  .bolao-panel-authorize-btn, .bolao-panel-retry-btn {
+    padding: 12px 24px;
+    font-size: 1.08rem;
+    border-radius: 10px;
+    margin-top: 8px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .success-message {
+    bottom: 12px;
+    right: 12px;
+    font-size: 1rem;
+    padding: 10px 16px;
+    border-radius: 8px;
+  }
+  /* ---- Fim Celulares ---- */
 }
