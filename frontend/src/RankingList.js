@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import api from './services/api';
 import './RankingList.css'; // Vamos mover os estilos para um arquivo separado
+import { API_BASE } from './config';
 
 // tenta uma lista de URLs em sequência
 async function tryGetFirst(urls) {
@@ -57,22 +58,45 @@ const StatusTag = React.memo(({ banido, desistiu }) => {
 
 const Avatar = React.memo(({ nome, fotoUrl }) => {
   const iniciais = getInitials(nome);
-  const [imgError, setImgError] = useState(false);
-  
-  if (fotoUrl && !imgError) {
-    return (
-      <img
-        src={fotoUrl}
-        alt={`Avatar de ${nome}`}
-        className="avatar-img"
-        onError={() => setImgError(true)}
-      />
-    );
+  const [src, setSrc] = useState('');
+
+  useEffect(() => {
+    let u = String(fotoUrl || '').trim();
+    if (!u) {
+      setSrc(`${API_BASE}/uploads/avatars/avatar_default.jpg`);
+      return;
+    }
+    if (u.includes(';')) {
+      const parts = u.split(';').map(s => s.trim()).filter(Boolean);
+      u = parts[parts.length - 1];
+    }
+    if (u.startsWith('http://') || u.startsWith('https://')) {
+      setSrc(u);
+      return;
+    }
+    const filename = u.split('/').pop();
+    setSrc(`${API_BASE}/uploads/avatars/${filename || 'avatar_default.jpg'}`);
+  }, [fotoUrl]);
+
+  if (!src) {
+    return <div className="avatar-initials" aria-label={nome}>{iniciais}</div>;
   }
+
   return (
-    <div className="avatar-initials" aria-label={nome}>
-      {iniciais}
-    </div>
+    <img
+      src={src}
+      alt={`Avatar de ${nome}`}
+      className="avatar-img"
+      onError={(e) => {
+        if (!e.currentTarget.dataset.fallback) {
+          e.currentTarget.dataset.fallback = '1';
+          setSrc(`${API_BASE}/uploads/avatars/avatar_default.jpg`);
+        } else {
+          // como último recurso, volta para iniciais
+          setSrc('');
+        }
+      }}
+    />
   );
 });
 

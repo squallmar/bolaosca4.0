@@ -245,14 +245,15 @@ function AdminAnuncio() {
           <div style={{textAlign:'center',color:'#888'}}>Nenhum anúncio cadastrado.</div>
         ) : (
           <ul style={{listStyle:'none',padding:0}}>
-            {anuncios.map(anuncio => (
+                  {anuncios.map(anuncio => (
               <li key={anuncio.id} style={{marginBottom:'1.5em',borderBottom:'1px solid #eee',paddingBottom:'1em'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'1em'}}>
           {anuncio.imagem_url && (
                     <img 
             src={toImageSrc(anuncio.imagem_url)}
                       alt={anuncio.titulo} 
-                      style={{width:64,height:64,objectFit:'cover',borderRadius:8,border:'1px solid #43cea2'}} 
+                              style={{width:64,height:64,objectFit:'cover',borderRadius:8,border:'1px solid #43cea2'}} 
+                              onError={(e)=>{ e.currentTarget.onerror=null; e.currentTarget.src=`${API_BASE}/uploads/escudos/_default.png`; }}
                     />
                   )}
                   <div style={{flex:1}}>
