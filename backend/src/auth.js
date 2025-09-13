@@ -207,6 +207,9 @@ router.post('/register', uploadLocalAvatar.single('avatar'), async (req, res) =>
       // Aceita apenas caminhos relativos seguros; evita URLs com múltiplos hosts concatenados
       const val = String(req.body.avatarUrl || '').trim();
       avatarUrl = val.startsWith('http://') || val.startsWith('https://') ? val : ('/' + val.replace(/^\/+/, ''));
+    } else {
+      // Se não houver avatar enviado, usa a URL padrão do Cloudinary
+      avatarUrl = 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg';
     }
 
     const rows = await safeQuery(
