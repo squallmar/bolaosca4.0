@@ -68,3 +68,10 @@ CREATE TABLE IF NOT EXISTS login_blocked_ip (
 );
 
 -- Usuário admin inicial
+
+UPDATE time
+SET escudo_url = '/uploads/escudos/_default.png'
+WHERE escudo_url IS NULL
+   OR escudo_url ~ '-\\.png$'
+   OR escudo_url ~ '/uploads/escudos/$'
+   OR escudo_url = '';
