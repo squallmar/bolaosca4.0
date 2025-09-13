@@ -1,3 +1,5 @@
+/* ===== Desktop ===== */
+/* Card Timer Desktop */ 
 .aposta-timer-visual {
   position: fixed;
   top: 110px;
@@ -25,7 +27,9 @@
   transition: box-shadow 0.2s;
   animation: apostaPulse 1.2s infinite;
 }
+/* Botão X Desktop */
 .aposta-timer-close {
+/* ===== Celulares ===== */
   position: absolute;
   top: 8px;
   right: 12px;
@@ -85,7 +89,9 @@
   50% { box-shadow: 0 0 16px 6px #b71c1c88; }
   100% { box-shadow: 0 0 0 0 #b71c1c44; }
 }
+/* ===== Celulares ===== */
 @media (max-width: 600px) {  
+/* Card Timer Celular */
   .aposta-timer-visual {  
     left: 50%;
     top: auto;
@@ -96,8 +102,9 @@
     min-width: 90px;
     padding: 0.07em 0.01em;
     font-size: 0.78em;
-    margin-top: 4px;
+    margin-top: -1px;
   }
+/* Card Timer Celular */
   .aposta-timer-close {
     top: 2px;
     right: 4px;

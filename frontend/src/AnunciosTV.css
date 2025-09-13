@@ -1,4 +1,5 @@
-/* Desktop: card no canto direito */
+/* ===== Desktop ===== */
+/* Card TV Desktop */
 .tv-anuncios-card {
   position: fixed;
   top: 110px;
@@ -25,7 +26,9 @@
   color: #fff;
   transition: box-shadow 0.2s;
 }
+/* Botão X Desktop */
 .tv-anuncios-close {
+/* ===== Celulares ===== */
   position: absolute;
   top: 8px;
   right: 12px;
@@ -45,7 +48,9 @@
   box-shadow: 0 2px 8px 0px #2228;
   transition: background 0.2s;
 }
+/* ===== Celulares ===== */
 @media (max-width: 600px) {
+  /* Card TV Celular */
   .tv-anuncios-card {
     left: 50%;
     top: auto;
@@ -56,8 +61,9 @@
     min-width: 90px;
     padding: 0.07em 0.01em;
     font-size: 0.78em;
-    margin-top: 40px;
+    margin-top: 50px;
   }
+  /* Botão X Celular */
   .tv-anuncios-close {
     top: 2px;
     right: 4px;
