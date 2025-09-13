@@ -112,7 +112,7 @@ export default function AdminTeams() {
       const parts = u.split(';').map(s => s.trim()).filter(Boolean);
       u = parts[parts.length - 1];
     }
-    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    if (/^https?:\/\//i.test(u)) return u;
     const filename = u.split('/').pop();
     return `${API}/uploads/escudos/${filename || '_default.png'}`;
   };

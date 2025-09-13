@@ -60,16 +60,19 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      // Enviar tudo em um único FormData para /auth/register (backend aceita campo 'avatar')
-      const fd = new FormData();
-      fd.append('nome', formData.nome);
-      fd.append('email', formData.email);
-      fd.append('senha', formData.senha);
-      fd.append('tipo', formData.tipo);
-      fd.append('apelido', formData.apelido);
-      fd.append('contato', formData.contato);
-      if (avatarFile) fd.append('avatar', avatarFile);
-  await api.post('/auth/register', fd); // permitir axios definir boundary
+      let foto_url = '';
+      if (avatarFile) {
+        // Primeiro faz upload do avatar para Cloudinary
+        const fdAvatar = new FormData();
+        fdAvatar.append('file', avatarFile);
+        const { data } = await api.post('/upload/avatar', fdAvatar);
+        foto_url = data.url;
+      }
+      // Envia dados do usuário com foto_url
+      await api.post('/auth/register', {
+        ...formData,
+        foto_url
+      });
 
       alert('Cadastro realizado com sucesso! Você já pode fazer login.');
       navigate('/login');

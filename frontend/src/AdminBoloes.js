@@ -69,11 +69,21 @@ async function getPartidasPorRodada(rodadaId, timesMap = {}) {
     const key2 = slugify(time2);
     let escudo1 = timesMap[key1] || p.time1_escudo || p.time1Escudo || p.escudo1 || '';
     let escudo2 = timesMap[key2] || p.time2_escudo || p.time2Escudo || p.escudo2 || '';
-    // Se vierem relativos, converte para absolutos na pasta de uploads
-    if (escudo1 && !/^https?:\/\//i.test(escudo1)) escudo1 = `${IMG_BASE}/uploads/escudos/${escudo1.replace(/^\/+/, '')}`;
-    if (escudo2 && !/^https?:\/\//i.test(escudo2)) escudo2 = `${IMG_BASE}/uploads/escudos/${escudo2.replace(/^\/+/, '')}`;
-    if (!escudo1) escudo1 = `${IMG_BASE}/uploads/escudos/_default.png`;
-    if (!escudo2) escudo2 = `${IMG_BASE}/uploads/escudos/_default.png`;
+    // Se vierem URLs absolutas (Cloudinary), usa direto
+    if (escudo1 && /^https?:\/\//i.test(escudo1)) {
+      // ok
+    } else if (escudo1) {
+      escudo1 = `${IMG_BASE}/uploads/escudos/${escudo1.replace(/^\/+/, '')}`;
+    } else {
+      escudo1 = `${IMG_BASE}/uploads/escudos/_default.png`;
+    }
+    if (escudo2 && /^https?:\/\//i.test(escudo2)) {
+      // ok
+    } else if (escudo2) {
+      escudo2 = `${IMG_BASE}/uploads/escudos/${escudo2.replace(/^\/+/, '')}`;
+    } else {
+      escudo2 = `${IMG_BASE}/uploads/escudos/_default.png`;
+    }
     return {
       ...p,
       finalizada: (p.finalizada ?? p.finalizado) || false,
