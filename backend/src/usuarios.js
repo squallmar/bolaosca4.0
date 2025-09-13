@@ -1,3 +1,14 @@
+
+import express from 'express';
+import pool from './db.js';
+import { exigirAutenticacao, exigirRole } from './auth.js';
+import bcrypt from 'bcrypt';
+import { logger } from './logger.js';
+import { getPagination, safeQuery, sanitizeMediaUrl } from './utils.js';
+
+const auth = exigirAutenticacao;
+const router = express.Router();
+
 // Cadastro de usuário com foto_url
 router.post('/register', async (req, res) => {
   try {
@@ -12,15 +23,6 @@ router.post('/register', async (req, res) => {
     return res.status(500).json({ erro: 'Falha ao cadastrar usuário' });
   }
 });
-import express from 'express';
-import pool from './db.js';
-import { exigirAutenticacao, exigirRole } from './auth.js';
-import bcrypt from 'bcrypt';
-import { logger } from './logger.js';
-import { getPagination, safeQuery, sanitizeMediaUrl } from './utils.js';
-
-const auth = exigirAutenticacao;
-const router = express.Router();
 
 // >>> ADICIONE ESTE HELPER <<<
 async function ensureAdmin(req) {
