@@ -1,3 +1,11 @@
+/* Garante que o container do avatar não limite o tamanho */
+.ranking-item-avatar {
+  min-width: 120px;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 /* Avatar quadrado, sem border-radius */
 .avatar-img {
   width: 120px;
@@ -263,8 +271,14 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid #e9ecef;
   transition: all 0.3s;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   flex-direction: row;
+  min-height: 140px;
+  min-width: 120px;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ranking-item:hover {
