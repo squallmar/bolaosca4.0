@@ -278,6 +278,17 @@
 }
 @media (max-width: 900px) {
   .bolao-panel-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 18px;
+    align-items: center;
+    width: 100%;
+    max-width: 100vw;
+    margin: 0 auto;
+    padding: 0;
+    position: static;
+  }
+  .bolao-panel-content {
     display: flex;
     flex-direction: column;
     gap: 18px;
