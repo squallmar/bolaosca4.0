@@ -320,7 +320,7 @@ export default function RankingList() {
         </div>
         <div className="user-info">
           <div className="ranking-item-avatar">
-            <UserAvatar user={usuario} size={50} />
+            <UserAvatar user={usuario} />
           </div>
           <div className="user-details">
             <div className="username">
