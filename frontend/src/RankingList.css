@@ -1,3 +1,8 @@
+/* Garante tamanho do avatar em todas as telas */
+.avatar-img, .avatar-initials {
+  width: 120px !important;
+  height: 120px !important;
+}
 /* Garante que o container do avatar não limite o tamanho */
 .ranking-item-avatar {
   min-width: 120px;
