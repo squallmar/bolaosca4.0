@@ -1,16 +1,16 @@
 /* Avatar quadrado, sem border-radius */
 .avatar-img {
-  width: 90px;
-  height: 90px;
-  border-radius: 0;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
   object-fit: cover;
   object-position: center;
 }
 
 .avatar-initials {
-  width: 90px;
-  height: 90px;
-  border-radius: 0;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
   background-color: #ddd;
   display: flex;
   justify-content: center;
@@ -327,8 +327,8 @@
 }
 
 .avatar-img, .avatar-initials {
-  width: 90px;
-  height: 90px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   object-fit: cover;
   object-position: center;
