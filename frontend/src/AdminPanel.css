@@ -277,6 +277,34 @@
   font-weight: 600;
 }
 @media (max-width: 900px) {
+  .bolao-panel-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px;
+    align-items: center;
+    width: 100%;
+    max-width: 100vw;
+    margin: 0 auto;
+    padding: 0;
+    position: static;
+  }
+  .bolao-panel-card,
+  .admin-stats,
+  .stat-card,
+  .bolao-panel-user-card {
+    width: 95vw;
+    max-width: 320px;
+    margin: 0 auto 14px auto;
+    box-sizing: border-box;
+    align-self: center;
+    position: static;
+    float: none;
+    display: block;
+    padding: 14px 10px;
+    border: none;
+    background: #fff;
+    box-shadow: none;
+  }
   .bolao-panel-card {
     margin-bottom: 18px !important;
   }
