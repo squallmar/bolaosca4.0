@@ -1,6 +1,6 @@
 /* Garante tamanho do avatar em todas as telas */
 .avatar-img, .avatar-initials {
-  margin-left: 16px;
+  margin-left: 25px;
   width: 70px !important;
   height: 70px !important;
   border-radius: 50%;
