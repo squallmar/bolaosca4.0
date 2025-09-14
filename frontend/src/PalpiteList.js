@@ -1177,43 +1177,45 @@ export default function ApostarRodada() {
         }
         
         @media (max-width: 768px) {
-          .apostar-container {
-            margin: 0;
-            border-radius: 0;
-          }
-          .header-section {
-            height: 160px;
-          }
-          .main-title {
-            font-size: 2rem;
-          }
-          .content-wrapper {
-            padding: 16px;
-          }
-          .select-content {
-            flex-direction: column;
-            align-items: stretch;
-          }
-          .status-container {
-            justify-content: center;
-          }
-          .match-content {
-            flex-direction: column;
-            gap: 16px;
-          }
-          .match-card {
-            flex-direction: column;
-            gap: 8px;
-          }
-          .match-content {
-            flex-direction: column;
-            gap: 8px;
-          }
-          .bet-options {
-            flex-direction: row;
-            min-width: unset;
-            gap: 8px;
-          }
+            .apostar-container {
+              margin: 0;
+              border-radius: 0;
+            }
+            .header-section {
+              height: 160px;
+            }
+            .main-title {
+              font-size: 2rem;
+            }
+            .content-wrapper {
+              padding: 16px;
+            }
+            .select-content {
+              flex-direction: column;
+              align-items: stretch;
+            }
+            .status-container {
+              justify-content: center;
+            }
+            .match-content {
+              flex-direction: row; /* Alinha os elementos horizontalmente */
+              align-items: center; /* Centraliza os itens verticalmente */
+              gap: 16px;
+            }
+            .match-center {
+              display: flex; /* Adiciona display flex para o container do 'VS' */
+              align-items: center; /* Centraliza verticalmente o 'VS' */
+              justify-content: center; /* Centraliza horizontalmente o 'VS' */
+            }
+            .match-card {
+              flex-direction: column;
+              gap: 8px;
+            }
+            .bet-options {
+              flex-direction: row;
+              min-width: unset;
+              gap: 8px;
+            }
         }
 
         .palpite-info {
