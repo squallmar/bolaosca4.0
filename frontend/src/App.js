@@ -300,12 +300,13 @@ function Home() {
       {nome && autorizado === false && (
         <div style={{
           background: '#fff3e0',
-          color: '#d35400',
+          color: '#ff0000ff',
           border: '2px solid #f39c12',
           borderRadius: 12,
-          padding: '55px',
-          margin: '-40px auto',
-          maxWidth: 600,
+          marginBottom: 16,
+          padding: '20px',
+          margin: '-50px auto',
+          maxWidth: 500,
           fontWeight: 600,
           fontSize: 18,
           textAlign: 'center',
