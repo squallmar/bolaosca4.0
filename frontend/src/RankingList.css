@@ -42,7 +42,7 @@
 .username {
   font-weight: 700;
   font-size: 1.1em;
-  color: #2c3e50;
+  color: #000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -238,7 +238,7 @@
   height: 56px !important;
   border-radius: 50%;
   object-fit: cover;
-  object-position: center;
+  object-position: top center;
 }
 /* Garante que o container do avatar não limite o tamanho */
 .ranking-item-avatar {
