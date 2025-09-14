@@ -296,25 +296,6 @@ function Home() {
       <AnunciosTV />
       {/* Chat flutuante */}
       <ChatWindow />
-      {/* Mensagem de não autorizado */}
-      {nome && autorizado === false && (
-        <div style={{
-          background: '#fff3e0',
-          color: '#ff0000ff',
-          border: '2px solid #f39c12',
-          borderRadius: 12,
-          padding: '20px',
-          margin: '-40px auto 50px auto',
-          maxWidth: 560,
-          fontWeight: 600,
-          fontSize: 18,
-          textAlign: 'center',
-          boxShadow: '0 2px 12px #f39c1233'
-        }}>
-          Você ainda não foi autorizado para jogar e fazer parte do time.<br />
-          Procure a administração para liberação do acesso!
-        </div>
-      )}
       <div className="hero-section">
         <div className="hero-escudo">
           <img
