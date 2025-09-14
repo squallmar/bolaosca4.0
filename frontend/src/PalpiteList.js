@@ -452,8 +452,7 @@ export default function ApostarRodada() {
                   <div className="match-center">
                     <div className="vs-circle">
                       <span>VS</span>
-                    </div>
-                    <div className="match-date">{p.data || ''}</div>
+                    </div> 
                   </div>
 
                   <div className="team away-team">
