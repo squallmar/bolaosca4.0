@@ -305,6 +305,7 @@ function Home() {
           borderRadius: 12,
           padding: '18px',
           margin: '24px auto',
+          marginTop: '12px',
           maxWidth: 600,
           fontWeight: 600,
           fontSize: 18,
