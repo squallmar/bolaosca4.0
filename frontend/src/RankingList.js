@@ -8,7 +8,7 @@ function UserAvatar({ user, size = 56 }) {
   const pick = (x) => (x && String(x).trim()) || '';
   const raw = pick(user.foto_url) || pick(user.fotoUrl) || pick(user.avatar_url) || pick(user.avatarUrl);
   const initials = (user.nome || 'U').charAt(0).toUpperCase();
-  const style = { width: size, height: size, borderRadius: '50%', objectFit: 'contain', objectPosition: 'center' };
+  const style = { width: size, height: size, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center' };
 
   if (raw && /^https?:\/\/res\.cloudinary\.com\//i.test(raw)) {
     return (
@@ -322,7 +322,7 @@ export default function RankingList() {
         </div>
         <div className="user-info">
           <div className="ranking-item-avatar">
-            <UserAvatar user={usuario} size={70} />
+            <UserAvatar user={usuario} size={50} />
           </div>
           <div className="user-details">
             <div className="username">
