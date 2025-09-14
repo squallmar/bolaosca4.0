@@ -56,6 +56,7 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const [successMsg, setSuccessMsg] = useState('');
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -80,12 +81,11 @@ const Register = () => {
         },
       });
 
-  // Garante que avatarUrl seja populado corretamente, mesmo se vier como foto_url
-  const user = res.data;
-  const avatarUrl = user.avatarUrl || user.foto_url || user.fotoUrl || '';
-  auth.login({ ...user, avatarUrl });
-  navigate('/perfil');
-  console.log('Cadastro bem-sucedido:', user);
+      setSuccessMsg('Cadastro realizado com sucesso! Você será redirecionado para o login.');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+      console.log('Cadastro bem-sucedido:', res.data);
     } catch (err) {
       const errorMsg = err.response?.data?.erro || 'Falha ao criar conta. Tente novamente mais tarde.';
       setErrors({ ...errors, submit: errorMsg });
@@ -102,6 +102,7 @@ const Register = () => {
           <h2>Criar Conta</h2>
           <p>Junte-se à nossa comunidade de apostas</p>
         </div>
+        {successMsg && <div className="success-message" style={{marginBottom:12, color:'#00c853', fontWeight:'bold'}}>{successMsg}</div>}
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="nome">Nome Completo</label>

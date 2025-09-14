@@ -379,7 +379,7 @@ export default function ApostarRodada() {
                   {weekendLocked && (
                     <div className="status-badge finished">
                       <span className="badge-icon">🔒</span>
-                      {lockInfo?.pending ? 'Aguardando finalização da rodada (admin)' : 'Apostas fechadas (Encerrada as 14h.)'}
+                      {lockInfo?.pending ? 'Aguardando finalização da rodada (admin)' : 'Apostas fechadas (Encerrada as 14h Sábado.)'}
                     </div>
                   )}
                   {p._started && (
