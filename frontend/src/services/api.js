@@ -34,18 +34,19 @@ api.interceptors.request.use(async (config) => {
   // Não injeta mais Bearer do localStorage; usamos cookie httpOnly
   const protectedMethods = ['post','put','patch','delete'];
   if (protectedMethods.includes((config.method || '').toLowerCase())) {
-    const t = await ensureCsrf();
-    if (t) {
-      config.headers['X-CSRF-Token'] = t; // backend aceita este header
-    }
-    // fallback: alguns setups preferem cookie não-HttpOnly XSRF-TOKEN -> cabeçalho X-XSRF-TOKEN
+    // Sempre pega o valor do cookie XSRF-TOKEN
+    let xsrf = null;
     try {
-      const xsrf = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='));
-      if (xsrf) {
-        const val = decodeURIComponent(xsrf.split('=')[1] || '');
-        if (val && !config.headers['X-CSRF-Token']) config.headers['X-XSRF-TOKEN'] = val;
-      }
+      xsrf = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='));
     } catch {}
+    if (xsrf) {
+      const val = decodeURIComponent(xsrf.split('=')[1] || '');
+      if (val) config.headers['X-CSRF-Token'] = val;
+    } else {
+      // fallback: busca do endpoint se não houver cookie
+      const t = await ensureCsrf();
+      if (t) config.headers['X-CSRF-Token'] = t;
+    }
   }
   return config;
 });
