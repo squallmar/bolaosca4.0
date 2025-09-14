@@ -29,7 +29,7 @@
 .user-info {
 	display: flex;
 	align-items: center;
-	gap: 16px;
+	gap: 24px;
 	min-width: 0;
 	flex-grow: 1;
 	order: 1;
