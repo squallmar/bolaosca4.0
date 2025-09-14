@@ -303,8 +303,8 @@ function Home() {
           color: '#d35400',
           border: '2px solid #f39c12',
           borderRadius: 12,
-          padding: '18px',
-          
+          padding: '10px',
+          margin: '24px auto',
           maxWidth: 600,
           fontWeight: 600,
           fontSize: 18,
