@@ -17,14 +17,6 @@
 } 
 
 /* Garante que o container do avatar não limite o tamanho */ 
-.ranking-item-avatar { 
-	min-width: 100px !important;
-	min-height: 100px !important; 
-	display: flex; 
-	align-items: center; 
-	justify-content: center; 
-	margin-right: 16px; 
-} 
 
 .user-info { 
 	display: flex; 
