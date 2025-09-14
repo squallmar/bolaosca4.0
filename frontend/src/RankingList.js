@@ -8,7 +8,7 @@ function UserAvatar({ user, size = 56 }) {
   const pick = (x) => (x && String(x).trim()) || '';
   const raw = pick(user.foto_url) || pick(user.fotoUrl) || pick(user.avatar_url) || pick(user.avatarUrl);
   const initials = (user.nome || 'U').charAt(0).toUpperCase();
-  const style = { width: size, height: size, borderRadius: '50%', objectFit: 'cover' };
+  const style = { width: size, height: size, borderRadius: '50%', objectFit: 'cover', objectPosition: 'center' };
 
   if (raw && /^https?:\/\/res\.cloudinary\.com\//i.test(raw)) {
     return (
