@@ -375,9 +375,31 @@ function App() {
 
   const hideAdminSubMenu = /\/admin\/usuarios\/[0-9]+\/editar/.test(location.pathname);
 
+  const auth = useAuth() || {};
+  const { nome, autorizado } = auth;
   return (
     <div className="app">
       <Menu />
+      {/* Mensagem de não autorizado abaixo do menu principal */}
+      {location.pathname === '/' && nome && autorizado === false && (
+        <div style={{
+          background: '#fff3e0',
+          color: '#ff0000ff',
+          border: '2px solid #f39c12',
+          borderRadius: 12,
+          margin: '0 auto',
+          marginBottom: '32px',
+          padding: '20px',
+          maxWidth: 560,
+          fontWeight: 600,
+          fontSize: 18,
+          textAlign: 'center',
+          boxShadow: '0 2px 12px #f39c1233'
+        }}>
+          Você ainda não foi autorizado para jogar e fazer parte do time.<br />
+          Procure a administração para liberação do acesso!
+        </div>
+      )}
       <main className="main-content">
         {location.pathname === '/' && <ApostaTimer />}
         {erroMsg && (
