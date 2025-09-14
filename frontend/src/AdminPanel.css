@@ -292,21 +292,6 @@
     justify-content: flex-start;
     align-items: center;
   }
-  .bolao-panel-card,
-  .admin-stats,
-  .stat-card,
-  .bolao-panel-user-card {
-    width: 96vw;
-    max-width: 420px;
-    margin-left: auto;
-    margin-right: auto;
-    margin-bottom: 18px;
-    box-sizing: border-box;
-    align-self: center;
-    position: static;
-    float: none;
-    display: block;
-  }
   .bolao-panel-content {
     display: flex !important;
     flex-direction: column !important;
@@ -317,6 +302,21 @@
     margin: 0 auto;
     padding: 0;
     position: static;
+  }
+  .bolao-panel-card,
+  .admin-stats,
+  .stat-card,
+  .bolao-panel-user-card {
+    width: 94vw;
+    max-width: 360px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 18px;
+    box-sizing: border-box;
+    align-self: center;
+    position: static;
+    float: none;
+    display: block;
   }
   .bolao-panel-content {
     display: flex;
