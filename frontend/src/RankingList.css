@@ -1,10 +1,10 @@
 /* Garante tamanho do avatar em todas as telas */
 .avatar-img, .avatar-initials {
-  margin-left: 45px !important;
+  margin-left: 60px !important;
   width: 70px !important;
   height: 70px !important;
   border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain !important;
   object-position: center center;
   border: 3px solid #e9ecef;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
