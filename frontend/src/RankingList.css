@@ -327,8 +327,8 @@
 }
 
 .avatar-img, .avatar-initials {
-  width: 48px;
-  height: 48px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
   object-fit: cover;
   object-position: center;
