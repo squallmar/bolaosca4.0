@@ -1,5 +1,7 @@
 
 import express from 'express';
+import multer from 'multer';
+import cloudinary from 'cloudinary';
 import pool from './db.js';
 import { exigirAutenticacao, exigirRole } from './auth.js';
 import bcrypt from 'bcrypt';
@@ -8,15 +10,34 @@ import { getPagination, safeQuery, sanitizeMediaUrl } from './utils.js';
 
 const auth = exigirAutenticacao;
 const router = express.Router();
+// Configuração do Multer para receber o arquivo em memória
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Cadastro de usuário com foto_url
-router.post('/register', async (req, res) => {
+router.post('/register', upload.single('avatar'), async (req, res) => {
   try {
-    const { nome, email, senha, foto_url } = req.body;
-    if (!nome || !email || !senha) return res.status(400).json({ erro: 'Campos obrigatórios ausentes' });
+    const { nome, email, senha, tipo, apelido, contato } = req.body;
+    let foto_url = null;
+
+    if (!nome || !email || !senha) {
+      return res.status(400).json({ erro: 'Campos obrigatórios ausentes' });
+    }
+
+    // Se um arquivo de avatar foi enviado, faça o upload para o Cloudinary
+    if (req.file) {
+      const result = await cloudinary.v2.uploader.upload(
+        `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+        {
+          folder: 'avatars',
+        }
+      );
+      foto_url = result.secure_url;
+    }
+
     const hash = await bcrypt.hash(senha, 12);
-    const sql = `INSERT INTO usuario (nome, email, senha, foto_url) VALUES ($1, $2, $3, $4) RETURNING id, nome, email, foto_url`;
-    const { rows } = await pool.query(sql, [nome, email, hash, foto_url || null]);
+    const sql = `INSERT INTO usuario (nome, email, senha, foto_url, tipo, apelido, contato) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, nome, email, foto_url`;
+    const { rows } = await pool.query(sql, [nome, email, hash, foto_url, tipo, apelido, contato]);
+
     return res.status(201).json(rows[0]);
   } catch (e) {
     logger.error('usuario_register_error', { error: e.message });
