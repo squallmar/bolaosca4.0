@@ -40,12 +40,13 @@ body.no-scroll { overflow: hidden; }
 }
 
 .header-container {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 20px;  /* Reduzido de 32px para 20px */
-  padding: 0 20px;  /* Reduzido de 24px para 20px */
-  height: 70px;  /* Reduzido de 80px para 70px para um header mais compacto */
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 20px;
+  height: 70px;
   max-width: 1200px;
   margin: 0 auto;
   position: relative;
