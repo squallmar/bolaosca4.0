@@ -99,7 +99,8 @@ body.no-scroll { overflow: hidden; }
 
 .desktop-nav {
   display: flex;
-  gap: 8px;  /* Reduzido de 16px para 8px */
+  gap: 100px;
+  margin-top: -30px!important;  
   justify-self: center;
   align-items: flex-start;
   margin-right: 16px;
