@@ -62,53 +62,31 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      let foto_url = '';
+      // Cria um objeto FormData para enviar a foto e os dados
+      const data = new FormData();
+      data.append('nome', formData.nome);
+      data.append('email', formData.email);
+      data.append('senha', formData.senha);
+      data.append('tipo', formData.tipo);
+      data.append('apelido', formData.apelido);
+      data.append('contato', formData.contato);
       if (avatarFile) {
-        // Primeiro faz upload do avatar para Cloudinary
-        const fdAvatar = new FormData();
-        fdAvatar.append('file', avatarFile);
-        const { data } = await api.post('/upload/avatar', fdAvatar);
-        foto_url = data.url;
+        data.append('avatar', avatarFile); // Adiciona o arquivo da foto
       }
-      // Envia dados do usuário com foto_url
-      const resp = await api.post('/auth/register', {
-        ...formData,
-        foto_url
+
+      const res = await api.post('/usuario/register', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data', // Importante para enviar arquivos
+        },
       });
-      // login automático após cadastro
-      const user = resp.data?.usuario;
-      if (user) {
-      await auth.login(null, user.tipo, user.nome, user.autorizado, user.avatar_url || user.foto_url, user.apelido);
-        if (!user.autorizado) {
-          alert('Usuário não autorizado para apostar');
-        }
-      navigate('/');
-      } else {
-        alert('Cadastro realizado! Você já pode fazer login.');
-        navigate('/login');
-      }
-    } catch (error) {
-      const resp = error?.response;
-      if (resp) {
-        if (resp.status === 400) {
-          const msg = resp.data?.erro || resp.data?.error || '';
-          if (/Senha fraca/i.test(msg)) {
-            setErrors({ senha: 'Senha fraca: mínimo 10, maiúscula, minúscula e número.' });
-          } else if (/Email já cadastrado/i.test(msg)) {
-            setErrors({ email: 'Email já cadastrado.' });
-          } else {
-            setErrors({ submit: msg || 'Dados inválidos. Verifique as informações.' });
-          }
-        } else if (resp.status === 409) {
-          setErrors({ email: 'Email já cadastrado.' });
-        } else {
-          setErrors({ submit: 'Erro no servidor. Tente novamente.' });
-        }
-      } else if (error?.request) {
-        setErrors({ submit: 'Sem resposta do servidor.' });
-      } else {
-        setErrors({ submit: 'Erro inesperado.' });
-      }
+
+      auth.login(res.data);
+      navigate('/perfil');
+      console.log('Cadastro bem-sucedido:', res.data);
+    } catch (err) {
+      const errorMsg = err.response?.data?.erro || 'Falha ao criar conta. Tente novamente mais tarde.';
+      setErrors({ ...errors, submit: errorMsg });
+      console.error('Erro de cadastro:', err.response?.data);
     } finally {
       setIsLoading(false);
     }
