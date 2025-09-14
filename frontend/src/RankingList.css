@@ -17,6 +17,14 @@
 } 
 
 /* Garante que o container do avatar não limite o tamanho */ 
+.ranking-item-avatar { 
+	min-width: 70px; 
+	min-height: 70px; 
+	display: flex; 
+	align-items: center; 
+	justify-content: center; 
+	margin-right: 16px; 
+} 
 
 .user-info { 
 	display: flex; 
@@ -570,7 +578,7 @@
 .user-info { 
 	display: flex; 
 	align-items: center; 
-	gap: 12px; 
+	gap: 25px; 
 	min-width: 0; 
 	flex-grow: 1; 
 	order: 1; 
