@@ -304,7 +304,7 @@ function Home() {
           border: '2px solid #f39c12',
           borderRadius: 12,
           padding: '18px',
-          margin: '24px auto',
+          margin: '15px auto',
           maxWidth: 600,
           fontWeight: 600,
           fontSize: 18,
