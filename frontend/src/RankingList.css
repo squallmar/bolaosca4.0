@@ -18,7 +18,7 @@
 
 /* Garante que o container do avatar não limite o tamanho */ 
 .ranking-item-avatar { 
-	min-width: 70px; 
+		min-width: 90px;
 	min-height: 70px; 
 	display: flex; 
 	align-items: center; 
