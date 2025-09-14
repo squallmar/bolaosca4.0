@@ -1,47 +1,42 @@
 /* Configurações básicas e tipografia */
 .ranking-container {
-  max-width: 1000px;
-  margin: 20px auto 0 auto;
-  background: #fff;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-}
-
-.ranking-header {
-  height: 160px;
-  position: relative;
-  background: linear-gradient(135deg, #2c3e50, #4a6491);
-  color: white;
-  padding: 20px;
-}
-
-.trophy-banner {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.main-title {
-  font-size: 28px;
-  font-weight: 800;
-  margin: 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-  z-index: 2;
-}
-
-.trophy-overlay {
-  position: absolute;
-  margin-top: 80px;
-  right: -10px;
-  width: 50px;
-  height: 50px;
-  opacity: 1;
-  filter: brightness(1.05) contrast(1.05);
-  z-index: 1;
+  @media (max-width: 480px) {
+    .ranking-item {
+      padding: 12px 16px;
+      flex-wrap: wrap;
+      flex-direction: row;
+    }
+    .position {
+      flex-direction: column;
+      gap: 8px;
+      min-width: auto;
+      order: 0;
+      margin-right: 8px;
+    }
+    .user-info {
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      order: 1;
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+    .avatar-img, .avatar-initials {
+      margin-right: 0;
+      margin-bottom: 0;
+    }
+    .points {
+      margin-left: 0;
+      order: 2;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .points-value {
+      font-size: 18px;
+    }
+  }
   object-fit: contain;
   pointer-events: none;
 }
@@ -547,5 +542,15 @@
   
   .points-value {
     font-size: 1.2em;
+  }
+  /* Estilos para medalhas */
+  .medal-icon {
+
+    width: 40px !important;
+    height: 40px !important;
+    object-fit: contain;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 8px;
   }
 }
