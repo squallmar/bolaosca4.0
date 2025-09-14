@@ -91,8 +91,8 @@ body.no-scroll { overflow: hidden; }
   grid-template-columns: auto 1fr auto; /* logo | nav center | user info */
   align-items: center;
   gap: 32px;
-  padding: 0 24px;
-  height: 80px;
+  padding: 5px 24px 5px 24px;
+  height: 70px;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -100,9 +100,10 @@ body.no-scroll { overflow: hidden; }
 .desktop-nav {
   display: flex;
   gap: 8px;  /* Reduzido de 16px para 8px */
-  justify-self: center; /* centraliza horizontalmente na coluna do meio */
-  align-self: center;
-  margin-right: 16px;  /* Reduzido de 24px para 16px */
+  justify-self: center;
+  align-items: flex-start;
+  margin-right: 16px;
+  padding-top: 5px;
 }
 
 /* Avatar à direita sempre */
@@ -111,7 +112,8 @@ body.no-scroll { overflow: hidden; }
   align-items: center;
   gap: 10px;
   min-width: 120px;
-  max-width: 180px;
+  flex-shrink: 0;
+  padding-top: 3px;
   height: 42px;
   box-sizing: border-box;
   justify-content: flex-end; /* posiciona conteúdo (nome + avatar) alinhado à direita dentro da caixa */
@@ -124,6 +126,7 @@ body.no-scroll { overflow: hidden; }
   transform: none;
   z-index: 2;
   justify-self: end;
+  padding-top: 5px;
 }
 
 .user-info img {
@@ -178,12 +181,12 @@ body.no-scroll { overflow: hidden; }
 .nav-link {
   color: #fff;
   text-decoration: none;
-  padding: 8px 12px;  /* Reduzido de 10px 16px para 8px 12px */
+  padding: 6px 10px;
   border-radius: 8px;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 4px;  /* Reduzido de 6px para 4px */
+  gap: 4px;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
