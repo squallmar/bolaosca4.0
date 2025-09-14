@@ -8,16 +8,14 @@ function UserAvatar({ user, size = 56 }) {
   const pick = (x) => (x && String(x).trim()) || '';
   const raw = pick(user.foto_url) || pick(user.fotoUrl) || pick(user.avatar_url) || pick(user.avatarUrl);
   const initials = (user.nome || 'U').charAt(0).toUpperCase();
-  const style = { width: size, height: size, borderRadius: '50%', objectFit: 'cover' };
+  // Removido estilo inline, usar CSS
 
   if (raw && /^https?:\/\/res\.cloudinary\.com\//i.test(raw)) {
     return (
       <img
         src={raw}
         alt={user.displayName || user.nome}
-        width={size}
-        height={size}
-        style={style}
+        className="avatar-img"
         onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg'; }}
       />
     );
@@ -25,7 +23,7 @@ function UserAvatar({ user, size = 56 }) {
 
   // Se a URL estiver vazia, exibe as iniciais
   return (
-    <div style={{ ...style, backgroundColor: '#ddd', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2em', fontWeight: 'bold' }}>
+    <div className="avatar-initials" style={{ width: size, height: size }}>
       {initials}
     </div>
   );
