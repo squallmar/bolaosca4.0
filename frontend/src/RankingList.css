@@ -318,7 +318,7 @@
 
 .mode-selector {
   display: flex;
-  gap: 12px;
+  gap: 32px;
   justify-content: center;
 }
 
