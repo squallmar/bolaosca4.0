@@ -3,6 +3,34 @@ import api from './services/api';
 import './RankingList.css'; // Vamos mover os estilos para um arquivo separado
 import { API_BASE } from './config';
 
+// Componente auxiliar para exibir o avatar de forma robusta
+function UserAvatar({ user, size = 56 }) {
+  const pick = (x) => (x && String(x).trim()) || '';
+  const raw = pick(user.foto_url) || pick(user.fotoUrl) || pick(user.avatar_url) || pick(user.avatarUrl);
+  const initials = (user.nome || 'U').charAt(0).toUpperCase();
+  const style = { width: size, height: size, borderRadius: '50%', objectFit: 'cover' };
+
+  if (raw && /^https?:\/\/res\.cloudinary\.com\//i.test(raw)) {
+    return (
+      <img
+        src={raw}
+        alt={user.displayName || user.nome}
+        width={size}
+        height={size}
+        style={style}
+        onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg'; }}
+      />
+    );
+  }
+
+  // Se a URL estiver vazia, exibe as iniciais
+  return (
+    <div style={{ ...style, backgroundColor: '#ddd', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '1.2em', fontWeight: 'bold' }}>
+      {initials}
+    </div>
+  );
+}
+
 // tenta uma lista de URLs em sequência
 async function tryGetFirst(urls) {
   let lastErr;
@@ -292,9 +320,10 @@ export default function RankingList() {
           <Medal pos={posicao} />
           <div className="pos-label">{posLabel(posicao)}</div>
         </div>
-        
         <div className="user-info">
-          <Avatar nome={usuario.displayName} fotoUrl={usuario.fotoUrl} />
+          <div className="ranking-item-avatar">
+            <UserAvatar user={usuario} size={50} />
+          </div>
           <div className="user-details">
             <div className="username">
               {usuario.displayName}
@@ -307,7 +336,6 @@ export default function RankingList() {
             )}
           </div>
         </div>
-        
         <div className="points">
           <span className="points-value">{usuario.pontos}</span>
           <span className="points-label">pontos</span>

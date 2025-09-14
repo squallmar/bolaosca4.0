@@ -80,9 +80,12 @@ const Register = () => {
         },
       });
 
-      auth.login(res.data);
-      navigate('/perfil');
-      console.log('Cadastro bem-sucedido:', res.data);
+  // Garante que avatarUrl seja populado corretamente, mesmo se vier como foto_url
+  const user = res.data;
+  const avatarUrl = user.avatarUrl || user.foto_url || user.fotoUrl || '';
+  auth.login({ ...user, avatarUrl });
+  navigate('/perfil');
+  console.log('Cadastro bem-sucedido:', user);
     } catch (err) {
       const errorMsg = err.response?.data?.erro || 'Falha ao criar conta. Tente novamente mais tarde.';
       setErrors({ ...errors, submit: errorMsg });
