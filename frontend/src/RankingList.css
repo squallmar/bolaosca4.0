@@ -314,8 +314,8 @@
 
 /* Tamanho e estilo principal do avatar */
 .avatar-img, .avatar-initials {
-  width: 40px !important;
-  height: 40px !important;
+  width: 55px !important;
+  height: 55px !important;
   border-radius: 50%;
   object-fit: contain;
   object-position: center center;
