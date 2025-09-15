@@ -99,7 +99,7 @@ body.no-scroll { overflow: hidden; }
 .desktop-nav {
   display: flex;
   gap: 8px;  /* Reduzido de 16px para 8px */
-  margin-top: -30px!important;
+  margin-top: -25px!important;
   justify-self: center; /* centraliza horizontalmente na coluna do meio */
   align-self: center;
   margin-right: 16px;  /* Reduzido de 24px para 16px */
@@ -110,7 +110,7 @@ body.no-scroll { overflow: hidden; }
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: -30px !important;
+  margin-top: -25px !important;
   min-width: 120px;
   max-width: 180px;
   height: 42px;
