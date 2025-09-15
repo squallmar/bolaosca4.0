@@ -47,7 +47,7 @@ import AdminSubMenu from './AdminSubMenu';
   if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
     return <Manutencao />;
   }
-  
+
 function Menu() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -371,6 +371,13 @@ function App() {
   // Captura mensagem de erro vinda do redirecionamento
   const location = useLocation();
   const erroMsg = location.state?.erro;
+  const auth = useAuth() || {};
+  const isAdmin = auth?.tipo === 'admin' && auth?.autorizado;
+
+  // Bloqueio de manutenção para todos exceto admin autorizado
+  if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
+    return <Manutencao />;
+  }
 
   // Protege rotas que exigem autenticação
   const RequireAuth = ({ children }) => {
