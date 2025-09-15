@@ -1,11 +1,3 @@
-  const location = useLocation();
-  const erroMsg = location.state?.erro;
-  const auth = useAuth() || {};
-  const isAdmin = auth?.tipo === 'admin' && auth?.autorizado;
-
-  if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
-    return <Manutencao />;
-  }
 import React, { useState, useEffect } from 'react';
 import Manutencao from './Manutencao';
 import { API_BASE } from './config';
@@ -47,7 +39,15 @@ import AdminSubMenu from './AdminSubMenu';
 
 // Removido: não utilizamos mais Authorization via localStorage; autenticação por cookie httpOnly
 
+  const location = useLocation();
+  const erroMsg = location.state?.erro;
+  const auth = useAuth() || {};
+  const isAdmin = auth?.tipo === 'admin' && auth?.autorizado;
 
+  if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
+    return <Manutencao />;
+  }
+  
 function Menu() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
