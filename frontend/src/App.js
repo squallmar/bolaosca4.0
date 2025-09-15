@@ -1,6 +1,8 @@
+  const location = useLocation();
+  const erroMsg = location.state?.erro;
   const auth = useAuth() || {};
   const isAdmin = auth?.tipo === 'admin' && auth?.autorizado;
-  const location = useLocation();
+
   if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
     return <Manutencao />;
   }
