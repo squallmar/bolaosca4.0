@@ -1,4 +1,11 @@
+  const auth = useAuth() || {};
+  const isAdmin = auth?.tipo === 'admin' && auth?.autorizado;
+  const location = useLocation();
+  if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
+    return <Manutencao />;
+  }
 import React, { useState, useEffect } from 'react';
+import Manutencao from './Manutencao';
 import { API_BASE } from './config';
 import ApostaTimer from './ApostaTimer';
 import { useLocation, Link, Routes, Route, Navigate, BrowserRouter } from 'react-router-dom';
@@ -385,6 +392,7 @@ function App() {
         )}
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/manutencao" element={<Manutencao />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/admin" element={<AdminPanel />} />
