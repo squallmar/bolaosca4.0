@@ -348,9 +348,11 @@ function App() {
   const auth = useAuth() || {};
   const isAdmin = auth?.tipo === 'admin' && auth?.autorizado;
 
-  if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
-    return <Manutencao />;
-  }
+  // ativar pagina de manutenção para não-admins
+
+   // if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
+  //  return <Manutencao />;
+ // }
 
   const RequireAuth = ({ children }) => {
     const auth = useAuth() || {};
