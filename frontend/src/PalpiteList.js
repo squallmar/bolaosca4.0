@@ -239,16 +239,23 @@ export default function ApostarRodada() {
     setOk('');
     setSaving(s => ({ ...s, [partida.id]: true }));
     try {
-  await api.post(`/palpite/apostar/${partida.id}`, { palpite: valor });
+      await api.post(`/palpite/apostar/${partida.id}`, { palpite: valor });
       setPalpites(p => ({ ...p, [partida.id]: valor }));
       setOk('Palpite salvo! ⚽');
       setTimeout(() => setOk(''), 2500);
     } catch (e) {
       const status = e?.response?.status;
-  if (status === 403) setErro('Você não está autorizado a apostar.');
-  else if (status === 400) setErro(e.response?.data?.erro || 'Palpite inválido.');
-  else if (status === 409) setErro(e.response?.data?.erro || 'Apostas fechadas para esta partida.');
-      else setErro('Erro ao salvar palpite.');
+      if (status === 401) {
+        setErro('Você ainda não foi autorizado a jogar. Peça autorização à administração!');
+      } else if (status === 403) {
+        setErro('Você não pode jogar nessa rodada. Peça liberação à administração!');
+      } else if (status === 400) {
+        setErro(e.response?.data?.erro || 'Palpite inválido.');
+      } else if (status === 409) {
+        setErro(e.response?.data?.erro || 'Apostas fechadas para esta partida.');
+      } else {
+        setErro('Erro ao salvar palpite.');
+      }
     } finally {
       setSaving(s => ({ ...s, [partida.id]: false }));
     }
