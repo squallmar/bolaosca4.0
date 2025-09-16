@@ -1,3 +1,121 @@
+import PDFDocument from 'pdfkit';
+// Gera relatório PDF de desempate do campeonato
+router.get('/relatorio-campeonato/:campeonatoId', isAdmin, async (req, res) => {
+  const { campeonatoId } = req.params;
+  try {
+    // Busca todos os usuários participantes do campeonato
+    const usersRes = await pool.query(`
+      SELECT u.id, u.nome, u.apelido, u.email
+      FROM usuario u
+      JOIN palpite p ON p.usuario_id = u.id
+      JOIN partida pa ON pa.id = p.partida_id
+      JOIN rodada r ON r.id = pa.rodada_id
+      WHERE r.campeonato_id = $1
+      GROUP BY u.id
+    `, [campeonatoId]);
+    const users = usersRes.rows;
+
+    // Busca todas as rodadas do campeonato
+    const rodadasRes = await pool.query('SELECT id, nome FROM rodada WHERE campeonato_id = $1', [campeonatoId]);
+    const rodadas = rodadasRes.rows;
+
+    // Busca todos os palpites e pontos por rodada
+    const pontosRes = await pool.query(`
+      SELECT p.usuario_id, r.id as rodada_id, SUM(p.pontos) as pontos
+      FROM palpite p
+      JOIN partida pa ON pa.id = p.partida_id
+      JOIN rodada r ON r.id = pa.rodada_id
+      WHERE r.campeonato_id = $1
+      GROUP BY p.usuario_id, r.id
+    `, [campeonatoId]);
+    // Estrutura: { usuario_id, rodada_id, pontos }
+    const pontosPorRodada = {};
+    for (const row of pontosRes.rows) {
+      if (!pontosPorRodada[row.usuario_id]) pontosPorRodada[row.usuario_id] = [];
+      pontosPorRodada[row.usuario_id].push({ rodada_id: row.rodada_id, pontos: Number(row.pontos) });
+    }
+
+    // Calcula rodadas vencidas por usuário
+    const rodadasVencidas = {};
+    for (const rodada of rodadas) {
+      // Para cada rodada, encontra o(s) usuário(s) com maior pontuação
+      let max = -Infinity;
+      let vencedores = [];
+      for (const user of users) {
+        const pontos = pontosPorRodada[user.id]?.find(r => r.rodada_id === rodada.id)?.pontos || 0;
+        if (pontos > max) {
+          max = pontos;
+          vencedores = [user.id];
+        } else if (pontos === max) {
+          vencedores.push(user.id);
+        }
+      }
+      for (const uid of vencedores) {
+        rodadasVencidas[uid] = (rodadasVencidas[uid] || 0) + 1;
+      }
+    }
+
+    // Monta ranking final com critérios de desempate
+    const ranking = users.map(u => {
+      const pontosTotais = (pontosPorRodada[u.id] || []).reduce((acc, r) => acc + r.pontos, 0);
+      return {
+        ...u,
+        rodadasVencidas: rodadasVencidas[u.id] || 0,
+        pontosTotais,
+        pontosPorRodada: pontosPorRodada[u.id] || [],
+      };
+    });
+    // Ordena por pontos totais, depois rodadas vencidas, depois maior pontuação em uma rodada
+    ranking.sort((a, b) => {
+      if (b.pontosTotais !== a.pontosTotais) return b.pontosTotais - a.pontosTotais;
+      if ((b.rodadasVencidas || 0) !== (a.rodadasVencidas || 0)) return (b.rodadasVencidas || 0) - (a.rodadasVencidas || 0);
+      const maxA = Math.max(...(a.pontosPorRodada.map(r => r.pontos)));
+      const maxB = Math.max(...(b.pontosPorRodada.map(r => r.pontos)));
+      return maxB - maxA;
+    });
+
+    // Gera PDF
+    const doc = new PDFDocument({ margin: 36, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="relatorio-campeonato-${campeonatoId}.pdf"`);
+    doc.pipe(res);
+
+    doc.fontSize(18).text('Relatório Final do Campeonato', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Campeonato ID: ${campeonatoId}`);
+    doc.text(`Data: ${new Date().toLocaleString('pt-BR')}`);
+    doc.moveDown();
+    doc.fontSize(14).text('Critérios de Desempate:', { underline: true });
+    doc.fontSize(12).text('1) Maior pontuação total');
+    doc.text('2) Maior número de rodadas vencidas');
+    doc.text('3) Maior pontuação em uma rodada');
+    doc.moveDown();
+
+    doc.fontSize(14).text('Ranking Final:', { underline: true });
+    doc.moveDown(0.5);
+    // Cabeçalho
+    doc.fontSize(12).text('Posição', 36, doc.y, { continued: true });
+    doc.text('Nome', 90, doc.y, { continued: true });
+    doc.text('Rodadas Vencidas', 250, doc.y, { continued: true });
+    doc.text('Pontos Totais', 370, doc.y, { continued: true });
+    doc.text('Maior Pontuação em Rodada', 470, doc.y);
+    doc.moveDown(0.5);
+    // Linhas
+    ranking.forEach((u, idx) => {
+      doc.text(`${idx + 1}º`, 36, doc.y, { continued: true });
+      doc.text(u.nome, 90, doc.y, { continued: true });
+      doc.text(u.rodadasVencidas, 250, doc.y, { continued: true });
+      doc.text(u.pontosTotais, 370, doc.y, { continued: true });
+      const maxRodada = Math.max(...(u.pontosPorRodada.map(r => r.pontos)));
+      doc.text(maxRodada, 470, doc.y);
+    });
+
+    doc.end();
+  } catch (err) {
+    console.error('Erro ao gerar relatório PDF:', err);
+    res.status(500).json({ erro: 'Erro ao gerar relatório PDF.' });
+  }
+});
 import express from 'express';
 import pool from './db.js';
 import jwt from 'jsonwebtoken';

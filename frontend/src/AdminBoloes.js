@@ -4,7 +4,26 @@ import { useNavigate } from 'react-router-dom';
 import AdminSubMenu from './AdminSubMenu';
 import { API_BASE, API_BASE as IMG_BASE } from './config';
 
-// ...existing code...
+// Função para baixar relatório PDF do campeonato
+async function baixarRelatorioCampeonato(campeonatoId, nome) {
+  try {
+    const res = await fetch(`${API_BASE}/admin/relatorio-campeonato/${campeonatoId}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Falha ao gerar relatório');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `relatorio-campeonato-${nome || campeonatoId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Erro ao baixar relatório PDF: ' + (e?.message || e));
+  }
+}
 
 // Autenticação agora via cookie httpOnly; não precisamos mais injetar Authorization manual
 async function tryGet(urls, config = {}) {
@@ -315,6 +334,19 @@ export default function AdminBoloes() {
                 >
                   Finalizar
                 </button>
+                {Array.isArray(bolaoCampeonatos[b.id]) && bolaoCampeonatos[b.id].length > 0 && (
+                  bolaoCampeonatos[b.id].map((c, cidx) => (
+                    <button
+                      key={`relatorio-camp-${c.id}`}
+                      onClick={() => baixarRelatorioCampeonato(c.id, c.nome)}
+                      className="btn btn-primary btn-sm"
+                      style={{ marginLeft: 8 }}
+                    >
+                      📄 Relatório PDF
+                    </button>
+                  ))
+                )}
+
               </div>
             </div>
 
