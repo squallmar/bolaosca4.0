@@ -301,13 +301,29 @@ export default function RankingList() {
 
   const listaExibida = useMemo(() => (modo === 'rodada' ? ranking : rankingGeral), [modo, ranking, rankingGeral]);
 
+  // Exibe rótulos especiais só se a rodada/campeonato estiver finalizado
   const posLabel = useCallback((pos) => {
-    if (pos === 1) return 'Campeão';
-    if (pos === 2) return 'Vice';
-    if (pos === 3) return '3º Lugar';
-    if (pos === 4) return '4º Lugar';
+    if (modo === 'rodada') {
+      const rodada = rodadas.find(r => String(r.id) === String(rodadaId));
+      if (!rodada?.finalizada && !rodada?.finalizado) return `${pos}º Lugar`;
+      if (pos === 1) return 'Campeão';
+      if (pos === 2) return 'Vice';
+      if (pos === 3) return '3º Lugar';
+      if (pos === 4) return '4º Lugar';
+      return `${pos}º Lugar`;
+    }
+    if (modo === 'geral') {
+      // Só mostra se o campeonato selecionado estiver finalizado
+      const campeonato = campeonatos.find(c => String(c.id) === String(campeonatoId));
+      if (!campeonato?.finalizado && !campeonato?.finalizada) return `${pos}º Lugar`;
+      if (pos === 1) return 'Campeão';
+      if (pos === 2) return 'Vice';
+      if (pos === 3) return '3º Lugar';
+      if (pos === 4) return '4º Lugar';
+      return `${pos}º Lugar`;
+    }
     return `${pos}º Lugar`;
-  }, []);
+  }, [modo, rodadas, rodadaId, campeonatos, campeonatoId]);
 
   const RankingItem = React.memo(({ usuario, posicao }) => {
     const isTop3 = posicao <= 3;
