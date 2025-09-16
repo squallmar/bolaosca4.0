@@ -68,7 +68,8 @@ function normalizeRanking(list = []) {
 }
 
 // Componentes auxiliares para melhor performance
-const Medal = React.memo(({ pos }) => {
+const Medal = React.memo(({ pos, isLast }) => {
+  if (isLast) return <img src={`${API_BASE}/uploads/avatars/pangare.jpg`} alt="Pangaré" className="medal-icon" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', background: '#fffbe6', border: '2px solid #e0c36a' }} />;
   if (pos === 1) return <img src="/medals/gold.png" alt="1º Lugar" className="medal-icon" />;
   if (pos === 2) return <img src="/medals/silver.png" alt="2º Lugar" className="medal-icon" />;
   if (pos === 3) return <img src="/medals/bronze.png" alt="3º Lugar" className="medal-icon" />;
@@ -327,23 +328,26 @@ export default function RankingList() {
 
   const RankingItem = React.memo(({ usuario, posicao }) => {
     const isTop3 = posicao <= 3;
-    
+    const isLast = posicao === listaExibida.length;
+    const nomeExibido = isLast ? 'Pangaré' : usuario.displayName;
     return (
-      <div className={`ranking-item ${isTop3 ? 'top-three' : ''}`}>
+      <div className={`ranking-item ${isTop3 ? 'top-three' : ''} ${isLast ? 'pangare' : ''}`}>
         <div className="position">
-          <Medal pos={posicao} />
-          <div className="pos-label">{posLabel(posicao)}</div>
+          <Medal pos={posicao} isLast={isLast} />
+          <div className="pos-label">{isLast ? 'Pangaré' : posLabel(posicao)}</div>
         </div>
         <div className="user-info">
           <div className="ranking-item-avatar">
-            <UserAvatar user={usuario} />
+            {isLast
+              ? <img src={`${API_BASE}/uploads/avatars/pangare.jpg`} alt="Pangaré" className="avatar-img" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', background: '#fffbe6', border: '2px solid #e0c36a' }} />
+              : <UserAvatar user={usuario} />}
           </div>
           <div className="user-details">
             <div className="username">
-              <span className="username-text">{usuario.displayName}</span>
+              <span className="username-text">{nomeExibido}</span>
               <StatusTag banido={usuario.banido} desistiu={usuario.desistiu} />
             </div>
-            {usuario.nome && usuario.apelido && usuario.apelido !== usuario.nome && (
+            {usuario.nome && usuario.apelido && usuario.apelido !== usuario.nome && !isLast && (
               <div className="fullname">
                 {usuario.nome}
               </div>
