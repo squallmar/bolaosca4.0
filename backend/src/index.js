@@ -216,8 +216,8 @@ const csrfProtection = csurf({
   cookie: {
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  secure: process.env.NODE_ENV === 'production',
-  partitioned: process.env.NODE_ENV === 'production' ? true : undefined
+    secure: process.env.NODE_ENV === 'production',
+    // partitioned: process.env.NODE_ENV === 'production' ? true : undefined // REMOVIDO para compatibilidade
   }
 });
 
@@ -228,8 +228,8 @@ app.get('/csrf-token', cors({ origin: flexibleOrigin, credentials: true }), csrf
   res.cookie('XSRF-TOKEN', token, {
     httpOnly: false,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  secure: process.env.NODE_ENV === 'production',
-  partitioned: process.env.NODE_ENV === 'production' ? true : undefined
+    secure: process.env.NODE_ENV === 'production',
+    // partitioned: process.env.NODE_ENV === 'production' ? true : undefined // REMOVIDO para compatibilidade
   });
   res.json({ csrfToken: token });
 });
