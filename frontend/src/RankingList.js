@@ -68,8 +68,17 @@ function normalizeRanking(list = []) {
 }
 
 // Componentes auxiliares para melhor performance
-const Medal = React.memo(({ pos, isLast }) => {
-  if (isLast) return <img src={`${API_BASE}/uploads/avatars/pangare.jpg`} alt="Pangaré" className="medal-icon" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', background: '#fffbe6', border: '2px solid #e0c36a' }} />;
+const Medal = React.memo(({ pos, isLast, showPangare }) => {
+  if (isLast && showPangare) {
+    return (
+      <img
+        src="https://res.cloudinary.com/dsmxqn0fa/image/upload/v1758067988/pangare_s0ea1e.jpg"
+        alt="Pangaré"
+        className="medal-icon"
+        style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', background: '#fffbe6', border: '2px solid #e0c36a' }}
+      />
+    );
+  }
   if (pos === 1) return <img src="/medals/gold.png" alt="1º Lugar" className="medal-icon" />;
   if (pos === 2) return <img src="/medals/silver.png" alt="2º Lugar" className="medal-icon" />;
   if (pos === 3) return <img src="/medals/bronze.png" alt="3º Lugar" className="medal-icon" />;
@@ -303,10 +312,12 @@ export default function RankingList() {
   const listaExibida = useMemo(() => (modo === 'rodada' ? ranking : rankingGeral), [modo, ranking, rankingGeral]);
 
   // Exibe rótulos especiais só se a rodada/campeonato estiver finalizado
-  const posLabel = useCallback((pos) => {
+  const posLabel = useCallback((pos, isLast = false) => {
     if (modo === 'rodada') {
       const rodada = rodadas.find(r => String(r.id) === String(rodadaId));
-      if (!rodada?.finalizada && !rodada?.finalizado) return `${pos}º Lugar`;
+      const finalizada = rodada?.finalizada || rodada?.finalizado;
+      if (!finalizada) return `${pos}º Lugar`;
+      if (isLast) return 'Pangaré';
       if (pos === 1) return 'Campeão';
       if (pos === 2) return 'Vice';
       if (pos === 3) return '3º Lugar';
@@ -314,9 +325,10 @@ export default function RankingList() {
       return `${pos}º Lugar`;
     }
     if (modo === 'geral') {
-      // Só mostra se o campeonato selecionado estiver finalizado
       const campeonato = campeonatos.find(c => String(c.id) === String(campeonatoId));
-      if (!campeonato?.finalizado && !campeonato?.finalizada) return `${pos}º Lugar`;
+      const finalizado = campeonato?.finalizado || campeonato?.finalizada;
+      if (!finalizado) return `${pos}º Lugar`;
+      if (isLast) return 'Pangaré';
       if (pos === 1) return 'Campeão';
       if (pos === 2) return 'Vice';
       if (pos === 3) return '3º Lugar';
@@ -329,25 +341,35 @@ export default function RankingList() {
   const RankingItem = React.memo(({ usuario, posicao }) => {
     const isTop3 = posicao <= 3;
     const isLast = posicao === listaExibida.length;
-    const nomeExibido = isLast ? 'Pangaré' : usuario.displayName;
+    // Determina se deve mostrar "Pangaré" (imagem e label) para o último colocado
+    let showPangare = false;
+    if (isLast) {
+      if (modo === 'rodada') {
+        const rodada = rodadas.find(r => String(r.id) === String(rodadaId));
+        showPangare = !!(rodada?.finalizada || rodada?.finalizado);
+      } else if (modo === 'geral') {
+        const campeonato = campeonatos.find(c => String(c.id) === String(campeonatoId));
+        showPangare = !!(campeonato?.finalizado || campeonato?.finalizada);
+      }
+    }
     return (
-      <div className={`ranking-item ${isTop3 ? 'top-three' : ''} ${isLast ? 'pangare' : ''}`}>
+      <div className={`ranking-item ${isTop3 ? 'top-three' : ''} ${isLast && showPangare ? 'pangare' : ''}`}>
         <div className="position">
-          <Medal pos={posicao} isLast={isLast} />
-          <div className="pos-label">{isLast ? 'Pangaré' : posLabel(posicao)}</div>
+          <Medal pos={posicao} isLast={isLast} showPangare={showPangare} />
+          <div className="pos-label">{posLabel(posicao, isLast && showPangare)}</div>
         </div>
         <div className="user-info">
           <div className="ranking-item-avatar">
-            {isLast
-              ? <img src={`${API_BASE}/uploads/avatars/pangare.jpg`} alt="Pangaré" className="avatar-img" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', background: '#fffbe6', border: '2px solid #e0c36a' }} />
+            {isLast && showPangare
+              ? <img src="https://res.cloudinary.com/dsmxqn0fa/image/upload/v1758067988/pangare_s0ea1e.jpg" alt="Pangaré" className="avatar-img" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', background: '#fffbe6', border: '2px solid #e0c36a' }} />
               : <UserAvatar user={usuario} />}
           </div>
           <div className="user-details">
             <div className="username">
-              <span className="username-text">{nomeExibido}</span>
+              <span className="username-text">{usuario.displayName}</span>
               <StatusTag banido={usuario.banido} desistiu={usuario.desistiu} />
             </div>
-            {usuario.nome && usuario.apelido && usuario.apelido !== usuario.nome && !isLast && (
+            {usuario.nome && usuario.apelido && usuario.apelido !== usuario.nome && (!isLast || !showPangare) && (
               <div className="fullname">
                 {usuario.nome}
               </div>
