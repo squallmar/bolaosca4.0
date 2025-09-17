@@ -68,6 +68,15 @@ function normalizeRanking(list = []) {
 }
 
 // Componentes auxiliares para melhor performance
+const medalStyle = {
+  width: 70,
+  height: 70,
+  borderRadius: 8,
+  objectFit: 'cover',
+  background: '#fffbe6',
+  border: '2px solid #e0c36a',
+};
+
 const Medal = React.memo(({ pos, isLast, showPangare }) => {
   if (isLast && showPangare) {
     return (
@@ -75,14 +84,14 @@ const Medal = React.memo(({ pos, isLast, showPangare }) => {
         src="https://res.cloudinary.com/dsmxqn0fa/image/upload/v1758067988/pangare_s0ea1e.jpg"
         alt="Pangaré"
         className="medal-icon"
-        style={{ width: 70, height: 70, borderRadius: 8, objectFit: 'cover', background: '#fffbe6', border: '2px solid #e0c36a' }}
+        style={medalStyle}
       />
     );
   }
-  if (pos === 1) return <img src="/medals/gold.png" alt="1º Lugar" className="medal-icon" />;
-  if (pos === 2) return <img src="/medals/silver.png" alt="2º Lugar" className="medal-icon" />;
-  if (pos === 3) return <img src="/medals/bronze.png" alt="3º Lugar" className="medal-icon" />;
-  if (pos === 4) return <img src="/medals/4pessoas.png" alt="4º Lugar" className="medal-icon" />;
+  if (pos === 1) return <img src="/medals/gold.png" alt="1º Lugar" className="medal-icon" style={medalStyle} />;
+  if (pos === 2) return <img src="/medals/silver.png" alt="2º Lugar" className="medal-icon" style={medalStyle} />;
+  if (pos === 3) return <img src="/medals/bronze.png" alt="3º Lugar" className="medal-icon" style={medalStyle} />;
+  if (pos === 4) return <img src="/medals/4pessoas.png" alt="4º Lugar" className="medal-icon" style={medalStyle} />;
   return <span className="position-number">{pos}º</span>;
 });
 
