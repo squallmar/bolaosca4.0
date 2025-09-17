@@ -1,4 +1,37 @@
+
+import express from 'express';
 import PDFDocument from 'pdfkit';
+import pool from './db.js';
+import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { sanitizeText, sanitizeMediaUrl } from './utils.js';
+import { v2 as cloudinary } from 'cloudinary';
+
+const router = express.Router();
+
+// Middleware para verificar admin (aceita cookie httpOnly ou Bearer)
+async function isAdmin(req, res, next) {
+  const header = req.headers.authorization || '';
+  let token = null;
+  if (header.startsWith('Bearer ')) token = header.slice(7);
+  if (!token && req.cookies?.token) token = req.cookies.token;
+  if (!token) return res.status(401).json({ erro: 'Token não fornecido' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Revalida no banco: tipo admin e autorizado
+    const { rows } = await pool.query('SELECT id, tipo, autorizado FROM usuario WHERE id = $1', [decoded.id]);
+    const u = rows[0];
+    if (!u || u.tipo !== 'admin') return res.status(403).json({ erro: 'Acesso negado' });
+    if (!u.autorizado) return res.status(403).json({ erro: 'Admin não autorizado' });
+    req.adminId = u.id;
+    next();
+  } catch (e) {
+    return res.status(401).json({ erro: 'Token inválido' });
+  }
+}
+
 // Gera relatório PDF de desempate do campeonato
 router.get('/relatorio-campeonato/:campeonatoId', isAdmin, async (req, res) => {
   const { campeonatoId } = req.params;
@@ -116,42 +149,9 @@ router.get('/relatorio-campeonato/:campeonatoId', isAdmin, async (req, res) => {
     res.status(500).json({ erro: 'Erro ao gerar relatório PDF.' });
   }
 });
-import express from 'express';
-import pool from './db.js';
-import jwt from 'jsonwebtoken';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { sanitizeText, sanitizeMediaUrl } from './utils.js';
-
-const router = express.Router();
-
-// Middleware para verificar admin (aceita cookie httpOnly ou Bearer)
-async function isAdmin(req, res, next) {
-  const header = req.headers.authorization || '';
-  let token = null;
-  if (header.startsWith('Bearer ')) token = header.slice(7);
-  if (!token && req.cookies?.token) token = req.cookies.token;
-  if (!token) return res.status(401).json({ erro: 'Token não fornecido' });
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // Revalida no banco: tipo admin e autorizado
-    const { rows } = await pool.query('SELECT id, tipo, autorizado FROM usuario WHERE id = $1', [decoded.id]);
-    const u = rows[0];
-    if (!u || u.tipo !== 'admin') return res.status(403).json({ erro: 'Acesso negado' });
-    if (!u.autorizado) return res.status(403).json({ erro: 'Admin não autorizado' });
-    req.adminId = u.id;
-    next();
-  } catch (e) {
-    return res.status(401).json({ erro: 'Token inválido' });
-  }
-}
-
 // Configuração do multer para uploads de imagem (apenas uma declaração)
 // Usar memoryStorage para produção (Vercel/Render não tem filesystem)
 const storage = multer.memoryStorage();
-// ...existing code...
-
 const upload = multer({ storage });
 
 // Listar usuários não autorizados
@@ -185,14 +185,15 @@ router.post('/anuncio', isAdmin, upload.single('imagem'), async (req, res) => {
     let imagem_url = null;
     if (req.file) {
       // Envia para Cloudinary na pasta 'anuncios'
-      const { v2: cloudinary } = await import('cloudinary');
       try {
-        const result = await cloudinary.uploader.upload_stream({ folder: 'anuncios' }, (error, result) => {
-          if (error || !result) throw error || new Error('Falha no upload Cloudinary');
-          imagem_url = result.secure_url;
+        const uploadResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream({ folder: 'anuncios' }, (error, result) => {
+            if (error || !result) return reject(error || new Error('Falha no upload Cloudinary'));
+            resolve(result);
+          });
+          stream.end(req.file.buffer);
         });
-        // Como estamos usando memoryStorage, precisamos enviar o buffer
-        result.end(req.file.buffer);
+        imagem_url = uploadResult.secure_url;
       } catch (err) {
         return res.status(500).json({ erro: 'Falha ao enviar imagem para Cloudinary.' });
       }
@@ -231,13 +232,15 @@ router.put('/anuncios/:id', isAdmin, upload.single('imagem'), async (req, res) =
     let imagem_url = undefined;
     if (req.file) {
       // Envia para Cloudinary na pasta 'anuncios'
-      const { v2: cloudinary } = await import('cloudinary');
       try {
-        const result = await cloudinary.uploader.upload_stream({ folder: 'anuncios' }, (error, result) => {
-          if (error || !result) throw error || new Error('Falha no upload Cloudinary');
-          imagem_url = result.secure_url;
+        const uploadResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream({ folder: 'anuncios' }, (error, result) => {
+            if (error || !result) return reject(error || new Error('Falha no upload Cloudinary'));
+            resolve(result);
+          });
+          stream.end(req.file.buffer);
         });
-        result.end(req.file.buffer);
+        imagem_url = uploadResult.secure_url;
       } catch (err) {
         return res.status(500).json({ erro: 'Falha ao enviar imagem para Cloudinary.' });
       }
