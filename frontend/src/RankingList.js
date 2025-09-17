@@ -75,7 +75,7 @@ const Medal = React.memo(({ pos, isLast, showPangare }) => {
         src="https://res.cloudinary.com/dsmxqn0fa/image/upload/v1758067988/pangare_s0ea1e.jpg"
         alt="Pangaré"
         className="medal-icon"
-        style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', background: '#fffbe6', border: '2px solid #e0c36a' }}
+        style={{ width: 70, height: 70, borderRadius: 8, objectFit: 'cover', background: '#fffbe6', border: '2px solid #e0c36a' }}
       />
     );
   }
