@@ -107,40 +107,72 @@ router.get('/relatorio-campeonato/:campeonatoId', isAdmin, async (req, res) => {
       return maxB - maxA;
     });
 
-    // Gera PDF
-    const doc = new PDFDocument({ margin: 36, size: 'A4' });
+    // Gera PDF com layout melhorado
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="relatorio-campeonato-${campeonatoId}.pdf"`);
     doc.pipe(res);
 
-    doc.fontSize(18).text('Relatório Final do Campeonato', { align: 'center' });
+    // Título
+    doc.font('Courier-Bold').fontSize(18).text('Relatório Final do Campeonato', { align: 'center' });
     doc.moveDown();
-    doc.fontSize(12).text(`Campeonato ID: ${campeonatoId}`);
+    doc.font('Courier').fontSize(12).text(`Campeonato ID: ${campeonatoId}`);
     doc.text(`Data: ${new Date().toLocaleString('pt-BR')}`);
     doc.moveDown();
-    doc.fontSize(14).text('Critérios de Desempate:', { underline: true });
-    doc.fontSize(12).text('1) Maior pontuação total');
+    doc.font('Courier-Bold').fontSize(14).text('Critérios de Desempate:', { underline: true });
+    doc.font('Courier').fontSize(12).text('1) Maior pontuação total');
     doc.text('2) Maior número de rodadas vencidas');
     doc.text('3) Maior pontuação em uma rodada');
     doc.moveDown();
 
-    doc.fontSize(14).text('Ranking Final:', { underline: true });
+    doc.font('Courier-Bold').fontSize(14).text('Ranking Final:', { underline: true });
     doc.moveDown(0.5);
-    // Cabeçalho
-    doc.fontSize(12).text('Posição', 36, doc.y, { continued: true });
-    doc.text('Nome', 90, doc.y, { continued: true });
-    doc.text('Rodadas Vencidas', 250, doc.y, { continued: true });
-    doc.text('Pontos Totais', 370, doc.y, { continued: true });
-    doc.text('Maior Pontuação em Rodada', 470, doc.y);
-    doc.moveDown(0.5);
-    // Linhas
+
+    // Cabeçalho da tabela
+    const startX = 40;
+    let y = doc.y;
+    const colWidths = [60, 180, 90, 90, 110]; // soma = 530, cabe em A4
+    const headers = ['Posição', 'Nome', 'Rodadas', 'Pontos', 'Maior Rodada'];
+    let x = startX;
+    doc.font('Courier-Bold').fontSize(12);
+    headers.forEach((h, i) => {
+      doc.text(h, x, y, { width: colWidths[i], align: i === 1 ? 'left' : 'center' });
+      x += colWidths[i];
+    });
+    y += 20;
+    doc.moveTo(startX, y-5).lineTo(startX + colWidths.reduce((a,b)=>a+b,0), y-5).stroke();
+
+    // Linhas da tabela
+    doc.font('Courier').fontSize(12);
     ranking.forEach((u, idx) => {
-      doc.text(`${idx + 1}º`, 36, doc.y, { continued: true });
-      doc.text(u.nome, 90, doc.y, { continued: true });
-      doc.text(u.rodadasVencidas, 250, doc.y, { continued: true });
-      doc.text(u.pontosTotais, 370, doc.y, { continued: true });
+      x = startX;
       const maxRodada = Math.max(...(u.pontosPorRodada.map(r => r.pontos)));
-      doc.text(maxRodada, 470, doc.y);
+      const row = [
+        `${idx + 1}º`,
+        u.nome.length > 25 ? u.nome.slice(0,22)+'...' : u.nome,
+        u.rodadasVencidas,
+        u.pontosTotais,
+        maxRodada
+      ];
+      row.forEach((val, i) => {
+        doc.text(String(val), x, y, { width: colWidths[i], align: i === 1 ? 'left' : 'center' });
+        x += colWidths[i];
+      });
+      y += 18;
+      // Quebra de página se necessário
+      if (y > doc.page.height - 60) {
+        doc.addPage();
+        y = 50;
+        x = startX;
+        doc.font('Courier-Bold').fontSize(12);
+        headers.forEach((h, i) => {
+          doc.text(h, x, y, { width: colWidths[i], align: i === 1 ? 'left' : 'center' });
+          x += colWidths[i];
+        });
+        y += 20;
+        doc.moveTo(startX, y-5).lineTo(startX + colWidths.reduce((a,b)=>a+b,0), y-5).stroke();
+        doc.font('Courier').fontSize(12);
+      }
     });
 
     doc.end();
