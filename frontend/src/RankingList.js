@@ -360,9 +360,7 @@ export default function RankingList() {
         </div>
         <div className="user-info">
           <div className="ranking-item-avatar">
-            {isLast && showPangare
-              ? <img src="https://res.cloudinary.com/dsmxqn0fa/image/upload/v1758067988/pangare_s0ea1e.jpg" alt="Pangaré" className="avatar-img" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', background: '#fffbe6', border: '2px solid #e0c36a' }} />
-              : <UserAvatar user={usuario} />}
+            <UserAvatar user={usuario} />
           </div>
           <div className="user-details">
             <div className="username">
