@@ -374,7 +374,9 @@ export default function RankingList() {
           <div className="user-details">
             <div className="username">
               <span className="username-text">{usuario.displayName}</span>
-              <StatusTag banido={usuario.banido} desistiu={usuario.desistiu} />
+              {/* Mostra sempre os selos Desistiu e Banido, se aplicável */}
+              {usuario.banido && <span className="status-tag banido">Banido</span>}
+              {usuario.desistiu && <span className="status-tag desistiu">Desistiu</span>}
             </div>
             {usuario.nome && usuario.apelido && usuario.apelido !== usuario.nome && (!isLast || !showPangare) && (
               <div className="fullname">
