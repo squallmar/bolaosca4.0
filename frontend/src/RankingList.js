@@ -65,6 +65,8 @@ function normalizeRanking(list = []) {
       pontos: Number(it.pontos) || 0,
       banido: parseBool(it.banido),
       desistiu: parseBool(it.desistiu),
+      autorizado: parseBool(it.autorizado),
+      tipo: it.tipo || it.role || '',
     };
   });
 }
@@ -376,7 +378,9 @@ export default function RankingList() {
           <div className="user-details">
             <div className="username">
               <span className="username-text">{usuario.displayName}</span>
-              {/* Mostra sempre os selos Desistiu e Banido, se aplicável */}
+              {/* Selos igual admin: Usuário, Autorizado, Desistiu, Banido */}
+              <span className="status-tag usuario">Usuário</span>
+              {usuario.autorizado && <span className="status-tag autorizado">Autorizado</span>}
               {usuario.banido && <span className="status-tag banido">Banido</span>}
               {usuario.desistiu && <span className="status-tag desistiu">Desistiu</span>}
             </div>
