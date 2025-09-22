@@ -417,7 +417,9 @@ export default function ApostarRodada() {
                         (palpite === 'empate' && (key === 'empate' || key === 'draw'))
                       );
                       palpiteExtra = (
-                        <span className={`palpite-status ${acertou ? 'acertou' : 'errou'}`}>{acertou ? 'Acertou!' : `Seu palpite: ${palpiteText}`}</span>
+                        <span className={`palpite-status ${acertou ? 'acertou' : 'errou'}`}>
+                          {acertou ? 'Acertou!' : `Errou! Seu palpite: ${palpiteText}`}
+                        </span>
                       );
                     } else {
                       palpiteExtra = (
