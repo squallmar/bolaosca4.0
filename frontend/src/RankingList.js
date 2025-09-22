@@ -54,6 +54,8 @@ function normalizeRanking(list = []) {
     const nome = it.nome || 'Usuário';
     const apelido = (it.apelido || '').trim();
     const displayName = apelido || nome;
+    // Corrige para aceitar true, 1, '1', 'true' como verdadeiro
+    const parseBool = v => v === true || v === 1 || v === '1' || v === 'true';
     return {
       ...it,
       nome,
@@ -61,8 +63,8 @@ function normalizeRanking(list = []) {
       displayName,
       fotoUrl: it.foto_url || it.fotoUrl || '',
       pontos: Number(it.pontos) || 0,
-      banido: !!it.banido,
-      desistiu: !!it.desistiu,
+      banido: parseBool(it.banido),
+      desistiu: parseBool(it.desistiu),
     };
   });
 }
