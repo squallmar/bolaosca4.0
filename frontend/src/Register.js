@@ -63,6 +63,13 @@ const Register = () => {
     setIsLoading(true);
 
     try {
+      // Busca o token CSRF antes de cadastrar
+      let csrfToken = null;
+      try {
+        const resp = await api.get('/csrf-token');
+        csrfToken = resp.data?.csrfToken;
+      } catch {}
+
       // Cria um objeto FormData para enviar a foto e os dados
       const data = new FormData();
       data.append('nome', formData.nome);
@@ -77,7 +84,8 @@ const Register = () => {
 
       const res = await api.post('/usuario/register', data, {
         headers: {
-          'Content-Type': 'multipart/form-data', // Importante para enviar arquivos
+          'Content-Type': 'multipart/form-data',
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
       });
 
