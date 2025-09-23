@@ -195,7 +195,7 @@ router.post('/:id/desistir', auth, exigirRole('admin'), async (req, res) => {
   if (!perm.ok) return res.status(perm.status).json({ erro: perm.msg });
   try {
     const { id } = req.params;
-    const { desistiu } = req.body || {};
+    const desistiu = true;
   const { rows } = await pool.query(
       `UPDATE usuario
          SET desistiu = $1
