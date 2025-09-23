@@ -379,7 +379,7 @@ export default function RankingList() {
             <div className="username">
               <span className="username-text">{usuario.displayName}</span>
               {/* Selos igual admin: Usuário, Autorizado, Desistiu, Banido */}
-              <span className="status-tag usuario">Usuário</span>
+              
               {usuario.autorizado && <span className="status-tag autorizado">Autorizado</span>}
               {usuario.banido && <span className="status-tag banido">Banido</span>}
               {usuario.desistiu && <span className="status-tag desistiu">Desistiu</span>}
