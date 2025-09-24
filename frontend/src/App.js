@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import Manutencao from './Manutencao';
-import { API_BASE } from './config';
-import ApostaTimer from './ApostaTimer';
-import { useLocation, Link, Routes, Route, Navigate } from 'react-router-dom';
+import { useLocation, Link, Routes, Route, Navigate, NavLink } from 'react-router-dom';
 import { useAuth } from './authContext';
 import './App.css';
+import { API_BASE } from './config';
+
+// Importando todos os componentes para as rotas
+import Manutencao from './Manutencao';
+import ApostaTimer from './ApostaTimer';
 import Register from './Register';
 import AdminPanel from './AdminPanel';
 import BolaoList from './BolaoList';
@@ -34,27 +36,42 @@ import ApoioUser from './ApoioUser';
 import AnunciosTV from './AnunciosTV';
 import ChatWindow from './ChatWindow';
 import AdminBlockedIPs from './AdminBlockedIPs';
-import AdminSubMenu from './AdminSubMenu';
+
+// Componente para renderizar os links do menu
+// A propriedade 'onLinkClick' é usada para fechar o menu mobile após o clique
+function MenuLinks({ items, onLinkClick }) {
+  return (
+    <>
+      {items.map(({ to, label, icon, onClick }) => (
+        <NavLink
+          key={to}
+          to={to}
+          className={({ isActive }) => `${onLinkClick ? 'mobile-nav-link' : 'nav-link'}${isActive ? ' active' : ''}`}
+          onClick={() => {
+            if (onClick) onClick();
+            if (onLinkClick) onLinkClick();
+          }}
+        >
+          <span className="nav-icon">{icon}</span>
+          {label}
+        </NavLink>
+      ))}
+    </>
+  );
+}
 
 function Menu() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  // pega dados do contexto com fallback seguro
   const auth = useAuth() || {};
-  const { tipo, logout, nome, autorizado } = auth;
-  const avatarFromCtx = auth.avatarUrl || null;
+  const { tipo, logout, nome, autorizado, avatarUrl } = auth;
 
+  const isLogged = !!(nome || tipo);
   let menuItems = [];
   let userInfo = null;
 
-  const isLogged = !!(nome || tipo);
-  if (!isLogged) {
-    menuItems = [
-      { to: '/login', label: 'Login', icon: '🔐' },
-      { to: '/register', label: 'Cadastro', icon: '📝' }
-    ];
-  } else {
+  if (isLogged) {
     const primeiroNome = (nome || '').trim().split(' ')[0] || '';
     const buildAvatar = (url) => {
       if (!url) return null;
@@ -73,7 +90,7 @@ function Menu() {
       return `${API_BASE}/uploads/avatars/${filename}`;
     };
 
-    const preferred = buildAvatar(avatarFromCtx);
+    const preferred = buildAvatar(avatarUrl);
     const avatarSrc = preferred || 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg';
 
     userInfo = (
@@ -108,24 +125,27 @@ function Menu() {
         { to: '/palpite', label: 'Apostar', icon: '⚽' },
         { to: '/ranking', label: 'Ranking', icon: '📊' },
         { to: '/blog', label: 'Blog', icon: '📝' },
-        { to: '/apoio/user', label: 'Apoie o Site', icon: '💰' }
+        { to: '/apoio/user', label: 'Apoie o Site', icon: '💰' },
+        { to: '/', label: 'Sair', icon: '🚪', onClick: logout }
       ];
-      menuItems.push({ to: '/', label: 'Sair', icon: '🚪', onClick: logout });
     }
+  } else {
+    menuItems = [
+      { to: '/login', label: 'Login', icon: '🔐' },
+      { to: '/register', label: 'Cadastro', icon: '📝' }
+    ];
   }
 
   const toggleMobileMenu = () => setMobileMenuOpen(o => !o);
 
-  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     function handleKey(e) { if (e.key === 'Escape') setMobileMenuOpen(false); }
     window.addEventListener('keydown', handleKey);
-    if (mobileMenuOpen) {
-      document.body.classList.add('no-scroll');
-    } else {
-      document.body.classList.remove('no-scroll');
-    }
+    document.body.classList.toggle('no-scroll', mobileMenuOpen);
     return () => {
       window.removeEventListener('keydown', handleKey);
       document.body.classList.remove('no-scroll');
@@ -140,28 +160,9 @@ function Menu() {
           <span className="logo-text">Bolão SCA</span>
         </Link>
         <nav className="desktop-nav" aria-label="Menu principal">
-          {menuItems.map(({ to, label, icon, onClick }) => {
-            const isSair = label === 'Sair';
-            const isActive = isSair
-              ? false
-              : to === '/'
-                ? location.pathname === '/'
-                : location.pathname.startsWith(to) && to !== '/' && location.pathname !== '/';
-            const key = isSair ? 'sair' : to;
-            return (
-              <Link
-                key={key}
-                to={to}
-                className={`nav-link${isActive ? ' active' : ''}`}
-                onClick={onClick}
-              >
-                <span className="nav-icon">{icon}</span>
-                {label}
-              </Link>
-            );
-          })}
+          <MenuLinks items={menuItems} />
         </nav>
-        {userInfo}
+        {isLogged && userInfo}
         <button
           className={`mobile-menu-toggle ${mobileMenuOpen ? 'open' : ''}`}
           onClick={toggleMobileMenu}
@@ -179,29 +180,7 @@ function Menu() {
         className={`mobile-nav ${mobileMenuOpen ? 'open' : ''}`}
         aria-label="Menu principal móvel"
       >
-        {menuItems.map(({ to, label, icon, onClick }) => {
-          const isSair = label === 'Sair';
-          const isActive = isSair
-            ? false
-            : to === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(to) && to !== '/' && location.pathname !== '/';
-          const key = isSair ? 'sair' : to;
-          return (
-            <Link
-              key={key}
-              to={to}
-              className={`mobile-nav-link${isActive ? ' active' : ''}`}
-              onClick={() => {
-                setMobileMenuOpen(false);
-                if (onClick) onClick();
-              }}
-            >
-              <span className="nav-icon">{icon}</span>
-              {label}
-            </Link>
-          );
-        })}
+        <MenuLinks items={menuItems} onLinkClick={() => setMobileMenuOpen(false)} />
       </nav>
     </header>
   );
@@ -348,16 +327,15 @@ function App() {
   const auth = useAuth() || {};
   const isAdmin = auth?.tipo === 'admin' && auth?.autorizado;
 
-  // ativar pagina de manutenção para não-admins
-
-    if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
-    return <Manutencao />;
-  }
+  // Ativar página de manutenção para não-admins
+  // if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
+  //   return <Manutencao />;
+  // }
 
   const RequireAuth = ({ children }) => {
     const auth = useAuth() || {};
     if (!auth?.nome && !auth?.tipo) {
-      return <Navigate to="/login" replace state={{ erro: 'Você precisa estar logado ou faça seu cadastro!' }} />;
+      return <Navigate to="/login" replace state={{ from: location }} />;
     }
     return children;
   };
@@ -407,6 +385,7 @@ function App() {
           <Route path="/blog/:id" element={<BlogDetail />} />
           <Route path="/blog/:id/editar" element={<RequireAuth><BlogEdit /></RequireAuth>} />
           <Route path="/regras" element={<Regras />} />
+          <Route path="/logout" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </div>
