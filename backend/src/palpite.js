@@ -234,35 +234,28 @@ router.post('/resultado/:partidaId', exigirAutenticacao, async (req, res) => {
 });
 
 // Ranking da rodada (com flags)
+// Ranking da rodada (com flags) - VERSÃO CORRIGIDA
 router.get('/ranking/rodada/:rodadaId', async (req, res) => {
   const { rodadaId } = req.params;
   try {
     const { rows } = await pool.query(
-  `SELECT 
-     u.id,
-     COALESCE(u.apelido, u.nome) AS nome,
-     u.avatar_url AS "fotoUrl",
-     COALESCE(u.banido,false)  AS banido,
-     COALESCE(u.desistiu,false) AS desistiu,
-  COALESCE(SUM(CASE WHEN pa.rodada_id = $1 THEN p.pontos ELSE 0 END), 0) AS pontos
-   FROM usuario u
-   /* Apenas palpites desta rodada */
-   LEFT JOIN palpite p ON p.usuario_id = u.id
-   LEFT JOIN partida pa ON pa.id = p.partida_id AND pa.rodada_id = $1
-   GROUP BY u.id, u.apelido, u.nome, u.avatar_url, u.banido, u.desistiu
-   ORDER BY pontos DESC, COALESCE(u.apelido, u.nome) ASC`,
+      `SELECT 
+         u.id,
+         COALESCE(u.apelido, u.nome) AS nome,
+         u.avatar_url AS "fotoUrl",
+         COALESCE(u.banido, false)  AS banido,
+         COALESCE(u.desistiu, false) AS desistiu,
+         COALESCE(u.autorizado, true) AS autorizado,
+         COALESCE(SUM(CASE WHEN pa.rodada_id = $1 THEN p.pontos ELSE 0 END), 0) AS pontos
+       FROM usuario u
+       LEFT JOIN palpite p ON p.usuario_id = u.id
+       LEFT JOIN partida pa ON pa.id = p.partida_id AND pa.rodada_id = $1
+       GROUP BY u.id, u.apelido, u.nome, u.avatar_url, u.banido, u.desistiu, u.autorizado
+       ORDER BY pontos DESC, COALESCE(u.apelido, u.nome) ASC`,
       [rodadaId]
     );
-    // Se não autenticado ou não admin, ocultar flags sensíveis
-    const role = (req.user?.role || '').toLowerCase();
-    const sanitized = rows.map(r => {
-      if (!role || role !== 'admin') {
-        const { banido, desistiu, ...rest } = r;
-        return rest;
-      }
-      return r;
-    });
-    return res.json({ ranking: sanitized });
+    // REMOVER A SANITIZAÇÃO
+    return res.json({ ranking: rows });
   } catch (e) {
     console.error('GET /palpite/ranking/rodada erro:', e);
     return res.status(500).json({ erro: 'Falha ao carregar ranking da rodada' });
@@ -270,30 +263,25 @@ router.get('/ranking/rodada/:rodadaId', async (req, res) => {
 });
 
 // Ranking geral (com flags)
+// Ranking geral (com flags) - VERSÃO CORRIGIDA
 router.get('/ranking/geral', async (req, res) => {
   try {
     const { rows } = await pool.query(
-  `SELECT 
-     u.id,
-     COALESCE(u.apelido, u.nome) AS nome,
-     u.avatar_url AS "fotoUrl",
-     COALESCE(u.banido,false)  AS banido,
-     COALESCE(u.desistiu,false) AS desistiu,
-     COALESCE(SUM(p.pontos), 0) AS pontos
-   FROM usuario u
-   LEFT JOIN palpite p ON p.usuario_id = u.id
-   GROUP BY u.id, u.apelido, u.nome, u.avatar_url, u.banido, u.desistiu
-   ORDER BY pontos DESC, COALESCE(u.apelido, u.nome) ASC`
+      `SELECT 
+         u.id,
+         COALESCE(u.apelido, u.nome) AS nome,
+         u.avatar_url AS "fotoUrl",
+         COALESCE(u.banido, false)  AS banido,
+         COALESCE(u.desistiu, false) AS desistiu,
+         COALESCE(u.autorizado, true) AS autorizado,
+         COALESCE(SUM(p.pontos), 0) AS pontos
+       FROM usuario u
+       LEFT JOIN palpite p ON p.usuario_id = u.id
+       GROUP BY u.id, u.apelido, u.nome, u.avatar_url, u.banido, u.desistiu, u.autorizado
+       ORDER BY pontos DESC, COALESCE(u.apelido, u.nome) ASC`
     );
-    const role = (req.user?.role || '').toLowerCase();
-    const sanitized = rows.map(r => {
-      if (!role || role !== 'admin') {
-        const { banido, desistiu, ...rest } = r;
-        return rest;
-      }
-      return r;
-    });
-    return res.json({ ranking: sanitized });
+    // REMOVER A SANITIZAÇÃO - manter todos os campos para o frontend
+    return res.json({ ranking: rows });
   } catch (e) {
     console.error('GET /palpite/ranking/geral erro:', e);
     return res.status(500).json({ erro: 'Falha ao carregar ranking geral' });
