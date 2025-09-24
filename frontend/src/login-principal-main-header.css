@@ -1,7 +1,7 @@
 /* login-principal-main-header.css */
 
 /* Estilos para o contêiner principal */
-.main-header-container {
+.login-principal-main-header-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -11,31 +11,31 @@
 }
 
 /* Estilos para a área do logo */
-.main-header-logo-container {
+.login-principal-main-header-logo-container {
   display: flex;
   align-items: center;
   text-decoration: none;
 }
 
-.main-header-logo-image {
+.login-principal-main-header-logo-image {
   width: 45px;
   height: 45px;
   margin-right: 12px;
 }
 
-.main-header-logo-text {
+.login-principal-main-header-logo-text {
   font-size: 1.6em;
   font-weight: 700;
   color: #333;
 }
 
 /* Estilos para a navegação */
-.main-header-nav {
+.login-principal-main-header-nav {
   display: flex;
   gap: 25px;
 }
 
-.main-header-nav-link {
+.login-principal-main-header-nav-link {
   text-decoration: none;
   color: #555;
   font-weight: 500;
@@ -44,16 +44,16 @@
   transition: background-color 0.3s;
 }
 
-.main-header-nav-link:hover {
+.login-principal-main-header-nav-link:hover {
   background-color: #f0f0f0;
 }
 
-.main-header-nav-link.active {
+.login-principal-main-header-nav-link.active {
   background-color: #e6e6e6;
   color: #000;
 }
 
 /* Estilos para o ícone do menu mobile */
-.main-header-mobile-toggle {
+.login-principal-main-header-mobile-toggle {
   display: none; /* Esconde em telas desktop */
 }
