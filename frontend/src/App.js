@@ -154,12 +154,12 @@ function Menu() {
 
   return (
     <header className="header">
-      <div className="header-container">
-        <Link to="/" className="logo-container">
+      <div className="login-principal-main-header-container">
+        <Link to="/" className="login-principal-main-header-logo-container">
           <img src={'/escudo.png'} onError={e => { e.target.onerror = null; e.target.src = 'https://ui-avatars.com/api/?name=Bolao+SCA'; }} alt="Escudo Bolão" className="logo-image" />
-          <span className="logo-text">Bolão SCA</span>
+          <span className="login-principal-main-header-logo-text">Bolão SCA</span>
         </Link>
-        <nav className="desktop-nav" aria-label="Menu principal">
+        <nav className="login-principal-main-header-nav" aria-label="Menu principal">
           <MenuLinks items={menuItems} />
         </nav>
         {isLogged && userInfo}
