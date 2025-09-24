@@ -156,7 +156,7 @@ function Menu() {
     <header className="header">
       <div className="login-principal-main-header-container">
         <Link to="/" className="login-principal-main-header-logo-container">
-          <img src={'/escudo.png'} onError={e => { e.target.onerror = null; e.target.src = 'https://ui-avatars.com/api/?name=Bolao+SCA'; }} alt="Escudo Bolão" className="logo-image" />
+          <img src={'/escudo.png'} onError={e => { e.target.onerror = null; e.target.src = 'https://ui-avatars.com/api/?name=Bolao+SCA'; }} alt="Escudo Bolão" className="login-principal-main-header-logo-image" />
           <span className="login-principal-main-header-logo-text">Bolão SCA</span>
         </Link>
         <nav className="login-principal-main-header-nav" aria-label="Menu principal">
