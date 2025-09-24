@@ -378,10 +378,9 @@ export default function RankingList() {
           <div className="user-details">
             <div className="username">
               <span className="username-text">{usuario.displayName}</span>
-              {/* Selos igual admin: Autorizado, Desistiu, Banido */}
-              {usuario.autorizado && <span className="status-tag autorizado">Autorizado</span>}
+              {/* Selos igual admin: Desistiu/Pausado, Banido */}
               {usuario.banido && <span className="status-tag banido">Banido</span>}
-              {usuario.desistiu && <span className="status-tag desistiu">Desistiu</span>}
+              {usuario.desistiu && <span className="status-tag desistiu">Desistiu/Pausado</span>}
             </div>
             {usuario.nome && usuario.apelido && usuario.apelido !== usuario.nome && (!isLast || !showPangare) && (
               <div className="fullname">
