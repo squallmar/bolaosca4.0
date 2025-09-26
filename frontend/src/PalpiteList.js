@@ -13,6 +13,8 @@ function slugify(nome = '') {
 }
 
 export default function ApostarRodada() {
+  // URL do app (ajuste para o link real do seu app)
+  const APP_DOWNLOAD_URL = "https://seulink.com/app-download";
   const [rodadas, setRodadas] = useState([]);
   const [rodadaId, setRodadaId] = useState('');
   const [rodadaAtualId, setRodadaAtualId] = useState('');
@@ -277,7 +279,11 @@ export default function ApostarRodada() {
 
   return (
     <div className="apostar-container">
-      <div className="header-section">
+      <div className="app-download-banner">
+        Baixe nosso app, para para fazer as apostas no conforto do seu celular: {' '}
+        <a href={APP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">Clique aqui para baixar</a>
+      </div>
+  <div className="header-section">
         <div className="header-content">
           <h1 className="main-title">Fazer Apostas</h1>
           <p className="subtitle">Selecione uma rodada e faça seus palpites</p>
@@ -296,7 +302,7 @@ export default function ApostarRodada() {
         )}
         <div className="apostas-aviso-sub">Corte: sábado 13:59 (último minuto antes das 14h).</div>
       </div>
-      <div className="content-wrapper">
+  <div className="content-wrapper">
         <div className="controls-section">
           <div className="select-card">
             <div className="select-header">
@@ -550,6 +556,23 @@ export default function ApostarRodada() {
           </div>
         )}
       </div>
+      <style>{`
+        .app-download-banner {
+          background: #e3f2fd;
+          color: #0b3c6e;
+          padding: 12px 18px;
+          border-radius: 10px;
+          margin-bottom: 18px;
+          font-size: 16px;
+          text-align: center;
+          border: 1px dashed #90caf9;
+        }
+        .app-download-banner a {
+          color: #1976d2;
+          font-weight: bold;
+          text-decoration: underline;
+        }
+      `}</style>
 
   <style>{`
         :root {
