@@ -407,77 +407,82 @@ export default function AdminBoloes() {
                       {rodsToShow.length > 0 ? (
                         <div className="nested">
                           {rodsToShow.map((r, ridx) => (
-                            <div key={r.id} className="card rodada-card">
-                              <div className="card-header">
-                                <div className="index-chip chip-sm">{ridx + 1}º</div>
-                                <div className="title title-sm">
-                                  {r.nome}
-                                  {r.finalizada && <span className="badge badge-muted">Finalizada</span>}
+                            <React.Fragment key={r.id}>
+                              <div className="card rodada-card">
+                                <div className="card-header">
+                                  <div className="index-chip chip-sm">{ridx + 1}º</div>
+                                  <div className="title title-sm">
+                                    {r.nome}
+                                    {r.finalizada && <span className="badge badge-muted">Finalizada</span>}
+                                  </div>
+                                  <div className="actions">
+                                    <button
+                                      onClick={() => editarRodada(r.id, prompt('Novo nome:', r.nome) || r.nome)}
+                                      className="btn btn-primary btn-sm"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      onClick={() => excluirRodada(r.id)}
+                                      className="btn btn-danger btn-sm"
+                                    >
+                                      Excluir
+                                    </button>
+                                  </div>
                                 </div>
-                                <div className="actions">
-                                  <button
-                                    onClick={() => editarRodada(r.id, prompt('Novo nome:', r.nome) || r.nome)}
-                                    className="btn btn-primary btn-sm"
-                                  >
-                                    Editar
-                                  </button>
-                                  <button
-                                    onClick={() => excluirRodada(r.id)}
-                                    className="btn btn-danger btn-sm"
-                                  >
-                                    Excluir
-                                  </button>
-                                </div>
-                              </div>
 
-                              {Array.isArray(rodadaPartidas[r.id]) && rodadaPartidas[r.id].length > 0 ? (
-                                <div className="nested">
-                                  {rodadaPartidas[r.id].map((p, pidx) => (
-                                    <div key={p.id} className="card partida-card">
-                                      <div className="card-header compact">
-                                        <div className="index-chip chip-sm">{pidx + 1}º Jogo</div>
-                                        <div className="title match">
-                                          <img
-                                            src={p.escudo1}
-                                            alt={`Escudo ${p.time1}`}
-                                            className="escudo-img"
-                                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `${IMG_BASE}/uploads/escudos/_default.png`; }}
-                                          />
-                                          {p.time1} <span className="vs">x</span> {p.time2}
-                                          <img
-                                            src={p.escudo2}
-                                            alt={`Escudo ${p.time2}`}
-                                            className="escudo-img"
-                                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `${IMG_BASE}/uploads/escudos/_default.png`; }}
-                                          />
-                                          {p.finalizada && <span className="badge badge-muted">Finalizada</span>}
-                                        </div>
-                                        <div className="actions">
-                                          <button
-                                            onClick={() => editarPartida(
-                                              p.id,
-                                              prompt('Novo time 1:', p.time1) || p.time1,
-                                              prompt('Novo time 2:', p.time2) || p.time2
-                                            )}
-                                            className="btn btn-primary btn-sm"
-                                          >
-                                            Editar
-                                          </button>
-                                          <button
-                                            onClick={() => excluirPartida(p.id)}
-                                            className="btn btn-danger btn-sm"
-                                          >
-                                            Excluir
-                                          </button>
+                                {Array.isArray(rodadaPartidas[r.id]) && rodadaPartidas[r.id].length > 0 ? (
+                                  <div className="nested">
+                                    {rodadaPartidas[r.id].map((p, pidx) => (
+                                      <div key={p.id} className="card partida-card">
+                                        <div className="card-header compact">
+                                          <div className="index-chip chip-sm">{pidx + 1}º Jogo</div>
+                                          <div className="title match">
+                                            <img
+                                              src={p.escudo1}
+                                              alt={`Escudo ${p.time1}`}
+                                              className="escudo-img"
+                                              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `${IMG_BASE}/uploads/escudos/_default.png`; }}
+                                            />
+                                            {p.time1} <span className="vs">x</span> {p.time2}
+                                            <img
+                                              src={p.escudo2}
+                                              alt={`Escudo ${p.time2}`}
+                                              className="escudo-img"
+                                              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `${IMG_BASE}/uploads/escudos/_default.png`; }}
+                                            />
+                                            {p.finalizada && <span className="badge badge-muted">Finalizada</span>}
+                                          </div>
+                                          <div className="actions">
+                                            <button
+                                              onClick={() => editarPartida(
+                                                p.id,
+                                                prompt('Novo time 1:', p.time1) || p.time1,
+                                                prompt('Novo time 2:', p.time2) || p.time2
+                                              )}
+                                              className="btn btn-primary btn-sm"
+                                            >
+                                              Editar
+                                            </button>
+                                            <button
+                                              onClick={() => excluirPartida(p.id)}
+                                              className="btn btn-danger btn-sm"
+                                            >
+                                              Excluir
+                                            </button>
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="empty">Nenhuma partida cadastrada</div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="empty">Nenhuma partida cadastrada</div>
+                                )}
+                              </div>
+                              {ridx < rodsToShow.length - 1 && (
+                                <hr className="rodada-divider" />
                               )}
-                            </div>
+                            </React.Fragment>
                           ))}
                         </div>
                       ) : (
