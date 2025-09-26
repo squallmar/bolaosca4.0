@@ -224,13 +224,16 @@ const csrfProtection = csurf({
 // Rota dedicada para obter token CSRF com CORS explícito
 app.get('/csrf-token', cors({ origin: flexibleOrigin, credentials: true }), csrfProtection, (req, res) => {
   const token = req.csrfToken();
-  // Envia também em cookie legível pelo frontend
+  
+  // Cookie para o frontend poder ler
   res.cookie('XSRF-TOKEN', token, {
     httpOnly: false,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     secure: process.env.NODE_ENV === 'production',
-    // partitioned: process.env.NODE_ENV === 'production' ? true : undefined // REMOVIDO para compatibilidade
+    maxAge: 1000 * 60 * 60 * 8, // 8 horas
+    path: '/'
   });
+  
   res.json({ csrfToken: token });
 });
 

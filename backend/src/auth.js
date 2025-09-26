@@ -169,12 +169,11 @@ async function blockIp(ip, email, nome_usuario) {
 
 function setAuthCookie(res, token, req) {
   const isProduction = process.env.NODE_ENV === 'production';
-  // Não force o domínio; permita que o navegador aceite como cookie de site cruzado via SameSite=None
+  
   res.cookie('token', token, {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
-    // partitioned: isProduction ? true : undefined, // REMOVIDO para compatibilidade
     maxAge: 1000 * 60 * 60 * 8,
     path: '/'
   });
