@@ -1,4 +1,3 @@
-
 import express from 'express';
 import multer from 'multer';
 import cloudinary from 'cloudinary';
@@ -221,13 +220,6 @@ router.delete('/:id', auth, exigirRole('admin'), async (req, res) => {
   if (!perm.ok) return res.status(perm.status).json({ erro: perm.msg });
   try {
     const { id } = req.params;
-    // Verifica se o usuário já fez apostas
-    const apostas = await pool.query('SELECT 1 FROM palpite WHERE usuario_id = $1 LIMIT 1', [id]);
-    if (apostas.rowCount > 0) {
-      return res.status(400).json({
-        erro: 'Não é possível excluir este usuário porque ele já fez apostas.\n\nPor regras de competição e efeito histórico, usuários com apostas só podem ser marcados como "desistiu" (inativo). Exclusão só é permitida para usuários que nunca apostaram.'
-      });
-    }
     const del = await pool.query('DELETE FROM usuario WHERE id = $1', [id]);
     if (del.rowCount === 0) return res.status(404).json({ erro: 'Usuário não encontrado' });
     logger.info('audit_user_delete', { adminId: req.user.id, targetUserId: id });
