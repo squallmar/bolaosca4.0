@@ -280,8 +280,14 @@ export default function ApostarRodada() {
   return (
     <div className="apostar-container">
       <div className="app-download-banner">
-        Baixe nosso app, para para fazer as apostas no conforto do seu celular: {' '}
-        <a href={APP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">Clique aqui para baixar</a>
+        <div className="app-banner-icon">📱</div>
+        <div className="app-banner-content">
+          <div className="app-banner-title">Baixe o App Oficial!</div>
+          <div className="app-banner-subtitle">Aposte com mais praticidade e receba notificações direto no seu celular.</div>
+          <a className="app-banner-btn" href={APP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
+            <span role="img" aria-label="download">⬇️</span> Baixar App
+          </a>
+        </div>
       </div>
   <div className="header-section">
         <div className="header-content">
@@ -558,19 +564,66 @@ export default function ApostarRodada() {
       </div>
       <style>{`
         .app-download-banner {
-          background: #e3f2fd;
-          color: #0b3c6e;
-          padding: 12px 18px;
-          border-radius: 10px;
-          margin-bottom: 18px;
-          font-size: 16px;
-          text-align: center;
-          border: 1px dashed #90caf9;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 18px;
+          background: linear-gradient(90deg, #3a86ff 0%, #00b4d8 100%);
+          color: #fff;
+          padding: 22px 18px 22px 18px;
+          border-radius: 16px;
+          margin-bottom: 28px;
+          box-shadow: 0 4px 18px rgba(58,134,255,0.10);
+          position: relative;
+          overflow: hidden;
         }
-        .app-download-banner a {
+        .app-banner-icon {
+          font-size: 48px;
+          flex-shrink: 0;
+          filter: drop-shadow(0 2px 6px #1976d2aa);
+        }
+        .app-banner-content {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .app-banner-title {
+          font-size: 1.35rem;
+          font-weight: 800;
+          margin-bottom: 2px;
+          letter-spacing: 0.5px;
+        }
+        .app-banner-subtitle {
+          font-size: 1rem;
+          font-weight: 400;
+          margin-bottom: 10px;
+          opacity: 0.93;
+        }
+        .app-banner-btn {
+          display: inline-block;
+          background: #fff;
           color: #1976d2;
-          font-weight: bold;
-          text-decoration: underline;
+          font-weight: 700;
+          font-size: 1.08rem;
+          padding: 10px 28px;
+          border-radius: 999px;
+          text-decoration: none;
+          box-shadow: 0 2px 8px #1976d233;
+          transition: background 0.2s, color 0.2s, transform 0.15s;
+          border: none;
+        }
+        .app-banner-btn:hover {
+          background: #1976d2;
+          color: #fff;
+          transform: translateY(-2px) scale(1.04);
+        }
+        @media (max-width: 600px) {
+          .app-download-banner {
+            flex-direction: column;
+            align-items: center;
+            padding: 18px 6px;
+          }
+          .app-banner-content { align-items: center; }
         }
       `}</style>
 
