@@ -94,7 +94,7 @@ function Menu() {
     const avatarSrc = preferred || 'https://res.cloudinary.com/dsmxqn0fa/image/upload/v1757738470/avatar_default_lwtnzu.jpg';
 
     userInfo = (
-      <Link to="/perfil" className="user-info" style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 16, textDecoration: 'none' }}>
+      <Link to="/perfil" className="user-info_perfil" style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 16, textDecoration: 'none' }}>
         <img
           src={avatarSrc}
           alt="avatar"
