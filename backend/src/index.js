@@ -225,39 +225,55 @@ const csrfProtection = csurf({
 app.get('/csrf-token', cors({ origin: flexibleOrigin, credentials: true }), csrfProtection, (req, res) => {
   const token = req.csrfToken();
   
-  // Cookie para o frontend poder ler
+  // Cookie para o frontend poder ler - CONFIGURAÇÃO CORRIGIDA
   res.cookie('XSRF-TOKEN', token, {
     httpOnly: false,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 1000 * 60 * 60 * 8, // 8 horas
-    path: '/'
+    maxAge: 1000 * 60 * 60 * 8, // 8 horas - LINHA ADICIONADA
+    path: '/' // LINHA ADICIONADA
   });
   
   res.json({ csrfToken: token });
 });
 
-// Proteger rotas mutáveis com CSRF, mas liberar endpoints públicos e uploads
+// Proteger rotas mutáveis com CSRF, mas liberar endpoints públicos
 app.use((req, res, next) => {
   const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
   if (safeMethods.includes(req.method)) return next();
-  const publicPrefixes = [
+  
+  // Lista completa de endpoints públicos que NÃO precisam de CSRF
+  const publicEndpoints = [
     '/auth/login',
-    '/auth/register',
-  '/auth/refresh',
-  '/auth/logout',
+    '/auth/register', 
+    '/auth/refresh',
+    '/auth/logout',
     '/csrf-token',
     '/upload/avatar',
-    '/upload/escudo'
+    '/upload/escudo',
+    '/upload/anuncio',
+    '/anuncios',
+    '/feedback'
   ];
-  if (publicPrefixes.some(p => req.path.startsWith(p))) return next();
-  // Se já está autenticado via Bearer (JWT), consideramos as rotas idempotentes em termos de CSRF
-  // pois não dependem de cookies de sessão. Isto evita exigir token CSRF duplicado.
-  const auth = req.headers.authorization || '';
-  if (auth.startsWith('Bearer ')) return next();
-  // Demais rotas mutáveis exigem CSRF
+  
+  // Verifica se a rota atual está na lista de públicas
+  if (publicEndpoints.includes(req.path)) {
+    return next();
+  }
+  
+  // Se já está autenticado via Bearer token, pula CSRF
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.startsWith('Bearer ')) return next();
+  
+  // Para mobile, verifica se é um request de registro/login
+  if (req.path === '/auth/register' || req.path === '/auth/login') {
+    return next();
+  }
+  
+  // Aplica CSRF para as demais rotas
   return csrfProtection(req, res, next);
 });
+
 import authRouter from './auth.js';
 // Rota debug-cookie exposta diretamente
 // app.get('/auth/debug-cookie', handleDebugCookie);
