@@ -13,8 +13,8 @@ function slugify(nome = '') {
 }
 
 export default function ApostarRodada() {
-  // URL do app (ajuste para o link real do seu app)
-  const APP_DOWNLOAD_URL = "https://seulink.com/app-download";
+  // Link direto de download do Google Drive
+  const APP_DOWNLOAD_URL = "https://drive.google.com/uc?export=download&id=1fdvsUKhh9IO6cZbkgAmR_j3mSJaTVZWw";
   const [rodadas, setRodadas] = useState([]);
   const [rodadaId, setRodadaId] = useState('');
   const [rodadaAtualId, setRodadaAtualId] = useState('');
