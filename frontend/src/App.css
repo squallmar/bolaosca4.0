@@ -54,7 +54,7 @@ body.no-scroll { overflow: hidden; }
 .logo-container {
   display: flex;
   align-items: center;
-  margin-top: -20px!important;
+  margin-top: -2px!important;
   gap: 12px;
   text-decoration: none;
   flex-shrink: 0; /* evita encolher e quebrar o texto do logo */
