@@ -231,7 +231,13 @@ router.post('/register', uploadLocalAvatar.single('avatar'), async (req, res) =>
     );
 
     logger.info('user_registered', { userId: rows[0].id, email });
-    return res.status(201).json({ usuario: rows[0] });
+    // Gera token JWT para novo usuário
+    const token = jwt.sign(
+      { id: rows[0].id, email: rows[0].email, tipo: rows[0].tipo, autorizado: rows[0].autorizado },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+    return res.status(201).json({ token, usuario: rows[0] });
   } catch (err) {
     if (err.code === '23505') {
       res.status(400).json({ erro: 'Email já cadastrado. Use outro email.' });
@@ -296,7 +302,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '8h' }
     );
 
-    setAuthCookie(res, token, req);
+  // setAuthCookie(res, token, req); // Cookies desativados para login mobile/web
     
     const userOut = {
       id: usuario.id,
