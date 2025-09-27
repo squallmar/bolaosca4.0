@@ -169,11 +169,12 @@ async function blockIp(ip, email, nome_usuario) {
 
 function setAuthCookie(res, token, req) {
   const isProduction = process.env.NODE_ENV === 'production';
-  
+  // Não force o domínio; permita que o navegador aceite como cookie de site cruzado via SameSite=None
   res.cookie('token', token, {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
+    // partitioned: isProduction ? true : undefined, // REMOVIDO para compatibilidade
     maxAge: 1000 * 60 * 60 * 8,
     path: '/'
   });
@@ -231,13 +232,7 @@ router.post('/register', uploadLocalAvatar.single('avatar'), async (req, res) =>
     );
 
     logger.info('user_registered', { userId: rows[0].id, email });
-    // Gera token JWT para novo usuário
-    const token = jwt.sign(
-      { id: rows[0].id, email: rows[0].email, tipo: rows[0].tipo, autorizado: rows[0].autorizado },
-      JWT_SECRET,
-      { expiresIn: '8h' }
-    );
-    return res.status(201).json({ token, usuario: rows[0] });
+    return res.status(201).json({ usuario: rows[0] });
   } catch (err) {
     if (err.code === '23505') {
       res.status(400).json({ erro: 'Email já cadastrado. Use outro email.' });
@@ -302,7 +297,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '8h' }
     );
 
-  // setAuthCookie(res, token, req); // Cookies desativados para login mobile/web
+    setAuthCookie(res, token, req);
     
     const userOut = {
       id: usuario.id,

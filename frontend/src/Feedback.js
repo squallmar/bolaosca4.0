@@ -18,7 +18,7 @@ export default function Feedback() {
     }
     try {
       setLoading(true);
-  // CSRF removido: agora só Bearer Token
+      try { await api.get('/csrf-token'); } catch {}
       const resp = await api.post('/feedback', { nome, mensagem });
       setEmailInfo(resp?.data?.email || null);
       setOk(true);

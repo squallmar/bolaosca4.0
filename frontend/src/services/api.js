@@ -15,12 +15,38 @@ export function setAuthToken(token) {
   }
 }
 
+// Cache simples em memória para evitar buscar CSRF a cada request
+let _csrfToken = null;
+let _csrfFetching = null;
 
-// Sempre injeta Bearer Token se existir
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
+async function ensureCsrf() {
+  if (_csrfToken) return _csrfToken;
+  if (_csrfFetching) return _csrfFetching;
+  _csrfFetching = fetch(`${API_BASE}/csrf-token`, { credentials: 'include' })
+    .then(r => r.json())
+    .then(d => { _csrfToken = d.csrfToken; return _csrfToken; })
+    .catch(() => null)
+    .finally(() => { _csrfFetching = null; });
+  return _csrfFetching;
+}
+
+api.interceptors.request.use(async (config) => {
+  // Não injeta mais Bearer do localStorage; usamos cookie httpOnly
+  const protectedMethods = ['post','put','patch','delete'];
+  if (protectedMethods.includes((config.method || '').toLowerCase())) {
+    // Sempre pega o valor do cookie XSRF-TOKEN
+    let xsrf = null;
+    try {
+      xsrf = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='));
+    } catch {}
+    if (xsrf) {
+      const val = decodeURIComponent(xsrf.split('=')[1] || '');
+      if (val) config.headers['X-CSRF-Token'] = val;
+    } else {
+      // fallback: busca do endpoint se não houver cookie
+      const t = await ensureCsrf();
+      if (t) config.headers['X-CSRF-Token'] = t;
+    }
   }
   return config;
 });
