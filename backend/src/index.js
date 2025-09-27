@@ -223,29 +223,34 @@ const csrfProtection = csurf({
 
 // Rota dedicada para obter token CSRF com CORS explícito
 app.get('/csrf-token', cors({ origin: flexibleOrigin, credentials: true }), csrfProtection, (req, res) => {
-  const token = req.csrfToken();
-  
-  // Cookie para o frontend poder ler - CONFIGURAÇÃO CORRIGIDA
-  res.cookie('XSRF-TOKEN', token, {
-    httpOnly: false,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 1000 * 60 * 60 * 8, // 8 horas - LINHA ADICIONADA
-    path: '/' // LINHA ADICIONADA
-  });
-  
-  res.json({ csrfToken: token });
+  try {
+    const token = req.csrfToken();
+    
+    // Cookie para o frontend - CONFIGURAÇÃO COMPATÍVEL COM MOBILE
+    res.cookie('XSRF-TOKEN', token, {
+      httpOnly: false,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 1000 * 60 * 60 * 8, // 8 horas
+      path: '/'
+    });
+    
+    res.json({ csrfToken: token });
+  } catch (error) {
+    console.error('Erro ao gerar CSRF token:', error);
+    res.status(500).json({ erro: 'Falha ao gerar token CSRF' });
+  }
 });
 
-// Proteger rotas mutáveis com CSRF, mas liberar endpoints públicos
+// Proteger rotas mutáveis com CSRF - VERSÃO CORRIGIDA
 app.use((req, res, next) => {
   const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
   if (safeMethods.includes(req.method)) return next();
   
-  // Lista completa de endpoints públicos que NÃO precisam de CSRF
+  // NÃO aplica CSRF para endpoints públicos (incluindo registro)
   const publicEndpoints = [
     '/auth/login',
-    '/auth/register', 
+    '/auth/register',
     '/auth/refresh',
     '/auth/logout',
     '/csrf-token',
@@ -258,19 +263,19 @@ app.use((req, res, next) => {
   
   // Verifica se a rota atual está na lista de públicas
   if (publicEndpoints.includes(req.path)) {
+    console.log('✅ CSRF bypass para:', req.path);
     return next();
   }
   
   // Se já está autenticado via Bearer token, pula CSRF
   const authHeader = req.headers.authorization || '';
-  if (authHeader.startsWith('Bearer ')) return next();
-  
-  // Para mobile, verifica se é um request de registro/login
-  if (req.path === '/auth/register' || req.path === '/auth/login') {
+  if (authHeader.startsWith('Bearer ')) {
+    console.log('✅ CSRF bypass para rota autenticada:', req.path);
     return next();
   }
   
-  // Aplica CSRF para as demais rotas
+  console.log('🔒 Aplicando CSRF para:', req.path);
+  // Aplica CSRF apenas para rotas não-públicas e não-autenticadas
   return csrfProtection(req, res, next);
 });
 
