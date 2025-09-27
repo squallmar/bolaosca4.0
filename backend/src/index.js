@@ -226,10 +226,9 @@ app.get('/csrf-token', cors({ origin: flexibleOrigin, credentials: true }), csrf
   const token = req.csrfToken();
   // Envia também em cookie legível pelo frontend
   res.cookie('XSRF-TOKEN', token, {
-    httpOnly: false,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    // partitioned: process.env.NODE_ENV === 'production' ? true : undefined // REMOVIDO para compatibilidade
+    httpOnly: false, // CSRF precisa ser acessível pelo JS
+    sameSite: 'none', // se for cross-domain e HTTPS
+    secure: true      // obrigatório para sameSite: 'none'
   });
   res.json({ csrfToken: token });
 });
@@ -241,8 +240,9 @@ app.use((req, res, next) => {
   const publicPrefixes = [
     '/auth/login',
     '/auth/register',
-  '/auth/refresh',
-  '/auth/logout',
+    '/usuario/register', // ✅ cadastro de usuário também é público
+    '/auth/refresh',
+    '/auth/logout',
     '/csrf-token',
     '/upload/avatar',
     '/upload/escudo'

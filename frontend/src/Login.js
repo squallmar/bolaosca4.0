@@ -22,7 +22,7 @@ function Login() {
     e.preventDefault();
     setErro('');
     try {
-  const res = await api.post('/auth/login', { email, senha });
+  const res = await api.post('/auth/login', { email, senha }, { withCredentials: true }); // ✅ garante cookie
   const u = res.data?.usuario || {};
   const avatarUrlFromApi = u.avatarUrl || u.avatar_url || u.foto || u.fotoUrl || u.foto_url || u.imageUrl || null;
   // usa token retornado (se presente) como fallback Bearer quando cookie cross-site for bloqueado

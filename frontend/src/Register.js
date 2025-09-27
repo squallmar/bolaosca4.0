@@ -87,6 +87,7 @@ const Register = () => {
           'Content-Type': 'multipart/form-data',
           ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
+        withCredentials: true // ✅ garante envio de cookies no mobile
       });
 
       setSuccessMsg('Cadastro realizado com sucesso! Você será redirecionado para o login.');

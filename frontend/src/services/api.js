@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_BASE = process.env.REACT_APP_API_URL || '';
 const api = axios.create({
   baseURL: API_BASE,
-  withCredentials: true, // necessário se usa sessão/cookie httpOnly
+  withCredentials: true // garante envio de cookies
 });
 
 // Permite configurar Authorization Bearer globalmente (fallback quando cookie cross-site for bloqueado)
