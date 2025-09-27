@@ -261,47 +261,49 @@ app.get('/csrf-token', cors({ origin: flexibleOrigin, credentials: true }), csrf
 });
 
 // MIDDLEWARE CSRF CORRIGIDO - DESATIVA PARA REGISTRO/LOGIN
+// SOLUÇÃO DEFINITIVA - CSRF APENAS PARA ROTAS ADMIN
 app.use((req, res, next) => {
-  const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
-  if (safeMethods.includes(req.method)) return next();
+  // Métodos seguros nunca precisam de CSRF
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   
-  // LISTA COMPLETA de endpoints que NÃO PRECISAM de CSRF
-  const noCsrfPaths = [
-    '/auth/login',
-    '/auth/register',
-    '/auth/refresh',
-    '/auth/logout',
-    '/csrf-token',
-    '/upload/avatar',
-    '/upload/escudo', 
-    '/upload/anuncio',
-    '/anuncios',
-    '/feedback',
-    '/healthz'
-  ];
-  
-  // Verifica se a rota atual está na lista
-  if (noCsrfPaths.includes(req.path)) {
-    console.log('✅ CSRF bypass para:', req.path);
+  // ⚠️⚠️⚠️ CSRF COMPLETAMENTE DESATIVADO PARA REGISTRO/LOGIN ⚠️⚠️⚠️
+  if (req.path.startsWith('/auth/')) {
+    console.log('✅ CSRF DESATIVADO para auth:', req.path);
     return next();
   }
   
-  // Verifica também por prefixos (caso tenha sub-rotas)
-  if (noCsrfPaths.some(path => req.path.startsWith(path))) {
-    console.log('✅ CSRF bypass para prefixo:', req.path);
+  // ⚠️ CSRF DESATIVADO para uploads
+  if (req.path.startsWith('/upload/')) {
+    console.log('✅ CSRF DESATIVADO para upload:', req.path);
     return next();
   }
   
-  // Se tem Bearer token, não precisa de CSRF
-  const authHeader = req.headers.authorization || '';
-  if (authHeader.startsWith('Bearer ')) {
-    console.log('✅ CSRF bypass para Bearer token:', req.path);
+  // ⚠️ CSRF DESATIVADO para outros endpoints públicos
+  if (['/anuncios', '/feedback', '/healthz'].includes(req.path)) {
+    console.log('✅ CSRF DESATIVADO para rota pública:', req.path);
     return next();
   }
   
-  console.log('🔒 Aplicando CSRF para:', req.path, 'Method:', req.method);
-  // Aplica CSRF apenas para rotas que não estão nas exceções
-  return csrfProtection(req, res, next);
+  // ✅ CSRF APENAS para rotas administrativas
+  if (req.path.startsWith('/admin/') || 
+      req.path.startsWith('/bolao/') || 
+      req.path.startsWith('/usuario/') ||
+      req.path.startsWith('/times/') ||
+      req.path.startsWith('/blog/') && req.method !== 'GET') {
+    
+    // Se tem Bearer token, não precisa de CSRF
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      console.log('✅ CSRF bypass para Bearer token:', req.path);
+      return next();
+    }
+    
+    console.log('🔒 Aplicando CSRF para rota admin:', req.path);
+    return csrfProtection(req, res, next);
+  }
+  
+  // Para todas as outras rotas, não aplica CSRF
+  console.log('✅ CSRF não aplicado para:', req.path);
+  return next();
 });
 
 import authRouter from './auth.js';
