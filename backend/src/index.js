@@ -212,13 +212,37 @@ const blogWriteLimiter = rateLimit({ windowMs: 5*60*1000, max: 30, message: { er
 
 // Inicializa proteção CSRF (cookie-based)
 // Em produção precisamos permitir envio cross-site (front em Vercel, API em Render)
+// 1. CONFIGURAÇÃO DO CSRF (mantenha igual)
 const csrfProtection = csurf({
   cookie: {
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    // partitioned: process.env.NODE_ENV === 'production' ? true : undefined // REMOVIDO para compatibilidade
+    secure: process.env.NODE_ENV === 'production'
   }
+});
+
+// MIDDLEWARE DE DEBUG - APENAS UM
+app.use((req, res, next) => {
+  if (req.path === '/auth/register' && req.method === 'POST') {
+    console.log('=== DEBUG REGISTRO MOBILE ===');
+    console.log('📍 Path:', req.path);
+    console.log('📍 Method:', req.method);
+    console.log('📍 Origin:', req.headers.origin);
+    console.log('📍 User-Agent:', req.headers['user-agent']);
+    
+    // Headers CSRF
+    console.log('📍 Headers CSRF:');
+    Object.keys(req.headers).forEach(key => {
+      if (key.toLowerCase().includes('csrf') || key.toLowerCase().includes('xsrf')) {
+        console.log(`  ${key}:`, req.headers[key]);
+      }
+    });
+    
+    // Cookies
+    console.log('📍 Cookies recebidos:', req.cookies);
+    console.log('📍 Body keys:', Object.keys(req.body || {}));
+  }
+  next();
 });
 
 // Rota dedicada para obter token CSRF com CORS explícito
@@ -236,36 +260,47 @@ app.get('/csrf-token', cors({ origin: flexibleOrigin, credentials: true }), csrf
   res.json({ csrfToken: token });
 });
 
-// MIDDLEWARE CSRF SIMPLIFICADO - FUNCIONA NO MOBILE
+// MIDDLEWARE CSRF CORRIGIDO - DESATIVA PARA REGISTRO/LOGIN
 app.use((req, res, next) => {
   const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
   if (safeMethods.includes(req.method)) return next();
   
-  // NÃO aplica CSRF para estas rotas
-  const publicRoutes = [
+  // LISTA COMPLETA de endpoints que NÃO PRECISAM de CSRF
+  const noCsrfPaths = [
     '/auth/login',
-    '/auth/register', 
+    '/auth/register',
     '/auth/refresh',
     '/auth/logout',
     '/csrf-token',
     '/upload/avatar',
-    '/upload/escudo',
+    '/upload/escudo', 
     '/upload/anuncio',
     '/anuncios',
-    '/feedback'
+    '/feedback',
+    '/healthz'
   ];
   
-  if (publicRoutes.includes(req.path)) {
+  // Verifica se a rota atual está na lista
+  if (noCsrfPaths.includes(req.path)) {
+    console.log('✅ CSRF bypass para:', req.path);
+    return next();
+  }
+  
+  // Verifica também por prefixos (caso tenha sub-rotas)
+  if (noCsrfPaths.some(path => req.path.startsWith(path))) {
+    console.log('✅ CSRF bypass para prefixo:', req.path);
     return next();
   }
   
   // Se tem Bearer token, não precisa de CSRF
   const authHeader = req.headers.authorization || '';
   if (authHeader.startsWith('Bearer ')) {
+    console.log('✅ CSRF bypass para Bearer token:', req.path);
     return next();
   }
   
-  // Para todas as outras rotas, aplica CSRF
+  console.log('🔒 Aplicando CSRF para:', req.path, 'Method:', req.method);
+  // Aplica CSRF apenas para rotas que não estão nas exceções
   return csrfProtection(req, res, next);
 });
 
