@@ -79,7 +79,6 @@ const flexibleOrigin = (origin, callback) => {
   }
 };
 
-
 // Configuração CORS Corrigida
 const allowedOrigins = [
   'https://bolaosca4-0.vercel.app',
@@ -212,7 +211,6 @@ const blogWriteLimiter = rateLimit({ windowMs: 5*60*1000, max: 30, message: { er
 
 // Inicializa proteção CSRF (cookie-based)
 // Em produção precisamos permitir envio cross-site (front em Vercel, API em Render)
-// 1. CONFIGURAÇÃO DO CSRF (mantenha igual)
 const csrfProtection = csurf({
   cookie: {
     httpOnly: true,
@@ -221,7 +219,7 @@ const csrfProtection = csurf({
   }
 });
 
-// MIDDLEWARE DE DEBUG - APENAS UM
+// MIDDLEWARE DE DEBUG
 app.use((req, res, next) => {
   if (req.path === '/auth/register' && req.method === 'POST') {
     console.log('=== DEBUG REGISTRO MOBILE ===');
@@ -240,7 +238,6 @@ app.use((req, res, next) => {
     
     // Cookies
     console.log('📍 Cookies recebidos:', req.cookies);
-    console.log('📍 Body keys:', Object.keys(req.body || {}));
   }
   next();
 });
@@ -260,26 +257,64 @@ app.get('/csrf-token', cors({ origin: flexibleOrigin, credentials: true }), csrf
   res.json({ csrfToken: token });
 });
 
-// MIDDLEWARE CSRF CORRIGIDO - DESATIVA PARA REGISTRO/LOGIN
-// SOLUÇÃO DEFINITIVA - CSRF APENAS PARA ROTAS ADMIN
+// Rate limit específico para login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { erro: 'Muitas tentativas de login. Tente novamente depois.' }
+});
+app.use('/auth/login', loginLimiter);
+
+// Rate limit para registro (abuso de criação)
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  message: { erro: 'Muitas tentativas de registro. Tente novamente mais tarde.' }
+});
+app.use('/auth/register', registerLimiter);
+
+// Rate limiter geral básico
+const globalLimiter = rateLimit({ windowMs: 15*60*1000, max: 300 });
+app.use(globalLimiter);
+
+// Limites específicos apostas e resultado
+const apostaLimiter = rateLimit({ windowMs: 60 * 1000, max: 25, message: { erro: 'Muitas apostas em pouco tempo.' } });
+app.use('/palpite/apostar', apostaLimiter);
+const resultadoLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { erro: 'Muitos lançamentos de resultado.' } });
+app.use('/palpite/resultado', resultadoLimiter);
+
+// Limites específicos de abuso
+const anunciosLimiter = rateLimit({ windowMs: 60*60*1000, max: 10, message: { erro: 'Limite de envios de anúncios atingido. Tente depois.' } });
+const feedbackLimiter = rateLimit({ windowMs: 60*60*1000, max: 15, message: { erro: 'Limite de feedback atingido. Tente depois.' } });
+const uploadLimiter = rateLimit({ windowMs: 60*60*1000, max: 40, message: { erro: 'Muitos uploads. Tente mais tarde.' } });
+
+// ========== IMPORTANTE: ROTAS PÚBLICAS PRIMEIRO ==========
+import authRouter from './auth.js';
+import apoioRouter from './apoio.js';
+import regrasRouter from './regras.js';
+
+// ✅ ROTAS PÚBLICAS (SEM CSRF) - PRIMEIRO
+app.use('/auth', authRouter);
+app.use('/apoio', apoioRouter);
+app.use('/regras', regrasRouter);
+
+// ========== MIDDLEWARE CSRF (APENAS PARA ROTAS PRIVADAS) ==========
 app.use((req, res, next) => {
   // Métodos seguros nunca precisam de CSRF
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   
-  // ⚠️⚠️⚠️ CSRF COMPLETAMENTE DESATIVADO PARA REGISTRO/LOGIN ⚠️⚠️⚠️
+  // ⚠️ CSRF COMPLETAMENTE DESATIVADO PARA ROTAS PÚBLICAS
   if (req.path.startsWith('/auth/')) {
     console.log('✅ CSRF DESATIVADO para auth:', req.path);
     return next();
   }
   
-  // ⚠️ CSRF DESATIVADO para uploads
   if (req.path.startsWith('/upload/')) {
     console.log('✅ CSRF DESATIVADO para upload:', req.path);
     return next();
   }
   
-  // ⚠️ CSRF DESATIVADO para outros endpoints públicos
-  if (['/anuncios', '/feedback', '/healthz'].includes(req.path)) {
+  if (['/anuncios', '/feedback', '/healthz', '/csrf-token', '/apoio', '/regras'].includes(req.path)) {
     console.log('✅ CSRF DESATIVADO para rota pública:', req.path);
     return next();
   }
@@ -289,7 +324,7 @@ app.use((req, res, next) => {
       req.path.startsWith('/bolao/') || 
       req.path.startsWith('/usuario/') ||
       req.path.startsWith('/times/') ||
-      req.path.startsWith('/blog/') && req.method !== 'GET') {
+      (req.path.startsWith('/blog/') && req.method !== 'GET')) {
     
     // Se tem Bearer token, não precisa de CSRF
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
@@ -306,19 +341,28 @@ app.use((req, res, next) => {
   return next();
 });
 
-import authRouter from './auth.js';
-// Rota debug-cookie exposta diretamente
-// app.get('/auth/debug-cookie', handleDebugCookie);
+// ========== ROTAS PRIVADAS (COM CSRF) - DEPOIS ==========
 import adminRouter from './admin.js';
 import bolaoRouter from './bolao.js';
 import palpiteRouter from './palpite.js';
 import usuariosRouter from './usuarios.js';
 import timesRouter from './timesRouter.js';
 import blogRouter from './blog.js';
-import apoioRouter from './apoio.js';
-import regrasRouter from './regras.js';
 import pool from './db.js';
 import bcrypt from 'bcrypt';
+
+app.use('/admin', adminRouter);
+app.use('/bolao', bolaoRouter);
+app.use('/palpite', palpiteRouter);
+app.use('/usuario', usuariosRouter);
+app.use('/times', timesRouter);
+
+// Limiter de mutações de blog ANTES do router
+app.use(['/blog','/blog/*'], (req,res,next)=>{
+  if (['POST','PUT','PATCH','DELETE'].includes(req.method)) return blogWriteLimiter(req,res,next);
+  return next();
+});
+app.use('/blog', blogRouter);
 
 // pastas de upload
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -329,59 +373,6 @@ const avatarsDir = path.join(uploadsDir, 'avatars');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 if (!fs.existsSync(escudosDir)) fs.mkdirSync(escudosDir, { recursive: true });
 if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
-
-// (CORS global já configurado acima)
-// (Removido middleware genérico de set de cookie CSRF para evitar chamadas sem secret)
-
-// Rate limit específico para login
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { erro: 'Muitas tentativas de login. Tente novamente depois.' }
-});
-app.use('/auth/login', loginLimiter);
-// Rate limit para registro (abuso de criação)
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 30,
-  message: { erro: 'Muitas tentativas de registro. Tente novamente mais tarde.' }
-});
-app.use('/auth/register', registerLimiter);
-// Rate limiter geral básico
-const globalLimiter = rateLimit({ windowMs: 15*60*1000, max: 300 });
-app.use(globalLimiter);
-
-// Limites específicos apostas e resultado
-const apostaLimiter = rateLimit({ windowMs: 60 * 1000, max: 25, message: { erro: 'Muitas apostas em pouco tempo.' } });
-app.use('/palpite/apostar', apostaLimiter);
-const resultadoLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { erro: 'Muitos lançamentos de resultado.' } });
-app.use('/palpite/resultado', resultadoLimiter);
-
-// Limites específicos de abuso
-const anunciosLimiter = rateLimit({ windowMs: 60*60*1000, max: 10, message: { erro: 'Limite de envios de anúncios atingido. Tente depois.' } });
-const feedbackLimiter = rateLimit({ windowMs: 60*60*1000, max: 15, message: { erro: 'Limite de feedback atingido. Tente depois.' } });
-const uploadLimiter = rateLimit({ windowMs: 60*60*1000, max: 40, message: { erro: 'Muitos uploads. Tente mais tarde.' } });
-app.use('/auth', authRouter); // <- monta rotas de auth
-
-app.use('/admin', adminRouter);
-app.use('/bolao', bolaoRouter);
-app.use('/palpite', palpiteRouter);
-app.use('/usuario', usuariosRouter);
-// Importante: manter '/times' porque o webpack devServer faz pathRewrite '^/api' -> ''
-// Assim chamadas frontend para '/api/times' chegam aqui como '/times'
-app.use('/times', timesRouter);
-// Limiter de mutações de blog ANTES do router
-app.use(['/blog','/blog/*'], (req,res,next)=>{
-  if (['POST','PUT','PATCH','DELETE'].includes(req.method)) return blogWriteLimiter(req,res,next);
-  return next();
-});
-app.use('/blog', blogRouter);
-app.use('/apoio', apoioRouter);
-app.use('/regras', regrasRouter);
-
-// servir arquivos
-// servir arquivos com CORS liberado
-// ...já movido para o topo...
 
 // filtro imagens
 function imageFilter(req, file, cb) {
@@ -494,7 +485,7 @@ const storageAnuncio = multer.diskStorage({
     const base = path
       .basename(file.originalname || 'anuncio', ext)
       .toLowerCase()
-      .normalize('NFD').replace(/[ -\u007f]/g, '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9\-]+/g, '-')
       .replace(/^-+|-+$/g, '');
     cb(null, `${Date.now()}-${base}${ext || '.png'}`);
@@ -705,7 +696,6 @@ app.post('/feedback', feedbackLimiter, async (req, res) => {
   }
 });
 
-
 // --- SOCKET.IO CHAT ---
 let onlineUsers = {};
 // Simple request logger (non-PII) with correlation id
@@ -726,7 +716,6 @@ io.on('connection', (socket) => {
   const msgWindowMs = 5000; // 5s janela
   const maxMsgsPerWindow = 8;
   let msgTimestamps = [];
-
 
   // Espera objeto: { apelido, tipo }
   socket.on('join', (userObj) => {
