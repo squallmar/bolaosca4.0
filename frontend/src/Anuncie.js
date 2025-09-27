@@ -22,8 +22,7 @@ export default function Anuncie() {
     setLoading(true);
     setEmailInfo(null);
     try {
-      // força obtenção do token CSRF antes do POST
-      try { await api.get('/csrf-token'); } catch {}
+  // CSRF removido: agora só Bearer Token
       const { nome, contato, mensagem } = form;
       const resp = await api.post('/anuncios', { nome, contato, mensagem });
       const email = resp?.data?.email;

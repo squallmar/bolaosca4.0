@@ -13,16 +13,9 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Pré-busca CSRF para reduzir risco de primeira falha 403
-    (async () => {
-      try {
-        const API_BASE = process.env.REACT_APP_API_URL || '';
-        await fetch(`${API_BASE}/csrf-token`, { credentials: 'include' });
-      } catch {}
-    })();
-    // Só chama /auth/me se houver token ou sessão (cookie)
-    const hasSession = !!document.cookie.split('; ').find(c => c.startsWith('token='));
-    if (hasSession) {
+    // Só chama /auth/me se houver token salvo
+    const hasToken = !!localStorage.getItem('token');
+    if (hasToken) {
       (async () => {
         try {
           console.log('[AUTHCTX] Chamando /auth/me...');
