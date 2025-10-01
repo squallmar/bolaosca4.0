@@ -1,6 +1,3 @@
-// Listar todos os campeonatos
-// ...existing code...
-
 import express from 'express';
 import pool from './db.js';
 import { safeQuery } from './utils.js';
@@ -29,12 +26,17 @@ router.delete('/partida/:id', exigirAutenticacao, exigirRole('admin'), async (re
   }
 });
 
-// Editar partida (apenas admin)
+// Editar partida (apenas admin) - MODIFICADO: inclui dataJogo
 router.put('/partida/:id', exigirAutenticacao, exigirRole('admin'), async (req, res) => {
   const { id } = req.params;
-  const { time1, time2 } = req.body;
+  const { time1, time2, dataJogo } = req.body; // ← NOVO: recebe dataJogo
+  
   try {
-    await safeQuery(pool, 'UPDATE partida SET time1 = $1, time2 = $2 WHERE id = $3', [time1, time2, id]);
+    await safeQuery(
+      pool, 
+      'UPDATE partida SET time1 = $1, time2 = $2, data_jogo = $3 WHERE id = $4', 
+      [time1, time2, dataJogo, id] // ← NOVO: inclui dataJogo
+    );
     res.json({ sucesso: true });
   } catch (err) {
     res.status(500).json({ erro: 'Erro ao editar partida', detalhes: err.message });
@@ -268,11 +270,15 @@ router.post('/campeonato/:campeonatoId/rodada', exigirAutenticacao, exigirRole('
   res.json(result.rows[0]);
 });
 
-// Criar partida
+// Criar partida - MODIFICADO: inclui dataJogo
 router.post('/rodada/:rodadaId/partida', exigirAutenticacao, exigirRole('admin'), async (req, res) => {
-  const { time1, time2 } = req.body;
+  const { time1, time2, dataJogo } = req.body; // ← NOVO: recebe dataJogo
   const { rodadaId } = req.params;
-  const result = await pool.query('INSERT INTO partida (rodada_id, time1, time2) VALUES ($1, $2, $3) RETURNING *', [rodadaId, time1, time2]);
+  
+  const result = await pool.query(
+    'INSERT INTO partida (rodada_id, time1, time2, data_jogo) VALUES ($1, $2, $3, $4) RETURNING *', 
+    [rodadaId, time1, time2, dataJogo] // ← NOVO: inclui dataJogo
+  );
   res.json(result.rows[0]);
 });
 
@@ -334,7 +340,7 @@ function slugifyLocal(s = '') {
 router.get('/rodada/:rodadaId/partidas', async (req, res) => {
   const { rodadaId } = req.params;
   try {
-    // Primeiro tenta pelo JOIN exato (rápido quando nomes casam 100%)
+    // MODIFICADO: Inclui data_jogo no SELECT
     const sql = `
       SELECT 
         p.id,
@@ -342,6 +348,7 @@ router.get('/rodada/:rodadaId/partidas', async (req, res) => {
         p.time1,
         p.time2,
         p.resultado,
+        p.data_jogo,
         COALESCE(p.finalizada, false) AS finalizada,
         t1.escudo_url AS time1_escudo,
         t2.escudo_url AS time2_escudo
