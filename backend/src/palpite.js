@@ -5,6 +5,7 @@ import { safeQuery } from './utils.js';
 import { logger } from './logger.js';
 
 const router = express.Router();
+
 // util local para normalizar nomes de times
 function slugifyLocal(s = '') {
   return String(s)
@@ -13,6 +14,7 @@ function slugifyLocal(s = '') {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
+
 // Helpers de tempo: considerar America/Sao_Paulo usando Intl (não depende do timezone do servidor)
 function getBRTimeParts(d = new Date()) {
   const fmt = new Intl.DateTimeFormat('pt-BR', {
@@ -31,16 +33,55 @@ function getBRTimeParts(d = new Date()) {
   return { day, hour };
 }
 
-// Regra global: corta apostas a partir de sábado 14:00 e durante todo o domingo (no horário de Brasília)
-function isGlobalLockActive() {
-  const { day, hour } = getBRTimeParts();
-  if (day === 6) { // Sábado
-    return hour >= 14;
-  }
-  if (day === 0) { // Domingo
+// NOVA REGRA: Bloqueia apostas a partir de 14:00 no dia do jogo (horário de Brasília)
+async function isMatchLocked(partidaId) {
+  try {
+    // Busca a data do jogo - USA COLUNA EXISTENTE data_jogo
+    const rows = await safeQuery(
+      pool,
+      `SELECT data_jogo FROM partida WHERE id = $1`,
+      [partidaId]
+    );
+    
+    if (!rows[0]) {
+      return 'Partida não encontrada';
+    }
+    
+    const partida = rows[0];
+    
+    // Se não tem data definida, não bloqueia por data (permite apostas)
+    if (!partida.data_jogo) {
+      return false;
+    }
+    
+    const dataJogo = new Date(partida.data_jogo);
+    const agora = new Date();
+    
+    // Converte para horário de Brasília para comparação
+    const dataJogoBR = new Date(dataJogo.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const agoraBR = new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    
+    // Extrai apenas a data (YYYY-MM-DD) para comparação
+    const dataJogoStr = dataJogoBR.toISOString().split('T')[0];
+    const agoraStr = agoraBR.toISOString().split('T')[0];
+    
+    // Se já passou do dia do jogo, bloqueia
+    if (agoraStr > dataJogoStr) {
+      return true;
+    }
+    
+    // Se é o mesmo dia, bloqueia a partir das 14:00
+    if (agoraStr === dataJogoStr && agoraBR.getHours() >= 14) {
+      return true;
+    }
+    
+    return false;
+    
+  } catch (error) {
+    console.error('Erro ao verificar bloqueio da partida:', error);
+    // Em caso de erro, usa regra conservadora (bloqueia)
     return true;
   }
-  return false; // Segunda a Sexta liberado
 }
 
 // Segunda-feira: mantém bloqueado apenas se a ÚLTIMA rodada de algum campeonato (que tenha partidas) não estiver finalizada
@@ -65,7 +106,6 @@ async function hasPendingFinalization() {
   );
   return rows.length > 0;
 }
-
 
 // helper: garante usuário do token
 function getUserId(req, res) {
@@ -145,23 +185,26 @@ router.post('/apostar/:partidaId', exigirAutenticacao, async (req, res) => {
   if (!usuarioId) return;
 
   const { partidaId } = req.params;
-  // Corta globalmente (sab 14:00 até fim de domingo) OU até admin finalizar rodada pendente
-  const weekend = isGlobalLockActive();
+  
+  // NOVA REGRA: Verifica bloqueio por data específica do jogo
+  const matchLocked = await isMatchLocked(partidaId);
   const pending = await hasPendingFinalization();
-  if (weekend || pending) {
+  
+  if (matchLocked || pending) {
     return res.status(409).json({ 
-      erro: weekend 
-        ? 'Apostas fechadas (Depois das 14h, não é permitido alterar o palpite).' 
+      erro: matchLocked 
+        ? 'Apostas fechadas para esta partida (apostas permitidas apenas até 14h do dia do jogo).' 
         : 'Apostas bloqueadas: aguardando finalização da rodada pelo admin.'
     });
   }
+
   const bloqueio = await partidaBloqueada(partidaId);
   if (bloqueio) return res.status(409).json({ erro: bloqueio });
 
   let { palpite } = req.body || {};
   try {
-  const userRows = await safeQuery(pool, 'SELECT autorizado FROM usuario WHERE id = $1', [usuarioId]);
-  if (!userRows[0]?.autorizado) return res.status(403).json({ erro: 'Usuário não autorizado para apostar' });
+    const userRows = await safeQuery(pool, 'SELECT autorizado FROM usuario WHERE id = $1', [usuarioId]);
+    if (!userRows[0]?.autorizado) return res.status(403).json({ erro: 'Usuário não autorizado para apostar' });
 
     palpite = String(palpite || '').toLowerCase();
     if (!['time1', 'empate', 'time2'].includes(palpite)) {
@@ -175,8 +218,8 @@ router.post('/apostar/:partidaId', exigirAutenticacao, async (req, res) => {
       DO UPDATE SET palpite = EXCLUDED.palpite
       RETURNING *`;
     const rows = await safeQuery(pool, sql, [partidaId, usuarioId, palpite]);
-  logger.info('audit_bet_upsert', { userId: usuarioId, partidaId, palpite });
-  res.json(rows[0]);
+    logger.info('audit_bet_upsert', { userId: usuarioId, partidaId, palpite });
+    res.json(rows[0]);
   } catch (e) {
     console.error('Erro apostar:', e);
     res.status(500).json({ erro: 'Falha ao salvar palpite' });
@@ -225,8 +268,8 @@ router.post('/resultado/:partidaId', exigirAutenticacao, async (req, res) => {
        ORDER BY u.nome`,
       [partidaId]
     );
-  logger.info('audit_result_launch', { adminId: usuarioId, partidaId: Number(partidaId), resultado });
-  res.json({ ok: true, partidaId: Number(partidaId), resultado, palpites: rows });
+    logger.info('audit_result_launch', { adminId: usuarioId, partidaId: Number(partidaId), resultado });
+    res.json({ ok: true, partidaId: Number(partidaId), resultado, palpites: rows });
   } catch (e) {
     console.error('Erro ao lançar resultado:', e);
     res.status(500).json({ erro: 'Falha ao lançar resultado' });
@@ -234,7 +277,6 @@ router.post('/resultado/:partidaId', exigirAutenticacao, async (req, res) => {
 });
 
 // Ranking da rodada (com flags)
-// Ranking da rodada (com flags) - VERSÃO CORRIGIDA
 router.get('/ranking/rodada/:rodadaId', async (req, res) => {
   const { rodadaId } = req.params;
   try {
@@ -254,7 +296,6 @@ router.get('/ranking/rodada/:rodadaId', async (req, res) => {
        ORDER BY pontos DESC, COALESCE(u.apelido, u.nome) ASC`,
       [rodadaId]
     );
-    // REMOVER A SANITIZAÇÃO
     return res.json({ ranking: rows });
   } catch (e) {
     console.error('GET /palpite/ranking/rodada erro:', e);
@@ -263,7 +304,6 @@ router.get('/ranking/rodada/:rodadaId', async (req, res) => {
 });
 
 // Ranking geral (com flags)
-// Ranking geral (com flags) - VERSÃO CORRIGIDA
 router.get('/ranking/geral', async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -280,7 +320,6 @@ router.get('/ranking/geral', async (req, res) => {
        GROUP BY u.id, u.apelido, u.nome, u.avatar_url, u.banido, u.desistiu, u.autorizado
        ORDER BY pontos DESC, COALESCE(u.apelido, u.nome) ASC`
     );
-    // REMOVER A SANITIZAÇÃO - manter todos os campos para o frontend
     return res.json({ ranking: rows });
   } catch (e) {
     console.error('GET /palpite/ranking/geral erro:', e);
@@ -288,14 +327,34 @@ router.get('/ranking/geral', async (req, res) => {
   }
 });
 
-// Estado de bloqueio global (para UI)
+// NOVA ROTA: Verificar status de bloqueio de uma partida específica
+router.get('/lock-status/:partidaId', async (req, res) => {
+  const { partidaId } = req.params;
+  
+  try {
+    const matchLocked = await isMatchLocked(partidaId);
+    const pending = await hasPendingFinalization();
+    const bloqueio = await partidaBloqueada(partidaId);
+    
+    res.json({
+      locked: matchLocked || pending || !!bloqueio,
+      matchLocked,
+      pending,
+      bloqueio: bloqueio || null
+    });
+  } catch (e) {
+    console.error('Erro ao verificar status:', e);
+    res.json({ locked: true, matchLocked: true, pending: false, bloqueio: null });
+  }
+});
+
+// Estado de bloqueio global (para UI) - MANTIDO PARA COMPATIBILIDADE
 router.get('/lock', async (_req, res) => {
   try {
-    const weekend = isGlobalLockActive();
     const pending = await hasPendingFinalization();
-    res.json({ locked: weekend || pending, weekend, pending });
+    res.json({ locked: pending, pending });
   } catch (e) {
-    res.json({ locked: false, weekend: false, pending: false });
+    res.json({ locked: false, pending: false });
   }
 });
 
