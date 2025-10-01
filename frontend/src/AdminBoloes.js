@@ -25,13 +25,34 @@ async function baixarRelatorioCampeonato(campeonatoId, nome) {
   }
 }
 
+// Função para formatar a data para o input datetime-local
+function formatDateForInput(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toISOString().slice(0, 16);
+}
+
+// Função para formatar a data para exibição
+function formatDateForDisplay(dateString) {
+  if (!dateString) return 'Data não definida';
+  const date = new Date(dateString);
+  return date.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
 // Autenticação agora via cookie httpOnly; não precisamos mais injetar Authorization manual
 async function tryGet(urls, config = {}) {
   let lastErr;
   const merged = { ...config }; // sem headers extras
   for (const url of urls) {
     try {
-  const res = await api.get(url, merged);
+      const res = await api.get(url, merged);
       return { data: res.data, urlOk: url };
     } catch (err) {
       lastErr = err;
@@ -110,6 +131,8 @@ async function getPartidasPorRodada(rodadaId, timesMap = {}) {
       time2,
       escudo1,
       escudo2,
+      // NOVO: Inclui data_jogo se disponível
+      data_jogo: p.data_jogo || p.dataJogo || null,
     };
   });
 }
@@ -210,13 +233,13 @@ export default function AdminBoloes() {
   // Ações (mesmos endpoints da BolaoList)
   async function editarBolao(id, nome) {
     if (!nome?.trim()) return;
-  await api.put(`/bolao/${id}`, { nome });
+    await api.put(`/bolao/${id}`, { nome });
     fetchAll();
   }
   async function excluirBolao(id) {
     if (!window.confirm('Excluir bolão?')) return;
     try {
-  await api.delete(`${API_BASE}/bolao/${id}`);
+      await api.delete(`${API_BASE}/bolao/${id}`);
       fetchAll();
     } catch (e) {
       const msg = e?.response?.data?.erro || e?.message || 'Erro ao excluir bolão';
@@ -226,42 +249,49 @@ export default function AdminBoloes() {
   }
   async function finalizarBolao(id) {
     if (!window.confirm('Finalizar bolão?')) return;
-  await api.post(`${API_BASE}/bolao/${id}/finalizar`, {});
+    await api.post(`${API_BASE}/bolao/${id}/finalizar`, {});
     fetchAll();
   }
   async function editarCampeonato(id, nome) {
     if (!nome?.trim()) return;
-  await api.put(`/bolao/campeonato/${id}`, { nome });
+    await api.put(`/bolao/campeonato/${id}`, { nome });
     fetchAll();
   }
   async function excluirCampeonato(id) {
     if (!window.confirm('Excluir campeonato?')) return;
-  await api.delete(`${API_BASE}/bolao/campeonato/${id}`);
+    await api.delete(`${API_BASE}/bolao/campeonato/${id}`);
     fetchAll();
   }
   async function finalizarCampeonato(id) {
     if (!window.confirm('Finalizar campeonato?')) return;
-  await api.post(`${API_BASE}/bolao/campeonato/${id}/finalizar`, {});
+    await api.post(`${API_BASE}/bolao/campeonato/${id}/finalizar`, {});
     fetchAll();
   }
   async function editarRodada(id, nome) {
     if (!nome?.trim()) return;
-  await api.put(`/bolao/rodada/${id}`, { nome });
+    await api.put(`/bolao/rodada/${id}`, { nome });
     fetchAll();
   }
   async function excluirRodada(id) {
     if (!window.confirm('Excluir rodada?')) return;
-  await api.delete(`${API_BASE}/bolao/rodada/${id}`);
+    await api.delete(`${API_BASE}/bolao/rodada/${id}`);
     fetchAll();
   }
-  async function editarPartida(id, t1, t2) {
+
+  // MODIFICADO: Função de editar partida agora inclui dataJogo
+  async function editarPartida(id, t1, t2, dataJogo) {
     if (!t1?.trim() || !t2?.trim()) return;
-  await api.put(`/bolao/partida/${id}`, { time1: t1, time2: t2 });
+    await api.put(`/bolao/partida/${id}`, { 
+      time1: t1, 
+      time2: t2, 
+      dataJogo: dataJogo // ← NOVO
+    });
     fetchAll();
   }
+
   async function excluirPartida(id) {
     if (!window.confirm('Excluir partida?')) return;
-  await api.delete(`${API_BASE}/bolao/partida/${id}`);
+    await api.delete(`${API_BASE}/bolao/partida/${id}`);
     fetchAll();
   }
 
@@ -269,369 +299,394 @@ export default function AdminBoloes() {
     <>
       <AdminSubMenu />
       <div className="admin-boloes">
-      <div className="header-banner">
-        <div className="header-left">
-          <button className="btn" onClick={() => navigate('/bolao')} title="Voltar">
-            ← Voltar
-          </button>
-          <h2 className="page-title">Bolões (gerenciamento)</h2>
-          <div className="subtitle">Gerencie bolões, campeonatos, rodadas e partidas</div>
-        </div>
-        <div className="header-actions">
-          <button className="btn" onClick={fetchAll} title="Recarregar">
-            🔄 Recarregar
-          </button>
-        </div>
-      </div>
-
-      <div className="toolbar">
-        <label className="label">Ver rodada:</label>
-        <select
-          value={selectedRodadaId}
-          onChange={e => setSelectedRodadaId(e.target.value)}
-          className="select"
-        >
-          <option value="">Mais atual por campeonato</option>
-          {Object.values(campeonatoRodadas).flat().map((r) => (
-            <option key={r.id} value={r.id}>{r.nome || `Rodada ${r.id}`}</option>
-          ))}
-        </select>
-        {selectedRodadaId && (
-          <button onClick={() => setSelectedRodadaId('')} className="btn btn-light">
-            Limpar filtro
-          </button>
-        )}
-      </div>
-
-      {loading && <div className="info-row">Carregando...</div>}
-      {msg && <div className="info-row error">{msg}</div>}
-
-      <div className="list">
-        {boloes.map((b, idx) => (
-          <div key={b.id} className="card bolao-card">
-            <div className="card-header">
-              <div className="index-chip">{idx + 1}º</div>
-              <div className="title">
-                {b.nome}
-                {b.finalizado && <span className="badge badge-muted">Finalizado</span>}
-              </div>
-              <div className="actions">
-                <button
-                  onClick={() => editarBolao(b.id, prompt('Novo nome do bolão:', b.nome) || b.nome)}
-                  className="btn btn-primary"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => excluirBolao(b.id)}
-                  className="btn btn-danger"
-                >
-                  Excluir
-                </button>
-                <button
-                  onClick={() => finalizarBolao(b.id)}
-                  className="btn btn-success"
-                >
-                  Finalizar
-                </button>
-                {Array.isArray(bolaoCampeonatos[b.id]) && bolaoCampeonatos[b.id].length > 0 && (
-                  bolaoCampeonatos[b.id].map((c, cidx) => (
-                    <button
-                      key={`relatorio-camp-${c.id}`}
-                      onClick={() => baixarRelatorioCampeonato(c.id, c.nome)}
-                      className="btn btn-primary btn-sm"
-                      style={{ marginLeft: 8 }}
-                    >
-                      📄 Relatório PDF
-                    </button>
-                  ))
-                )}
-
-              </div>
-            </div>
-
-            {Array.isArray(bolaoCampeonatos[b.id]) && bolaoCampeonatos[b.id].length > 0 ? (
-              <div className="nested">
-                {bolaoCampeonatos[b.id].map((c, cidx) => {
-                  const rods = Array.isArray(campeonatoRodadas[c.id]) ? campeonatoRodadas[c.id] : [];
-                  let rodsToShow = rods;
-                  if (selectedRodadaId) {
-                    rodsToShow = rods.filter(r => String(r.id) === String(selectedRodadaId));
-                  } else if (!expandedCamps[c.id]) {
-                    if (rods.length > 0) {
-                      const idxAtual = rods.findIndex(r => !r.finalizada);
-                      const idx = idxAtual >= 0 ? idxAtual : rods.length - 1;
-                      rodsToShow = [rods[idx]];
-                    } else {
-                      rodsToShow = [];
-                    }
-                  }
-
-                  return (
-                    <div key={c.id} className="card camp-card">
-                      <div className="card-header">
-                        <div className="index-chip chip-sm">{cidx + 1}º</div>
-                        <div className="title title-sm">
-                          {c.nome}
-                          {c.finalizado && <span className="badge badge-muted">Finalizado</span>}
-                        </div>
-
-                        {(!selectedRodadaId && rods.length > 1) && (
-                          <button onClick={() => toggleCampExpand(c.id)} className="btn btn-light btn-sm">
-                            {expandedCamps[c.id] ? 'Recolher rodadas' : 'Mostrar todas rodadas'}
-                          </button>
-                        )}
-
-                        <div className="actions">
-                          <button
-                            onClick={() => editarCampeonato(c.id, prompt('Novo nome:', c.nome) || c.nome)}
-                            className="btn btn-primary btn-sm"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => excluirCampeonato(c.id)}
-                            className="btn btn-danger btn-sm"
-                          >
-                            Excluir
-                          </button>
-                          <button
-                            onClick={() => finalizarCampeonato(c.id)}
-                            className="btn btn-success btn-sm"
-                          >
-                            Finalizar
-                          </button>
-                        </div>
-                      </div>
-
-                      {rodsToShow.length > 0 ? (
-                        <div className="nested">
-                          {rodsToShow.map((r, ridx) => (
-                            <React.Fragment key={r.id}>
-                              <div className="card rodada-card">
-                                <div className="card-header">
-                                  <div className="index-chip chip-sm">{ridx + 1}º</div>
-                                  <div className="title title-sm">
-                                    {r.nome}
-                                    {r.finalizada && <span className="badge badge-muted">Finalizada</span>}
-                                  </div>
-                                  <div className="actions">
-                                    <button
-                                      onClick={() => editarRodada(r.id, prompt('Novo nome:', r.nome) || r.nome)}
-                                      className="btn btn-primary btn-sm"
-                                    >
-                                      Editar
-                                    </button>
-                                    <button
-                                      onClick={() => excluirRodada(r.id)}
-                                      className="btn btn-danger btn-sm"
-                                    >
-                                      Excluir
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {Array.isArray(rodadaPartidas[r.id]) && rodadaPartidas[r.id].length > 0 ? (
-                                  <div className="nested">
-                                    {rodadaPartidas[r.id].map((p, pidx) => (
-                                      <div key={p.id} className="card partida-card">
-                                        <div className="card-header compact">
-                                          <div className="index-chip chip-sm">{pidx + 1}º Jogo</div>
-                                          <div className="title match">
-                                            <img
-                                              src={p.escudo1}
-                                              alt={`Escudo ${p.time1}`}
-                                              className="escudo-img"
-                                              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `${IMG_BASE}/uploads/escudos/_default.png`; }}
-                                            />
-                                            {p.time1} <span className="vs">x</span> {p.time2}
-                                            <img
-                                              src={p.escudo2}
-                                              alt={`Escudo ${p.time2}`}
-                                              className="escudo-img"
-                                              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `${IMG_BASE}/uploads/escudos/_default.png`; }}
-                                            />
-                                            {p.finalizada && <span className="badge badge-muted">Finalizada</span>}
-                                          </div>
-                                          <div className="actions">
-                                            <button
-                                              onClick={() => editarPartida(
-                                                p.id,
-                                                prompt('Novo time 1:', p.time1) || p.time1,
-                                                prompt('Novo time 2:', p.time2) || p.time2
-                                              )}
-                                              className="btn btn-primary btn-sm"
-                                            >
-                                              Editar
-                                            </button>
-                                            <button
-                                              onClick={() => excluirPartida(p.id)}
-                                              className="btn btn-danger btn-sm"
-                                            >
-                                              Excluir
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="empty">Nenhuma partida cadastrada</div>
-                                )}
-                              </div>
-                              {ridx < rodsToShow.length - 1 && (
-                                <hr className="rodada-divider" />
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="empty">Nenhuma rodada cadastrada</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="empty">Nenhum campeonato cadastrado</div>
-            )}
+        <div className="header-banner">
+          <div className="header-left">
+            <button className="btn" onClick={() => navigate('/bolao')} title="Voltar">
+              ← Voltar
+            </button>
+            <h2 className="page-title">Bolões (gerenciamento)</h2>
+            <div className="subtitle">Gerencie bolões, campeonatos, rodadas e partidas</div>
           </div>
-        ))}
-      </div>
+          <div className="header-actions">
+            <button className="btn" onClick={fetchAll} title="Recarregar">
+              🔄 Recarregar
+            </button>
+          </div>
+        </div>
 
-  <style>{`
-        .admin-boloes {
-          max-width: 1100px;
-          margin: 32px auto;
-          background: #fff;
-          padding: 24px;
-          border-radius: 12px;
-          box-shadow: 0 2px 12px rgba(0,0,0,.06);
-        }
+        <div className="toolbar">
+          <label className="label">Ver rodada:</label>
+          <select
+            value={selectedRodadaId}
+            onChange={e => setSelectedRodadaId(e.target.value)}
+            className="select"
+          >
+            <option value="">Mais atual por campeonato</option>
+            {Object.values(campeonatoRodadas).flat().map((r) => (
+              <option key={r.id} value={r.id}>{r.nome || `Rodada ${r.id}`}</option>
+            ))}
+          </select>
+          {selectedRodadaId && (
+            <button onClick={() => setSelectedRodadaId('')} className="btn btn-light">
+              Limpar filtro
+            </button>
+          )}
+        </div>
 
-        .header-banner {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 16px 20px;
-          border-radius: 12px;
-          background: linear-gradient(135deg, #2c3e50, #4a6491);
-          color: #fff;
-          margin-bottom: 20px;
-        }
-        .header-left { flex: 1; }
-        .page-title { margin: 0; font-weight: 800; }
-        .subtitle { opacity: .9; font-size: 13px; }
-        .header-actions { display: flex; gap: 8px; }
+        {loading && <div className="info-row">Carregando...</div>}
+        {msg && <div className="info-row error">{msg}</div>}
 
-        .toolbar {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 16px;
-          flex-wrap: wrap;
-        }
-        .label { font-weight: 600; color: #2c3e50; }
-        .select {
-          padding: 10px 12px;
-          border: 2px solid #e0e0e0;
-          border-radius: 10px;
-          background: #fff;
-        }
+        <div className="list">
+          {boloes.map((b, idx) => (
+            <div key={b.id} className="card bolao-card">
+              <div className="card-header">
+                <div className="index-chip">{idx + 1}º</div>
+                <div className="title">
+                  {b.nome}
+                  {b.finalizado && <span className="badge badge-muted">Finalizado</span>}
+                </div>
+                <div className="actions">
+                  <button
+                    onClick={() => editarBolao(b.id, prompt('Novo nome do bolão:', b.nome) || b.nome)}
+                    className="btn btn-primary"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => excluirBolao(b.id)}
+                    className="btn btn-danger"
+                  >
+                    Excluir
+                  </button>
+                  <button
+                    onClick={() => finalizarBolao(b.id)}
+                    className="btn btn-success"
+                  >
+                    Finalizar
+                  </button>
+                  {Array.isArray(bolaoCampeonatos[b.id]) && bolaoCampeonatos[b.id].length > 0 && (
+                    bolaoCampeonatos[b.id].map((c, cidx) => (
+                      <button
+                        key={`relatorio-camp-${c.id}`}
+                        onClick={() => baixarRelatorioCampeonato(c.id, c.nome)}
+                        className="btn btn-primary btn-sm"
+                        style={{ marginLeft: 8 }}
+                      >
+                        📄 Relatório PDF
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
 
-        .info-row { padding: 12px; border-radius: 8px; background: #f3f7ff; color: #0b4ea2; margin-bottom: 12px; }
-        .info-row.error { background: #ffeaea; color: #b71c1c; }
+              {Array.isArray(bolaoCampeonatos[b.id]) && bolaoCampeonatos[b.id].length > 0 ? (
+                <div className="nested">
+                  {bolaoCampeonatos[b.id].map((c, cidx) => {
+                    const rods = Array.isArray(campeonatoRodadas[c.id]) ? campeonatoRodadas[c.id] : [];
+                    let rodsToShow = rods;
+                    if (selectedRodadaId) {
+                      rodsToShow = rods.filter(r => String(r.id) === String(selectedRodadaId));
+                    } else if (!expandedCamps[c.id]) {
+                      if (rods.length > 0) {
+                        const idxAtual = rods.findIndex(r => !r.finalizada);
+                        const idx = idxAtual >= 0 ? idxAtual : rods.length - 1;
+                        rodsToShow = [rods[idx]];
+                      } else {
+                        rodsToShow = [];
+                      }
+                    }
 
-        .list { display: flex; flex-direction: column; gap: 16px; }
+                    return (
+                      <div key={c.id} className="card camp-card">
+                        <div className="card-header">
+                          <div className="index-chip chip-sm">{cidx + 1}º</div>
+                          <div className="title title-sm">
+                            {c.nome}
+                            {c.finalizado && <span className="badge badge-muted">Finalizado</span>}
+                          </div>
 
-        .card {
-          background: #fff;
-          border: 1px solid #e9ecef;
-          border-radius: 12px;
-          padding: 12px;
-          transition: box-shadow .2s ease, transform .2s ease;
-        }
-        .card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.06); transform: translateY(-1px); }
-        .bolao-card { background: #fdfdfd; }
-        .camp-card { background: #fcfcff; }
-        .rodada-card { background: #fcfffc; }
-        .partida-card { background: #fffdfc; }
+                          {(!selectedRodadaId && rods.length > 1) && (
+                            <button onClick={() => toggleCampExpand(c.id)} className="btn btn-light btn-sm">
+                              {expandedCamps[c.id] ? 'Recolher rodadas' : 'Mostrar todas rodadas'}
+                            </button>
+                          )}
 
-        .card-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding-bottom: 8px;
-          border-bottom: 1px solid #f0f0f0;
-          margin-bottom: 8px;
-        }
-        .card-header.compact { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+                          <div className="actions">
+                            <button
+                              onClick={() => editarCampeonato(c.id, prompt('Novo nome:', c.nome) || c.nome)}
+                              className="btn btn-primary btn-sm"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => excluirCampeonato(c.id)}
+                              className="btn btn-danger btn-sm"
+                            >
+                              Excluir
+                            </button>
+                            <button
+                              onClick={() => finalizarCampeonato(c.id)}
+                              className="btn btn-success btn-sm"
+                            >
+                              Finalizar
+                            </button>
+                          </div>
+                        </div>
 
-        .nested {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-left: 16px;
-          padding-left: 16px;
-          border-left: 2px dashed #eef2f7;
-        }
+                        {rodsToShow.length > 0 ? (
+                          <div className="nested">
+                            {rodsToShow.map((r, ridx) => (
+                              <React.Fragment key={r.id}>
+                                <div className="card rodada-card">
+                                  <div className="card-header">
+                                    <div className="index-chip chip-sm">{ridx + 1}º</div>
+                                    <div className="title title-sm">
+                                      {r.nome}
+                                      {r.finalizada && <span className="badge badge-muted">Finalizada</span>}
+                                    </div>
+                                    <div className="actions">
+                                      <button
+                                        onClick={() => editarRodada(r.id, prompt('Novo nome:', r.nome) || r.nome)}
+                                        className="btn btn-primary btn-sm"
+                                      >
+                                        Editar
+                                      </button>
+                                      <button
+                                        onClick={() => excluirRodada(r.id)}
+                                        className="btn btn-danger btn-sm"
+                                      >
+                                        Excluir
+                                      </button>
+                                    </div>
+                                  </div>
 
-        .index-chip {
-          min-width: 32px; height: 32px;
-          display: inline-flex; align-items: center; justify-content: center;
-          border-radius: 50%;
-          background: #fbc02d; color: #fff; font-weight: 700;
-        }
-        .chip-sm { min-width: 60px; height: 23px; font-size: 12px; }
+                                  {Array.isArray(rodadaPartidas[r.id]) && rodadaPartidas[r.id].length > 0 ? (
+                                    <div className="nested">
+                                      {rodadaPartidas[r.id].map((p, pidx) => (
+                                        <div key={p.id} className="card partida-card">
+                                          <div className="card-header compact">
+                                            <div className="index-chip chip-sm">{pidx + 1}º Jogo</div>
+                                            <div className="title match">
+                                              <img
+                                                src={p.escudo1}
+                                                alt={`Escudo ${p.time1}`}
+                                                className="escudo-img"
+                                                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `${IMG_BASE}/uploads/escudos/_default.png`; }}
+                                              />
+                                              {p.time1} <span className="vs">x</span> {p.time2}
+                                              <img
+                                                src={p.escudo2}
+                                                alt={`Escudo ${p.time2}`}
+                                                className="escudo-img"
+                                                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `${IMG_BASE}/uploads/escudos/_default.png`; }}
+                                              />
+                                              {p.finalizada && <span className="badge badge-muted">Finalizada</span>}
+                                            </div>
+                                            <div className="actions">
+                                              {/* MODIFICADO: Botão de editar partida agora inclui data */}
+                                              <button
+                                                onClick={() => {
+                                                  const novaData = prompt(
+                                                    'Nova data e hora do jogo (formato: YYYY-MM-DDTHH:MM):', 
+                                                    p.data_jogo ? formatDateForInput(p.data_jogo) : ''
+                                                  );
+                                                  editarPartida(
+                                                    p.id,
+                                                    prompt('Novo time 1:', p.time1) || p.time1,
+                                                    prompt('Novo time 2:', p.time2) || p.time2,
+                                                    novaData
+                                                  );
+                                                }}
+                                                className="btn btn-primary btn-sm"
+                                              >
+                                                Editar
+                                              </button>
+                                              <button
+                                                onClick={() => excluirPartida(p.id)}
+                                                className="btn btn-danger btn-sm"
+                                              >
+                                                Excluir
+                                              </button>
+                                            </div>
+                                          </div>
+                                          {/* NOVO: Exibe a data da partida se disponível */}
+                                          {p.data_jogo && (
+                                            <div className="partida-info">
+                                              <small>
+                                                <strong>Data do jogo:</strong> {formatDateForDisplay(p.data_jogo)}
+                                              </small>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="empty">Nenhuma partida cadastrada</div>
+                                  )}
+                                </div>
+                                {ridx < rodsToShow.length - 1 && (
+                                  <hr className="rodada-divider" />
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="empty">Nenhuma rodada cadastrada</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="empty">Nenhum campeonato cadastrado</div>
+              )}
+            </div>
+          ))}
+        </div>
 
-        .title { font-size: 18px; font-weight: 700; color: #2c3e50; flex: 1; }
-        .title-sm { font-size: 16px; font-weight: 600; }
-        .title.match { color: #d32f2f; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .vs { margin: 0 6px; color: #999; }
-        /* Escudo quadrado (como nas outras telas) */
-        .escudo-img {
-          width: 45px;
-          height: 45px;
-          border-radius: 8px;      /* cantos suaves, não círculo */
-          object-fit: contain;     /* não cortar o escudo */
-          padding: 4px;            /* respiro interno */
-          background: #fff;        /* fundo branco */
-          border: 2px solid #eef2f7; /* borda clara como padrão */
-        }
+        <style>{`
+          .admin-boloes {
+            max-width: 1100px;
+            margin: 32px auto;
+            background: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,.06);
+          }
 
-        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+          .header-banner {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2c3e50, #4a6491);
+            color: #fff;
+            margin-bottom: 20px;
+          }
+          .header-left { flex: 1; }
+          .page-title { margin: 0; font-weight: 800; }
+          .subtitle { opacity: .9; font-size: 13px; }
+          .header-actions { display: flex; gap: 8px; }
 
-        .badge {
-          display: inline-flex; align-items: center; gap: 6px;
-          padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
-          margin-left: 8px;
-        }
-        .badge-muted { background: #9e9e9e; color: #fff; }
+          .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+          }
+          .label { font-weight: 600; color: #2c3e50; }
+          .select {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fff;
+          }
 
-        .btn {
-          padding: 8px 12px; border-radius: 8px; border: 1px solid #e0e0e0;
-          background: #fff; color: #2c3e50; font-weight: 600; cursor: pointer;
-          transition: all .2s ease; box-shadow: 0 1px 2px rgba(0,0,0,.04);
-        }
-        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.1); }
-        .btn:active { transform: translateY(0); }
-        .btn-sm { padding: 6px 10px; font-size: 12px; }
-        .btn-light { background: #f7f7f7; }
-        .btn-primary { background: #2196f3; color: #fff; border-color: #2196f3; }
-        .btn-danger { background: #f44336; color: #fff; border-color: #f44336; }
-        .btn-success { background: #4caf50; color: #fff; border-color: #4caf50; }
+          .info-row { padding: 12px; border-radius: 8px; background: #f3f7ff; color: #0b4ea2; margin-bottom: 12px; }
+          .info-row.error { background: #ffeaea; color: #b71c1c; }
 
-        .empty {
-          padding: 12px; text-align: center; color: #9e9e9e; font-style: italic;
-          background: #fafafa; border-radius: 8px; border: 1px dashed #eaeaea;
-        }
+          .list { display: flex; flex-direction: column; gap: 16px; }
 
-        @media (max-width: 768px) {
-          .header-banner { flex-direction: column; align-items: flex-start; }
-          .card-header { align-items: flex-start; }
-          .actions { width: 100%; }
-        }
-      `}</style>
+          .card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 12px;
+            transition: box-shadow .2s ease, transform .2s ease;
+          }
+          .card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.06); transform: translateY(-1px); }
+          .bolao-card { background: #fdfdfd; }
+          .camp-card { background: #fcfcff; }
+          .rodada-card { background: #fcfffc; }
+          .partida-card { background: #fffdfc; }
+
+          .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 8px;
+          }
+          .card-header.compact { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+
+          .nested {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-left: 16px;
+            padding-left: 16px;
+            border-left: 2px dashed #eef2f7;
+          }
+
+          .index-chip {
+            min-width: 32px; height: 32px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            background: #fbc02d; color: #fff; font-weight: 700;
+          }
+          .chip-sm { min-width: 60px; height: 23px; font-size: 12px; }
+
+          .title { font-size: 18px; font-weight: 700; color: #2c3e50; flex: 1; }
+          .title-sm { font-size: 16px; font-weight: 600; }
+          .title.match { color: #d32f2f; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+          .vs { margin: 0 6px; color: #999; }
+          
+          /* NOVO: Estilo para informações da partida */
+          .partida-info {
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-top: 8px;
+            border-left: 3px solid #2196f3;
+          }
+          
+          /* Escudo quadrado (como nas outras telas) */
+          .escudo-img {
+            width: 45px;
+            height: 45px;
+            border-radius: 8px;      /* cantos suaves, não círculo */
+            object-fit: contain;     /* não cortar o escudo */
+            padding: 4px;            /* respiro interno */
+            background: #fff;        /* fundo branco */
+            border: 2px solid #eef2f7; /* borda clara como padrão */
+          }
+
+          .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+          .badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+            margin-left: 8px;
+          }
+          .badge-muted { background: #9e9e9e; color: #fff; }
+
+          .btn {
+            padding: 8px 12px; border-radius: 8px; border: 1px solid #e0e0e0;
+            background: #fff; color: #2c3e50; font-weight: 600; cursor: pointer;
+            transition: all .2s ease; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+          }
+          .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.1); }
+          .btn:active { transform: translateY(0); }
+          .btn-sm { padding: 6px 10px; font-size: 12px; }
+          .btn-light { background: #f7f7f7; }
+          .btn-primary { background: #2196f3; color: #fff; border-color: #2196f3; }
+          .btn-danger { background: #f44336; color: #fff; border-color: #f44336; }
+          .btn-success { background: #4caf50; color: #fff; border-color: #4caf50; }
+
+          .empty {
+            padding: 12px; text-align: center; color: #9e9e9e; font-style: italic;
+            background: #fafafa; border-radius: 8px; border: 1px dashed #eaeaea;
+          }
+
+          @media (max-width: 768px) {
+            .header-banner { flex-direction: column; align-items: flex-start; }
+            .card-header { align-items: flex-start; }
+            .actions { width: 100%; }
+          }
+        `}</style>
       </div>
     </>
   );
