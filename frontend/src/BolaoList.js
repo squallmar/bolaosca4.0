@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import ApostaTimer from './ApostaTimer';
-// ...existing code...
 import api from './services/api';
 import { useAuth } from './authContext';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +15,7 @@ async function tryGet(urls, config = {}) {
 
   for (const url of urls) {
     try {
-  const res = await api.get(url, merged);
+      const res = await api.get(url, merged);
       return { data: res.data, urlOk: url };
     } catch (err) {
       lastErr = err;
@@ -25,6 +24,21 @@ async function tryGet(urls, config = {}) {
   }
   throw lastErr;
 }
+
+// Função para verificar bloqueio por partida (NOVA)
+const checkPartidaLock = async (partidaId) => {
+  try {
+    const { data } = await api.get(`/palpite/lock-status/${partidaId}`);
+    return data;
+  } catch (error) {
+    console.error('Erro ao verificar status da partida:', error);
+    return { 
+      locked: true, 
+      matchLocked: true,
+      message: 'Erro ao verificar status da partida'
+    };
+  }
+};
 
 // Fallbacks para listas globais (agora com token) - mantido igual
 async function getCampeonatosTodos() {
@@ -96,6 +110,9 @@ function BolaoList() {
   const [campeonatoRodadas, setCampeonatoRodadas] = useState({});
   const [rodadaPartidas, setRodadaPartidas] = useState({});
 
+  // NOVO: Estado para status de bloqueio das partidas
+  const [partidasLockStatus, setPartidasLockStatus] = useState({});
+
   // NOVO: filtro/expansão de rodadas
   const [selectedRodadaId, setSelectedRodadaId] = useState('');
   const [expandedCamps, setExpandedCamps] = useState({});
@@ -107,6 +124,20 @@ function BolaoList() {
 
   // Garanta Authorization em todas as chamadas axios - mantido igual
   useEffect(() => { /* Authorization via cookie */ }, []);
+
+  // NOVO: Carrega status de bloqueio para todas as partidas
+  const carregarLockStatusPartidas = useCallback(async (partidasList) => {
+    const statusMap = {};
+    for (const partida of partidasList) {
+      try {
+        const lockStatus = await checkPartidaLock(partida.id);
+        statusMap[partida.id] = lockStatus;
+      } catch (error) {
+        statusMap[partida.id] = { locked: true, matchLocked: true };
+      }
+    }
+    setPartidasLockStatus(statusMap);
+  }, []);
 
   // Utilitário: atualiza listas globais de campeonatos e rodadas
   const refreshLists = useCallback(async () => {
@@ -123,10 +154,10 @@ function BolaoList() {
   async function excluirCampeonato(id) {
     if (!window.confirm('Tem certeza que deseja excluir este campeonato?')) return;
     try {
-  await api.delete(`/bolao/campeonato/${id}`);
-  setMsg('Campeonato excluído!');
-  await refreshLists();
-  fetchAllGrouped();
+      await api.delete(`/bolao/campeonato/${id}`);
+      setMsg('Campeonato excluído!');
+      await refreshLists();
+      fetchAllGrouped();
     } catch {
       setMsg('Erro ao excluir campeonato');
     }
@@ -135,10 +166,10 @@ function BolaoList() {
   async function finalizarCampeonato(id) {
     if (!window.confirm('Finalizar este campeonato? Esta ação não pode ser desfeita.')) return;
     try {
-  await api.post(`/bolao/campeonato/${id}/finalizar`);
-  setMsg('Campeonato finalizado!');
-  await refreshLists();
-  fetchAllGrouped();
+      await api.post(`/bolao/campeonato/${id}/finalizar`);
+      setMsg('Campeonato finalizado!');
+      await refreshLists();
+      fetchAllGrouped();
     } catch {
       setMsg('Erro ao finalizar campeonato');
     }
@@ -147,10 +178,10 @@ function BolaoList() {
   async function editarCampeonato(id, nomeNovo) {
     if (!nomeNovo || !String(nomeNovo).trim()) return setMsg('Digite o novo nome do campeonato');
     try {
-  await api.put(`/bolao/campeonato/${id}`, { nome: nomeNovo });
-  setMsg('Campeonato editado!');
-  await refreshLists();
-  fetchAllGrouped();
+      await api.put(`/bolao/campeonato/${id}`, { nome: nomeNovo });
+      setMsg('Campeonato editado!');
+      await refreshLists();
+      fetchAllGrouped();
     } catch {
       setMsg('Erro ao editar campeonato');
     }
@@ -160,10 +191,10 @@ function BolaoList() {
   async function excluirRodada(id) {
     if (!window.confirm('Tem certeza que deseja excluir esta rodada?')) return;
     try {
-  await api.delete(`/bolao/rodada/${id}`);
-  setMsg('Rodada excluída!');
-  await refreshLists();
-  fetchAllGrouped();
+      await api.delete(`/bolao/rodada/${id}`);
+      setMsg('Rodada excluída!');
+      await refreshLists();
+      fetchAllGrouped();
     } catch {
       setMsg('Erro ao excluir rodada');
     }
@@ -172,10 +203,10 @@ function BolaoList() {
   async function finalizarRodada(id) {
     if (!window.confirm('Finalizar esta rodada? Esta ação não pode ser desfeita.')) return;
     try {
-  await api.post(`/bolao/rodada/${id}/finalizar`);
-  setMsg('Rodada finalizada!');
-  await refreshLists();
-  fetchAllGrouped();
+      await api.post(`/bolao/rodada/${id}/finalizar`);
+      setMsg('Rodada finalizada!');
+      await refreshLists();
+      fetchAllGrouped();
     } catch {
       setMsg('Erro ao finalizar rodada');
     }
@@ -184,20 +215,27 @@ function BolaoList() {
   async function editarRodada(id, nomeNovo) {
     if (!nomeNovo || !String(nomeNovo).trim()) return setMsg('Digite o novo nome da rodada');
     try {
-  await api.put(`/bolao/rodada/${id}`, { nome: nomeNovo });
-  setMsg('Rodada editada!');
-  await refreshLists();
-  fetchAllGrouped();
+      await api.put(`/bolao/rodada/${id}`, { nome: nomeNovo });
+      setMsg('Rodada editada!');
+      await refreshLists();
+      fetchAllGrouped();
     } catch {
       setMsg('Erro ao editar rodada');
     }
   }
 
-  // Ações de partida - mantido igual
+  // Ações de partida - ATUALIZADO com verificação de bloqueio
   async function excluirPartida(id) {
+    // NOVO: Verificar se a partida está bloqueada antes de excluir
+    const lockStatus = await checkPartidaLock(id);
+    if (lockStatus.locked) {
+      setMsg('Não é possível excluir partida: apostas já estão bloqueadas para esta partida.');
+      return;
+    }
+
     if (!window.confirm('Tem certeza que deseja excluir esta partida?')) return;
     try {
-  await api.delete(`/bolao/partida/${id}`);
+      await api.delete(`/bolao/partida/${id}`);
       setMsg('Partida excluída!');
       fetchAllGrouped();
     } catch {
@@ -208,7 +246,7 @@ function BolaoList() {
   async function finalizarPartida(id) {
     if (!window.confirm('Finalizar esta partida? Esta ação não pode ser desfeita.')) return;
     try {
-  await api.post(`/bolao/partida/${id}/finalizar`);
+      await api.post(`/bolao/partida/${id}/finalizar`);
       setMsg('Partida finalizada!');
       fetchAllGrouped();
     } catch {
@@ -217,11 +255,18 @@ function BolaoList() {
   }
 
   async function editarPartida(id, time1Novo, time2Novo) {
+    // NOVO: Verificar se a partida está bloqueada antes de editar
+    const lockStatus = await checkPartidaLock(id);
+    if (lockStatus.locked) {
+      setMsg('Não é possível editar partida: apostas já estão bloqueadas para esta partida.');
+      return;
+    }
+
     if (!time1Novo || !String(time1Novo).trim() || !time2Novo || !String(time2Novo).trim()) {
       return setMsg('Preencha os dois times');
     }
     try {
-  await api.put(`/bolao/partida/${id}`, { time1: time1Novo, time2: time2Novo });
+      await api.put(`/bolao/partida/${id}`, { time1: time1Novo, time2: time2Novo });
       setMsg('Partida editada!');
       fetchAllGrouped();
     } catch {
@@ -229,7 +274,7 @@ function BolaoList() {
     }
   }
 
-  // Buscar entidades agrupadas corretamente (itera sobre bolões->campeonatos->rodadas->partidas) - mantido igual
+  // Buscar entidades agrupadas corretamente (itera sobre bolões->campeonatos->rodadas->partidas) - ATUALIZADO
   const fetchAllGrouped = useCallback(async () => {
     if (!boloes || boloes.length === 0) return;
 
@@ -253,12 +298,20 @@ function BolaoList() {
 
       // Partidas por rodada
       const rodPart = {};
+      const todasPartidas = []; // NOVO: para coletar todas as partidas
       for (const r of allRods) {
         try {
-          rodPart[r.id] = await getPartidasPorRodada(r.id);
+          const partidas = await getPartidasPorRodada(r.id);
+          rodPart[r.id] = partidas;
+          todasPartidas.push(...partidas); // NOVO: adiciona ao array de todas as partidas
         } catch {
           rodPart[r.id] = [];
         }
+      }
+
+      // NOVO: Carrega status de bloqueio para todas as partidas
+      if (todasPartidas.length > 0) {
+        await carregarLockStatusPartidas(todasPartidas);
       }
 
       setBolaoCampeonatos(bolaoCamp);
@@ -270,12 +323,12 @@ function BolaoList() {
     } finally {
       setLoading(false);
     }
-  }, [boloes]);
+  }, [boloes, carregarLockStatusPartidas]);
 
   async function excluirBolao(id) {
     if (!window.confirm('Tem certeza que deseja excluir este bolão?')) return;
     try {
-  await api.delete(`/bolao/${id}`);
+      await api.delete(`/bolao/${id}`);
       setMsg('Bolão excluído!');
       fetchBoloes();
     } catch {
@@ -286,7 +339,7 @@ function BolaoList() {
   async function finalizarBolao(id) {
     if (!window.confirm('Finalizar este bolão? Esta ação não pode ser desfeita.')) return;
     try {
-  await api.post(`/bolao/${id}/finalizar`);
+      await api.post(`/bolao/${id}/finalizar`);
       setMsg('Bolão finalizado!');
       fetchBoloes();
     } catch {
@@ -297,7 +350,7 @@ function BolaoList() {
   async function editarBolao(id) {
     if (!editNome.trim()) return setMsg('Digite o novo nome do bolão');
     try {
-  await api.put(`/bolao/${id}`, { nome: editNome });
+      await api.put(`/bolao/${id}`, { nome: editNome });
       setMsg('Bolão editado!');
       setEditId(null);
       setEditNome('');
@@ -358,7 +411,7 @@ function BolaoList() {
     try {
       const { data } = await tryGet([`${API_BASE}/bolao/listar`, `${API_BASE}/listar`], {});
       setBoloes(Array.isArray(data) ? data : (data?.boloes || data || []));
-  // ...não limpa msg, só modalMsg será usado para sucesso
+      // ...não limpa msg, só modalMsg será usado para sucesso
     } catch (e) {
       setMsg('Erro ao buscar bolões');
       setBoloes([]);
@@ -480,15 +533,15 @@ function BolaoList() {
 
           <div className="creation-card campeonato-card">
             <h3 className="card-title">2º Criar Campeonato</h3>
-      <form onSubmit={async e => {
+            <form onSubmit={async e => {
               e.preventDefault();
               try {
                 await api.post(`/bolao/${novoCampeonato.bolaoId}/campeonato`, { nome: novoCampeonato.nome });
                 setModalMsg('Campeonato criado com sucesso!');
                 setTimeout(() => setModalMsg(''), 2500);
                 setNovoCampeonato({ bolaoId: '', nome: '' });
-        await refreshLists();
-        fetchAllGrouped();
+                await refreshLists();
+                fetchAllGrouped();
               } catch {
                 setMsg('Erro ao criar campeonato');
               }
@@ -534,15 +587,15 @@ function BolaoList() {
 
           <div className="creation-card rodada-card">
             <h3 className="card-title">3º Criar Rodada</h3>
-      <form onSubmit={async e => {
+            <form onSubmit={async e => {
               e.preventDefault();
               try {
                 await api.post(`/bolao/campeonato/${novaRodada.campeonatoId}/rodada`, { nome: novaRodada.nome });
                 setModalMsg('Rodada criada com sucesso!');
                 setTimeout(() => setModalMsg(''), 2500);
                 setNovaRodada({ campeonatoId: '', nome: '' });
-        await refreshLists();
-        fetchAllGrouped();
+                await refreshLists();
+                fetchAllGrouped();
               } catch {
                 setModalMsg('Erro ao criar rodada');
               }
@@ -713,6 +766,39 @@ function BolaoList() {
         </div>
       )}
 
+      {/* NOVO: Exibir status de bloqueio nas partidas */}
+      {tipo === 'admin' && autorizado && Object.keys(rodadaPartidas).length > 0 && (
+        <div className="lock-status-section">
+          <h3 className="section-title">Status de Bloqueio das Partidas</h3>
+          <div className="lock-status-grid">
+            {Object.entries(rodadaPartidas).map(([rodadaId, partidas]) => (
+              partidas.map(partida => {
+                const lockStatus = partidasLockStatus[partida.id] || {};
+                return (
+                  <div key={partida.id} className={`lock-status-item ${lockStatus.locked ? 'locked' : 'unlocked'}`}>
+                    <div className="partida-info">
+                      <strong>{partida.time1} vs {partida.time2}</strong>
+                      <span className="rodada-info">Rodada: {rodadas.find(r => r.id == rodadaId)?.nome || rodadaId}</span>
+                    </div>
+                    <div className="lock-status">
+                      {lockStatus.locked ? (
+                        <span className="status-badge locked">
+                          🔒 BLOQUEADA
+                          {lockStatus.matchLocked && <span className="reason">(Após 14h)</span>}
+                          {lockStatus.pending && <span className="reason">(Aguardando admin)</span>}
+                        </span>
+                      ) : (
+                        <span className="status-badge unlocked">🔓 LIBERADA</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="boloes-list">
         {boloes.map((b, idx) => (
           <div key={b.id} className="bolao-item">
@@ -792,7 +878,6 @@ function BolaoList() {
         ))}
       </div>
 
-
       {modalMsg && (
         <div className="center-toast modal-success">
           {modalMsg}
@@ -810,20 +895,20 @@ function BolaoList() {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          z-index: 9999; /* Z-index muito alto para garantir que apareça sobre tudo */
+          z-index: 9999;
           min-width: 320px;
           max-width: 90vw;
           text-align: center;
-          font-size: 28px; /* Fonte maior para garantir visibilidade */
+          font-size: 28px;
           box-shadow: 0 8px 32px rgba(0,0,0,0.25);
           background: #17632a;
           color: #fff;
-          border: 2px solid #fff; /* Borda branca para destacar */
+          border: 2px solid #fff;
           border-radius: 16px;
           padding: 40px 50px;
           font-weight: 800;
           letter-spacing: 1px;
-          animation: fadeIn 0.5s, pulsar 2.5s infinite; /* Animação de pulsar para chamar atenção - ajustada para 2.5s */
+          animation: fadeIn 0.5s, pulsar 2.5s infinite;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -837,7 +922,91 @@ function BolaoList() {
           50% { transform: translate(-50%, -50%) scale(1.05); }
           100% { transform: translate(-50%, -50%) scale(1); }
         }
-        /* ...estilos existentes... */
+
+        /* NOVO: Estilos para seção de status de bloqueio */
+        .lock-status-section {
+          margin: 32px 0;
+          padding: 20px;
+          background: #f8f9fa;
+          border-radius: 12px;
+          border: 1px solid #e9ecef;
+        }
+
+        .section-title {
+          margin: 0 0 20px 0;
+          color: #333;
+          font-size: 18px;
+          font-weight: 600;
+          text-align: center;
+        }
+
+        .lock-status-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 12px;
+        }
+
+        .lock-status-item {
+          padding: 12px;
+          border-radius: 8px;
+          border: 2px solid;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .lock-status-item.locked {
+          background: #ffebee;
+          border-color: #f44336;
+        }
+
+        .lock-status-item.unlocked {
+          background: #e8f5e9;
+          border-color: #4caf50;
+        }
+
+        .partida-info {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .partida-info strong {
+          font-size: 14px;
+          color: #333;
+        }
+
+        .rodada-info {
+          font-size: 12px;
+          color: #666;
+        }
+
+        .lock-status {
+          text-align: right;
+        }
+
+        .status-badge {
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 700;
+          color: white;
+        }
+
+        .status-badge.locked {
+          background: #f44336;
+        }
+
+        .status-badge.unlocked {
+          background: #4caf50;
+        }
+
+        .reason {
+          display: block;
+          font-size: 10px;
+          opacity: 0.9;
+          margin-top: 2px;
+        }
 
         /* Resumo do bolão */
         .bolao-summary {
@@ -890,10 +1059,19 @@ function BolaoList() {
           .bolao-summary {
             grid-template-columns: 1fr;
           }
+          .lock-status-grid {
+            grid-template-columns: 1fr;
+          }
+          .lock-status-item {
+            flex-direction: column;
+            gap: 8px;
+            text-align: center;
+          }
         }
       `}</style>
 
-  <style>{`
+      {/* ...resto dos estilos existentes (mantidos iguais)... */}
+      <style>{`
         .bolao-container {
           max-width: 900px;
           margin: 40px auto;
