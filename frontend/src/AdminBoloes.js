@@ -25,14 +25,19 @@ async function baixarRelatorioCampeonato(campeonatoId, nome) {
   }
 }
 
-// Função para formatar a data para o input datetime-local
+// Função para formatar a data para o input datetime-local (formato brasileiro)
 function formatDateForInput(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
-  return date.toISOString().slice(0, 16);
+  
+  // Ajusta para o timezone de Brasília
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
+  const localDate = new Date(date.getTime() - timezoneOffset);
+  
+  return localDate.toISOString().slice(0, 16);
 }
 
-// Função para formatar a data para exibição
+// Função para formatar a data para exibição amigável
 function formatDateForDisplay(dateString) {
   if (!dateString) return 'Data não definida';
   const date = new Date(dateString);
@@ -46,6 +51,104 @@ function formatDateForDisplay(dateString) {
   });
 }
 
+// Função para criar um input personalizado para data/hora
+function promptDateTime(mensagem, valorPadrao = '') {
+  return new Promise((resolve) => {
+    // Cria um modal simples
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    `;
+    
+    const content = document.createElement('div');
+    content.style.cssText = `
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      min-width: 300px;
+    `;
+    
+    const label = document.createElement('label');
+    label.textContent = mensagem;
+    label.style.cssText = 'display: block; margin-bottom: 10px; font-weight: bold;';
+    
+    const input = document.createElement('input');
+    input.type = 'datetime-local';
+    input.value = valorPadrao;
+    input.style.cssText = `
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    `;
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = 'display: flex; gap: 10px; justify-content: flex-end;';
+    
+    const confirmButton = document.createElement('button');
+    confirmButton.textContent = 'OK';
+    confirmButton.style.cssText = `
+      padding: 8px 16px;
+      background: #2196f3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    `;
+    
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancelar';
+    cancelButton.style.cssText = `
+      padding: 8px 16px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    `;
+    
+    confirmButton.onclick = () => {
+      resolve(input.value);
+      document.body.removeChild(modal);
+    };
+    
+    cancelButton.onclick = () => {
+      resolve(null);
+      document.body.removeChild(modal);
+    };
+    
+    buttonContainer.appendChild(cancelButton);
+    buttonContainer.appendChild(confirmButton);
+    
+    content.appendChild(label);
+    content.appendChild(input);
+    content.appendChild(buttonContainer);
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+    
+    // Foca no input
+    input.focus();
+    
+    // Fecha modal ao clicar fora
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        resolve(null);
+        document.body.removeChild(modal);
+      }
+    };
+  });
+}
 // Autenticação agora via cookie httpOnly; não precisamos mais injetar Authorization manual
 async function tryGet(urls, config = {}) {
   let lastErr;
@@ -484,23 +587,26 @@ export default function AdminBoloes() {
                                             </div>
                                             <div className="actions">
                                               {/* MODIFICADO: Botão de editar partida agora inclui data */}
-                                              <button
-                                                onClick={() => {
-                                                  const novaData = prompt(
-                                                    'Nova data e hora do jogo (formato: YYYY-MM-DDTHH:MM):', 
-                                                    p.data_jogo ? formatDateForInput(p.data_jogo) : ''
-                                                  );
-                                                  editarPartida(
-                                                    p.id,
-                                                    prompt('Novo time 1:', p.time1) || p.time1,
-                                                    prompt('Novo time 2:', p.time2) || p.time2,
-                                                    novaData
-                                                  );
-                                                }}
-                                                className="btn btn-primary btn-sm"
-                                              >
-                                                Editar
-                                              </button>
+                                                <button
+                                                  onClick={async () => {
+                                                    const novaData = await promptDateTime(
+                                                      'Nova data e hora do jogo:', 
+                                                      p.data_jogo ? formatDateForInput(p.data_jogo) : ''
+                                                    );
+                                                    
+                                                    if (novaData === null) return; // Usuário cancelou
+                                                    
+                                                    editarPartida(
+                                                      p.id,
+                                                      prompt('Novo time 1:', p.time1) || p.time1,
+                                                      prompt('Novo time 2:', p.time2) || p.time2,
+                                                      novaData || '' // Se o usuário apagar a data, envia string vazia
+                                                    );
+                                                  }}
+                                                  className="btn btn-primary btn-sm"
+                                                >
+                                                  Editar
+                                                </button>
                                               <button
                                                 onClick={() => excluirPartida(p.id)}
                                                 className="btn btn-danger btn-sm"
