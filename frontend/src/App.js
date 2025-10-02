@@ -327,7 +327,7 @@ function App() {
   const auth = useAuth() || {};
   const isAdmin = auth?.tipo === 'admin' && auth?.autorizado;
 
-   Ativar página de manutenção para não-admins
+   // Ativar página de manutenção para não-admins
    if (!isAdmin && location.pathname !== '/manutencao' && location.pathname !== '/login' && location.pathname !== '/register') {
      return <Manutencao />;
    }
