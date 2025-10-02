@@ -30,12 +30,13 @@ export default function ApostarRodada() {
   const [editando, setEditando] = useState({}); // controla edição por partida
   const [lockCountdown, setLockCountdown] = useState(''); // texto com tempo restante até fechamento
   const [lockChrono, setLockChrono] = useState(''); // cronômetro HH:MM:SS
+  const [partidasLockStatus, setPartidasLockStatus] = useState({}); // status de bloqueio por partida
 
   // Carrega times do backend
   useEffect(() => {
     async function loadTimes() {
       try {
-  const { data } = await api.get(`/times`);
+        const { data } = await api.get(`/times`);
         const arr = Array.isArray(data.items) ? data.items : [];
         const map = {};
         for (const t of arr) {
@@ -50,6 +51,35 @@ export default function ApostarRodada() {
     loadTimes();
   }, []);
 
+  // Função para verificar bloqueio por partida
+  const checkPartidaLock = useCallback(async (partidaId) => {
+    try {
+      const { data } = await api.get(`/palpite/lock-status/${partidaId}`);
+      return data;
+    } catch (error) {
+      console.error('Erro ao verificar status da partida:', error);
+      return { 
+        locked: true, 
+        matchLocked: true,
+        message: 'Erro ao verificar status da partida'
+      };
+    }
+  }, []);
+
+  // Carrega status de bloqueio para todas as partidas
+  const carregarLockStatusPartidas = useCallback(async (partidasList) => {
+    const statusMap = {};
+    for (const partida of partidasList) {
+      try {
+        const lockStatus = await checkPartidaLock(partida.id);
+        statusMap[partida.id] = lockStatus;
+      } catch (error) {
+        statusMap[partida.id] = { locked: true, matchLocked: true };
+      }
+    }
+    setPartidasLockStatus(statusMap);
+  }, [checkPartidaLock]);
+
   // Função para pegar escudo pelo nome
   const escudoByNome = useCallback((nome) => {
     const key = slugify(nome || '');
@@ -60,7 +90,7 @@ export default function ApostarRodada() {
 
   const carregarRodadas = useCallback(async () => {
     try {
-  const { data } = await api.get('/bolao/rodadas-todas');
+      const { data } = await api.get('/bolao/rodadas-todas');
       const lista = Array.isArray(data) ? data : (data?.rodadas || []);
       // Ordena por id ASC para previsibilidade
       const ordenadas = [...lista].sort((a,b) => Number(a.id) - Number(b.id));
@@ -88,7 +118,7 @@ export default function ApostarRodada() {
     setErro('');
     setOk('');
     try {
-  const { data } = await api.get(`/bolao/rodada/${rid}/partidas`);
+      const { data } = await api.get(`/bolao/rodada/${rid}/partidas`);
       const lista = Array.isArray(data) ? data : (data?.partidas || []);
       // marca client-side se já começou
       const now = Date.now();
@@ -103,17 +133,19 @@ export default function ApostarRodada() {
         return { ...p, _started: started };
       });
       setPartidas(norm);
+      // Carrega status de bloqueio para as partidas
+      carregarLockStatusPartidas(norm);
     } catch (e) {
       setErro('Erro ao carregar partidas');
       setPartidas([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [carregarLockStatusPartidas]);
 
   const carregarMeusPalpites = useCallback(async (rid) => {
     try {
-  const { data } = await api.get(`/palpite/meus/${rid}`);
+      const { data } = await api.get(`/palpite/meus/${rid}`);
       const arr = Array.isArray(data) ? data : [];
       const map = {};
       for (const p of arr) map[p.partida_id] = String(p.palpite || '').toLowerCase();
@@ -136,7 +168,7 @@ export default function ApostarRodada() {
     }
     async function pollServer() {
       try {
-  const { data } = await api.get('/palpite/lock');
+        const { data } = await api.get('/palpite/lock');
         setLockInfo(data || {});
         if (typeof data?.locked === 'boolean') setWeekendLocked(!!data.locked);
       } catch {
@@ -230,6 +262,7 @@ export default function ApostarRodada() {
     interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [weekendLocked]);
+  
   useEffect(() => {
     if (!rodadaId) return;
     carregarPartidas(rodadaId);
@@ -239,12 +272,34 @@ export default function ApostarRodada() {
   async function salvar(partida, valor) {
     setErro('');
     setOk('');
+    
+    // Verificação adicional por partida
+    const lockStatus = partidasLockStatus[partida.id] || await checkPartidaLock(partida.id);
+    if (lockStatus.locked) {
+      if (lockStatus.matchLocked) {
+        setErro('Apostas encerradas para esta partida (apostas permitidas apenas até 14h do dia do jogo).');
+        return;
+      }
+      if (lockStatus.pending) {
+        setErro('Apostas bloqueadas: aguardando finalização da rodada pelo admin.');
+        return;
+      }
+      if (lockStatus.bloqueio) {
+        setErro(lockStatus.bloqueio);
+        return;
+      }
+      // Bloqueio genérico
+      setErro('Apostas temporariamente bloqueadas para esta partida.');
+      return;
+    }
+
     setSaving(s => ({ ...s, [partida.id]: true }));
     try {
       await api.post(`/palpite/apostar/${partida.id}`, { palpite: valor });
       setPalpites(p => ({ ...p, [partida.id]: valor }));
       setOk('Palpite salvo! ⚽');
       setTimeout(() => setOk(''), 2500);
+      setEditando(e => ({...e, [partida.id]: false}));
     } catch (e) {
       const status = e?.response?.status;
       if (status === 401) {
@@ -272,10 +327,19 @@ export default function ApostarRodada() {
   const faltandoJogos = useMemo(() => {
     if (!partidas.length) return 0;
     return partidas.filter(p => {
-      const bloqueado = !!(weekendLocked || p.finalizada || p.finalizado || p.resultado || p._started || rodadaAtual?.finalizada);
+      const partidaLockStatus = partidasLockStatus[p.id] || {};
+      const bloqueado = !!(
+        weekendLocked || 
+        p.finalizada || 
+        p.finalizado || 
+        p.resultado || 
+        p._started || 
+        rodadaAtual?.finalizada ||
+        partidaLockStatus.locked
+      );
       return !bloqueado && !palpites[p.id];
     }).length;
-  }, [partidas, palpites, weekendLocked, rodadaAtual]);
+  }, [partidas, palpites, weekendLocked, rodadaAtual, partidasLockStatus]);
 
   return (
     <div className="apostar-container">
@@ -289,7 +353,7 @@ export default function ApostarRodada() {
           </a>
         </div>
       </div>
-  <div className="header-section">
+      <div className="header-section">
         <div className="header-content">
           <h1 className="main-title">Fazer Apostas</h1>
           <p className="subtitle">Selecione uma rodada e faça seus palpites</p>
@@ -308,7 +372,7 @@ export default function ApostarRodada() {
         )}
         <div className="apostas-aviso-sub">Corte: sábado 13:59 (último minuto antes das 14h).</div>
       </div>
-  <div className="content-wrapper">
+      <div className="content-wrapper">
         <div className="controls-section">
           <div className="select-card">
             <div className="select-header">
@@ -389,7 +453,16 @@ export default function ApostarRodada() {
 
         <div className="matches-grid">
           {partidas.map((p, idx) => {
-            const bloqueado = !!(weekendLocked || p.finalizada || p.finalizado || p.resultado || p._started || rodadaAtual?.finalizada);
+            const partidaLockStatus = partidasLockStatus[p.id] || {};
+            const bloqueado = !!(
+              weekendLocked || 
+              p.finalizada || 
+              p.finalizado || 
+              p.resultado || 
+              p._started || 
+              rodadaAtual?.finalizada ||
+              partidaLockStatus.locked
+            );
             const palpite = palpites[p.id];
             return (
               <div key={p.id} className={`match-card ${bloqueado ? 'blocked' : ''}`}>
@@ -401,10 +474,16 @@ export default function ApostarRodada() {
                       {lockInfo?.pending ? 'Aguardando finalização da rodada (admin)' : 'Apostas fechadas (Encerrada as 14h Sábado.)'}
                     </div>
                   )}
-                  {p._started && (
+                  {p._started && !p.resultado && (
                     <div className="status-badge started">
+                      <span className="badge-icon">⏰</span>
+                      Jogo em andamento - Apostas bloqueadas
+                    </div>
+                  )}
+                  {partidaLockStatus.matchLocked && !p._started && !p.resultado && (
+                    <div className="status-badge match-locked">
                       <span className="badge-icon">🔒</span>
-                      Apostas fechadas
+                      Apostas encerradas (após 14h)
                     </div>
                   )}
                   {p.resultado && (() => {
@@ -491,7 +570,7 @@ export default function ApostarRodada() {
                   <button
                     className={`bet-btn ${palpite === 'time1' ? 'selected' : ''}`}
                     disabled={bloqueado || saving[p.id] || (palpite && !editando[p.id])}
-                    onClick={() => { salvar(p, 'time1'); setEditando(e => ({...e, [p.id]: false})); }}
+                    onClick={() => { salvar(p, 'time1'); }}
                   >
                     {saving[p.id] && palpites[p.id] === 'time1' ? (
                       <div className="btn-loading"></div>
@@ -511,7 +590,7 @@ export default function ApostarRodada() {
                   <button
                     className={`bet-btn empate ${palpite === 'empate' ? 'selected' : ''}`}
                     disabled={bloqueado || saving[p.id] || (palpite && !editando[p.id])}
-                    onClick={() => { salvar(p, 'empate'); setEditando(e => ({...e, [p.id]: false})); }}
+                    onClick={() => { salvar(p, 'empate'); }}
                   >
                     {saving[p.id] && palpites[p.id] === 'empate' ? (
                       <div className="btn-loading"></div>
@@ -526,7 +605,7 @@ export default function ApostarRodada() {
                   <button
                     className={`bet-btn ${palpite === 'time2' ? 'selected' : ''}`}
                     disabled={bloqueado || saving[p.id] || (palpite && !editando[p.id])}
-                    onClick={() => { salvar(p, 'time2'); setEditando(e => ({...e, [p.id]: false})); }}
+                    onClick={() => { salvar(p, 'time2'); }}
                   >
                     {saving[p.id] && palpites[p.id] === 'time2' ? (
                       <div className="btn-loading"></div>
@@ -627,7 +706,7 @@ export default function ApostarRodada() {
         }
       `}</style>
 
-  <style>{`
+      <style>{`
         :root {
           --primary: #3a86ff;
           --primary-dark: #2563eb;
@@ -919,6 +998,18 @@ export default function ApostarRodada() {
           background: #fef2f2;
           color: #dc2626;
           border: 1px solid #fca5a5;
+        }
+
+        .status-badge.started {
+          background: #fff3cd;
+          color: #856404;
+          border: 1px solid #ffeaa7;
+        }
+
+        .status-badge.match-locked {
+          background: #f8d7da;
+          color: #721c24;
+          border: 1px solid #f5c6cb;
         }
 
         /* Palpite status badges */
