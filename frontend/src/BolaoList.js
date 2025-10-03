@@ -101,7 +101,7 @@ function BolaoList() {
   const [rodadas, setRodadas] = useState([]);
   const [novoCampeonato, setNovoCampeonato] = useState({ bolaoId: '', nome: '' });
   const [novaRodada, setNovaRodada] = useState({ campeonatoId: '', nome: '' });
-  const [novaPartida, setNovaPartida] = useState({ rodadaId: '', time1: '', time2: '' });
+  const [novaPartida, setNovaPartida] = useState({ rodadaId: '', time1: '', time2: '', dataJogo: '' });
   const [modalMsg, setModalMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -644,10 +644,14 @@ function BolaoList() {
             <form onSubmit={async e => {
               e.preventDefault();
               try {
-                await api.post(`/bolao/rodada/${novaPartida.rodadaId}/partida`, { time1: novaPartida.time1, time2: novaPartida.time2 });
+                await api.post(`/bolao/rodada/${novaPartida.rodadaId}/partida`, { 
+                  time1: novaPartida.time1, 
+                  time2: novaPartida.time2,
+                  dataJogo: novaPartida.dataJogo || null
+                });
                 setModalMsg('Partida criada com sucesso!');
                 setTimeout(() => setModalMsg(''), 2500);
-                setNovaPartida({ rodadaId: '', time1: '', time2: '' });
+                setNovaPartida({ rodadaId: '', time1: '', time2: '', dataJogo: '' });
                 fetchAllGrouped();
               } catch {
                 setModalMsg('Erro ao criar partida');
@@ -664,6 +668,17 @@ function BolaoList() {
               </select>
 
               <div className="teams-row">
+                {/* Data/hora da partida (opcional) */}
+                <input
+                  type="datetime-local"
+                  value={novaPartida.dataJogo}
+                  onChange={e => setNovaPartida({ ...novaPartida, dataJogo: e.target.value })}
+                  className="form-input"
+                  style={{ minWidth: 220 }}
+                  placeholder="Data e hora do jogo"
+                  title="Defina a data e hora do jogo (opcional)"
+                />
+
                 <select
                   value={novaPartida.time1}
                   onChange={e => setNovaPartida({ ...novaPartida, time1: e.target.value })}
