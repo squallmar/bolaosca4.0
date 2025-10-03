@@ -9,7 +9,24 @@ import { sanitizeText, sanitizeMediaUrl } from './utils.js';
 import { v2 as cloudinary } from 'cloudinary';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as pdfParseNS from 'pdf-parse';
-const pdfParseFn = (pdfParseNS && (pdfParseNS.default || pdfParseNS));
+// Unifica importação do pdf-parse (ESM/CJS)
+let pdfParseFn = (typeof pdfParseNS === 'function')
+  ? pdfParseNS
+  : (pdfParseNS && typeof pdfParseNS.default === 'function')
+    ? pdfParseNS.default
+    : null;
+if (!pdfParseFn) {
+  try {
+    const { createRequire } = await import('node:module');
+    const require = createRequire(import.meta.url);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const cjs = require('pdf-parse');
+    if (typeof cjs === 'function') pdfParseFn = cjs;
+    else if (cjs && typeof cjs.default === 'function') pdfParseFn = cjs.default;
+  } catch (e) {
+    // deixamos null e trataremos ao usar
+  }
+}
 
 const router = express.Router();
 
@@ -27,6 +44,13 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
 
   // Primeira tentativa: pdfjs (melhor preservação de linhas)
   try {
+    // Evita warnings de fontes padrão no ambiente server
+    if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
+      // No ambiente Node, standardFontDataUrl precisa apontar para assets internos do pacote
+      // Em legacy/build, as fontes padrão são resolvidas automaticamente se este valor estiver vazio
+      // Mantemos tentativa de set vazio para evitar erro de require
+      pdfjsLib.GlobalWorkerOptions.standardFontDataUrl = '';
+    }
     const loadingTask = pdfjsLib.getDocument({ data });
     const pdfDoc = await loadingTask.promise;
     const nPages = Math.min(pdfDoc.numPages, maxPages);
@@ -101,8 +125,8 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
   }
 
   // Segunda tentativa: pdf-parse (texto corrido)
-  if (jogosExtraidos.length === 0) {
-  const parsed = await pdfParseFn(Buffer.from(bin));
+  if (jogosExtraidos.length === 0 && pdfParseFn) {
+    const parsed = await pdfParseFn(Buffer.from(bin));
     const texto = parsed.text || '';
     const linhas = texto.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
@@ -138,6 +162,7 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
       console.warn('[PDF] Nenhum jogo extraído. Amostra de linhas:', linhas.slice(0, 30));
     }
   }
+  // Se ainda vazio e sem pdfParse disponível, apenas retorna o que temos (0) e deixamos o chamador lidar
 
   return jogosExtraidos;
 }
