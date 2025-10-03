@@ -125,17 +125,17 @@ function BolaoList() {
   // Garanta Authorization em todas as chamadas axios - mantido igual
   useEffect(() => { /* Authorization via cookie */ }, []);
 
-  // NOVO: Carrega status de bloqueio para todas as partidas
+  // NOVO: Carrega status de bloqueio para partidas informadas (reduzido)
   const carregarLockStatusPartidas = useCallback(async (partidasList) => {
-    const statusMap = {};
-    for (const partida of partidasList) {
+    const pairs = await Promise.all(partidasList.map(async (partida) => {
       try {
         const lockStatus = await checkPartidaLock(partida.id);
-        statusMap[partida.id] = lockStatus;
-      } catch (error) {
-        statusMap[partida.id] = { locked: true, matchLocked: true };
+        return [partida.id, lockStatus];
+      } catch (_e) {
+        return [partida.id, { locked: true, matchLocked: true }];
       }
-    }
+    }));
+    const statusMap = Object.fromEntries(pairs);
     setPartidasLockStatus(statusMap);
   }, []);
 
@@ -274,7 +274,7 @@ function BolaoList() {
     }
   }
 
-  // Buscar entidades agrupadas corretamente (itera sobre bolões->campeonatos->rodadas->partidas) - ATUALIZADO
+  // Buscar entidades agrupadas com foco na rodada atual (ou selecionada)
   const fetchAllGrouped = useCallback(async () => {
     if (!boloes || boloes.length === 0) return;
 
@@ -296,23 +296,39 @@ function BolaoList() {
         campRod[c.id] = allRods.filter(r => String(r.campeonatoId) === String(c.id));
       }
 
-      // Partidas por rodada
-      const rodPart = {};
-      const todasPartidas = []; // NOVO: para coletar todas as partidas
-      for (const r of allRods) {
-        try {
-          const partidas = await getPartidasPorRodada(r.id);
-          rodPart[r.id] = partidas;
-          todasPartidas.push(...partidas); // NOVO: adiciona ao array de todas as partidas
-        } catch {
-          rodPart[r.id] = [];
+      // Define quais rodadas carregar: selecionada ou "atual" por campeonato
+      let rodadasParaCarregar = [];
+      if (selectedRodadaId) {
+        rodadasParaCarregar = [selectedRodadaId];
+      } else {
+        const setIds = new Set();
+        for (const c of allCamps) {
+          const rods = campRod[c.id] || [];
+          if (rods.length > 0) {
+            const idxAtual = rods.findIndex(r => !r.finalizada);
+            const rodadaAtual = idxAtual >= 0 ? rods[idxAtual] : rods[rods.length - 1];
+            if (rodadaAtual) setIds.add(String(rodadaAtual.id));
+          }
         }
+        rodadasParaCarregar = Array.from(setIds);
       }
 
-      // NOVO: Carrega status de bloqueio para todas as partidas
-      if (todasPartidas.length > 0) {
-        await carregarLockStatusPartidas(todasPartidas);
-      }
+      // Partidas somente das rodadas alvo
+      const rodPart = {};
+      const todasPartidas = [];
+      const promises = rodadasParaCarregar.map(async (rid) => {
+        try {
+          const partidas = await getPartidasPorRodada(rid);
+          rodPart[rid] = partidas;
+          todasPartidas.push(...partidas);
+        } catch {
+          rodPart[rid] = [];
+        }
+      });
+      await Promise.all(promises);
+
+      // NOVO: Carrega status apenas das partidas exibidas
+      if (todasPartidas.length > 0) await carregarLockStatusPartidas(todasPartidas);
 
       setBolaoCampeonatos(bolaoCamp);
       setCampeonatoRodadas(campRod);
@@ -323,7 +339,7 @@ function BolaoList() {
     } finally {
       setLoading(false);
     }
-  }, [boloes, carregarLockStatusPartidas]);
+  }, [boloes, carregarLockStatusPartidas, selectedRodadaId]);
 
   async function excluirBolao(id) {
     if (!window.confirm('Tem certeza que deseja excluir este bolão?')) return;
@@ -433,12 +449,10 @@ function BolaoList() {
     fetchListas();
   }, []);
 
-  // Sempre que boloes mudar, buscar entidades agrupadas - mantido igual
+  // Sempre que boloes/seleção mudar, buscar entidades agrupadas
   useEffect(() => {
-    if (boloes.length > 0) {
-      fetchAllGrouped();
-    }
-  }, [boloes, fetchAllGrouped]);
+    if (boloes.length > 0) fetchAllGrouped();
+  }, [boloes, fetchAllGrouped, selectedRodadaId]);
 
   useEffect(() => {
     (async () => {
@@ -781,10 +795,34 @@ function BolaoList() {
         </div>
       )}
 
-      {/* NOVO: Exibir status de bloqueio nas partidas */}
+      {/* NOVO: Exibir status de bloqueio nas partidas (apenas rodada atual por padrão) */}
       {tipo === 'admin' && autorizado && Object.keys(rodadaPartidas).length > 0 && (
         <div className="lock-status-section">
           <h3 className="section-title">Status de Bloqueio das Partidas</h3>
+          <div className="lock-toolbar">
+            <label>Rodada: </label>
+            <select
+              value={selectedRodadaId}
+              onChange={(e) => setSelectedRodadaId(e.target.value)}
+              className="form-select"
+              style={{ maxWidth: 280 }}
+            >
+              <option value="">Atual por campeonato</option>
+              {rodadas.map(r => (
+                <option key={r.id} value={r.id}>{r.nome}</option>
+              ))}
+            </select>
+            {selectedRodadaId && (
+              <button
+                type="button"
+                onClick={() => setSelectedRodadaId('')}
+                className="action-button small"
+                style={{ background: '#f0f0f0', border: '1px solid #ddd' }}
+              >
+                Limpar filtro
+              </button>
+            )}
+          </div>
           <div className="lock-status-grid">
             {Object.entries(rodadaPartidas).map(([rodadaId, partidas]) => (
               partidas.map(partida => {
@@ -959,6 +997,13 @@ function BolaoList() {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
           gap: 12px;
+        }
+
+        .lock-toolbar {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin: 0 0 12px 0;
         }
 
         .lock-status-item {
