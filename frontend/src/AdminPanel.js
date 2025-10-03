@@ -11,6 +11,8 @@ function AdminPanel() {
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [campeonatos, setCampeonatos] = useState([]);
+  const [campeonatoId, setCampeonatoId] = useState('');
 
   async function fetchPendentes() {
     try {
@@ -41,6 +43,18 @@ function AdminPanel() {
   useEffect(() => {
     fetchPendentes();
   // ...apenas fetchPendentes...
+  }, []);
+
+  useEffect(() => {
+    // Carrega campeonatos para atrelar o upload às rodadas corretas
+    (async () => {
+      try {
+        const res = await api.get('/bolao/campeonatos-todos');
+        setCampeonatos(res.data || []);
+      } catch (e) {
+        console.error('Falha ao carregar campeonatos', e);
+      }
+    })();
   }, []);
 
   // Sanitiza e resolve a URL do avatar para sempre usar o domínio da API
@@ -75,8 +89,10 @@ function AdminPanel() {
           onSubmit={async (e) => {
             e.preventDefault();
             if (!window.pdfFile) return alert('Selecione um PDF!');
+            if (!campeonatoId) return alert('Selecione um campeonato');
             const formData = new FormData();
             formData.append('pdf', window.pdfFile);
+            formData.append('campeonatoId', String(campeonatoId));
             try {
               const res = await api.post('/admin/upload-jogos-pdf', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
@@ -88,6 +104,17 @@ function AdminPanel() {
           }}
           style={{ marginBottom: 20 }}
         >
+          <select
+            value={campeonatoId}
+            onChange={(e) => setCampeonatoId(e.target.value)}
+            required
+            style={{ marginRight: 10 }}
+          >
+            <option value="">Selecione o campeonato</option>
+            {campeonatos.map(c => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
           <input
             type="file"
             accept="application/pdf"

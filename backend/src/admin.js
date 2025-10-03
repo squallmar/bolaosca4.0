@@ -8,6 +8,7 @@ import fs from 'fs';
 import { sanitizeText, sanitizeMediaUrl } from './utils.js';
 import { v2 as cloudinary } from 'cloudinary';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import pdfParse from 'pdf-parse';
 
 const router = express.Router();
 
@@ -19,69 +20,103 @@ const upload = multer({ storage });
 // Função baseada no modelo do usuário
 async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
   const { maxPages = 300, debug = false } = opts;
-  const data = new Uint8Array(fs.readFileSync(caminhoPDF));
-  const loadingTask = pdfjsLib.getDocument({ data });
-  const pdfDoc = await loadingTask.promise;
-  const nPages = Math.min(pdfDoc.numPages, maxPages);
+  const bin = fs.readFileSync(caminhoPDF);
+  const data = new Uint8Array(bin);
   const jogosExtraidos = [];
-  for (let i = 1; i <= nPages; i++) {
-    const page = await pdfDoc.getPage(i);
-    const content = await page.getTextContent();
-    let linhas = [];
-    let linhaAtual = '';
-    let ultimaY = null;
-    content.items.forEach(item => {
-      const y = item.transform[5];
-      const str = (item.str || '').trim();
-      if (!str) return;
-      if (ultimaY !== null && Math.abs(ultimaY - y) > 6) {
-        if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
-        linhaAtual = str;
-      } else {
-        linhaAtual += ' ' + str;
-      }
-      ultimaY = y;
-    });
-    if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
-    // Regex e parsing conforme modelo do usuário (resumido)
+
+  // Primeira tentativa: pdfjs (melhor preservação de linhas)
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data });
+    const pdfDoc = await loadingTask.promise;
+    const nPages = Math.min(pdfDoc.numPages, maxPages);
+    for (let i = 1; i <= nPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const content = await page.getTextContent();
+      let linhas = [];
+      let linhaAtual = '';
+      let ultimaY = null;
+      content.items.forEach(item => {
+        const y = item.transform[5];
+        const str = (item.str || '').trim();
+        if (!str) return;
+        if (ultimaY !== null && Math.abs(ultimaY - y) > 6) {
+          if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
+          linhaAtual = str;
+        } else {
+          linhaAtual += ' ' + str;
+        }
+        ultimaY = y;
+      });
+      if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
+
+      const date = '(?:\\d{2}\\/\\d{2}\\/(?:\\d{2}|\\d{4}))';
+      const time = '(?:\\d{2}:\\d{2}|\\d{2}h\\d{2})';
+      const sep = '(?:x|X|vs\\.?)';
+      const patterns = [
+        new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
+        new RegExp(`^(${date})\\s*-\\s*(${time})\\s*-\\s*(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
+        new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s*-\\s*(${time})\\s*-\\s*(${date})$`, 'i'),
+        new RegExp(`^[A-Za-zçÇéÉáÁíÍõÕúÚâÂêÊôÔ]{2,}\\s+(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
+      ];
+      linhas.forEach(linha => {
+        const l = linha.replace(/[\u2012-\u2015\u2212\u2010]/g, '-').replace(/\s+/g, ' ').trim();
+        for (const re of patterns) {
+          const m = l.match(re);
+          if (m) {
+            let dataJogo, horaJogo, casa, fora;
+            if (re === patterns[0] || re === patterns[1] || re === patterns[3]) {
+              dataJogo = m[1];
+              horaJogo = m[2];
+              casa = m[3];
+              fora = m[5];
+            } else if (re === patterns[2]) {
+              casa = m[1];
+              fora = m[3];
+              horaJogo = m[4];
+              dataJogo = m[5];
+            }
+            if (/^\d{2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
+            jogosExtraidos.push({ time_casa: casa.trim(), time_fora: fora.trim(), data: dataJogo.trim(), hora: horaJogo.trim() });
+            break;
+          }
+        }
+      });
+    }
+  } catch (e) {
+    if (debug) console.warn('pdfjs falhou, tentando pdf-parse', e.message);
+  }
+
+  // Segunda tentativa: pdf-parse (texto corrido)
+  if (jogosExtraidos.length === 0) {
+    const parsed = await pdfParse(Buffer.from(bin));
+    const texto = parsed.text || '';
+    const linhas = texto.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     const date = '(?:\\d{2}\\/\\d{2}\\/(?:\\d{2}|\\d{4}))';
     const time = '(?:\\d{2}:\\d{2}|\\d{2}h\\d{2})';
     const sep = '(?:x|X|vs\\.?)';
     const patterns = [
       new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
-      new RegExp(`^(${date})\\s*-\\s*(${time})\\s*-\\s*(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
-      new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s*-\\s*(${time})\\s*-\\s*(${date})$`, 'i'),
-      new RegExp(`^[A-Za-zçÇéÉáÁíÍõÕúÚâÂêÊôÔ]{2,}\\s+(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
+      new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s+(${date})\\s+(${time})$`, 'i'),
     ];
-    linhas.forEach(linha => {
+    for (const linha of linhas) {
       const l = linha.replace(/[\u2012-\u2015\u2212\u2010]/g, '-').replace(/\s+/g, ' ').trim();
       for (const re of patterns) {
         const m = l.match(re);
         if (m) {
           let dataJogo, horaJogo, casa, fora;
-          if (re === patterns[0] || re === patterns[1] || re === patterns[3]) {
-            dataJogo = m[1];
-            horaJogo = m[2];
-            casa = m[3];
-            fora = m[5];
-          } else if (re === patterns[2]) {
-            casa = m[1];
-            fora = m[3];
-            horaJogo = m[4];
-            dataJogo = m[5];
-          }
+          if (re === patterns[0]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[5]; }
+          else { casa = m[1]; fora = m[3]; dataJogo = m[4]; horaJogo = m[5]; }
           if (/^\d{2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
-          jogosExtraidos.push({
-            time_casa: (casa || '').trim(),
-            time_fora: (fora || '').trim(),
-            data: (dataJogo || '').trim(),
-            hora: (horaJogo || '').trim(),
-          });
+          jogosExtraidos.push({ time_casa: casa.trim(), time_fora: fora.trim(), data: dataJogo.trim(), hora: horaJogo.trim() });
           break;
         }
       }
-    });
+    }
+    if (debug && jogosExtraidos.length === 0) {
+      console.warn('[PDF] Nenhum jogo extraído. Amostra de linhas:', linhas.slice(0, 30));
+    }
   }
+
   return jogosExtraidos;
 }
 
@@ -89,41 +124,75 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
 router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ erro: 'PDF não enviado' });
+    // campeonato alvo é obrigatório para que as rodadas se encaixem no layout do frontend
+    const campeonatoIdRaw = req.body?.campeonatoId || req.body?.campeonato_id;
+    const campeonatoId = Number(campeonatoIdRaw);
+    if (!campeonatoId || Number.isNaN(campeonatoId)) {
+      return res.status(400).json({ erro: 'campeonatoId é obrigatório' });
+    }
     // Salva PDF temporariamente
     const tempPath = path.join('/tmp', `jogos_${Date.now()}.pdf`);
     fs.writeFileSync(tempPath, req.file.buffer);
     // Extrai jogos
-    const jogos = await extrairJogosDoPDF(tempPath);
+  const debug = String(req.query?.debug || '').toLowerCase() === 'true';
+  const jogos = await extrairJogosDoPDF(tempPath, { debug });
     fs.unlinkSync(tempPath);
-    if (!jogos.length) return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF' });
-    // Busca última rodada existente
-    const rodadasRes = await pool.query('SELECT id, nome FROM rodada ORDER BY id DESC LIMIT 1');
-    let rodadaNum = rodadasRes.rows.length ? parseInt(rodadasRes.rows[0].nome) || rodadasRes.rows[0].id : 0;
-    let rodadaId = null;
-    let rodadaAtual = null;
+  if (!jogos.length) return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF' });
+    // util para normalizar data/hora em formato YYYY-MM-DD HH:mm
+    function normalizarDataHoraBR(d, h) {
+      try {
+        const m = String(d).match(/(\d{2})\/(\d{2})\/(\d{2,4})/);
+        if (!m) return null;
+        let [_, dd, mm, yy] = m;
+        if (yy.length === 2) yy = String(2000 + Number(yy));
+        let hh = '00', min = '00';
+        const t = String(h || '').trim();
+        if (t) {
+          const th = t.replace('h', ':');
+          const mt = th.match(/^(\d{2}):(\d{2})$/);
+          if (mt) { hh = mt[1]; min = mt[2]; }
+        }
+        return `${yy}-${mm}-${dd} ${hh}:${min}`; // YYYY-MM-DD HH:mm
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Busca última rodada do campeonato alvo
+    const rodadasRes = await pool.query('SELECT id, nome FROM rodada WHERE campeonato_id = $1 ORDER BY id DESC LIMIT 1', [campeonatoId]);
+    let rodadaNum = rodadasRes.rows.length ? (parseInt(rodadasRes.rows[0].nome) || rodadasRes.rows[0].id) : 0;
+    let rodadaId = rodadasRes.rows.length ? rodadasRes.rows[0].id : null;
+    // Se houver rodada existente, verifica quantas partidas já tem (para preencher até 10)
+    let countNaRodadaAtual = 0;
+    if (rodadaId) {
+      const { rows } = await pool.query('SELECT COUNT(*)::int AS c FROM partida WHERE rodada_id = $1', [rodadaId]);
+      countNaRodadaAtual = rows[0]?.c || 0;
+    }
+    let rodadaAtual = rodadaId ? { id: rodadaId, count: countNaRodadaAtual } : null;
     let criadas = 0, jogosCriados = 0, jogosIgnorados = 0;
     for (const [idx, jogo] of jogos.entries()) {
       // Cria nova rodada a cada 10 jogos
       if (!rodadaAtual || rodadaAtual.count >= 10) {
         rodadaNum++;
         const nome = `${rodadaNum}ª Rodada`;
-        const rodadaRes = await pool.query('INSERT INTO rodada (nome) VALUES ($1) RETURNING id', [nome]);
+        const rodadaRes = await pool.query('INSERT INTO rodada (nome, campeonato_id) VALUES ($1, $2) RETURNING id', [nome, campeonatoId]);
         rodadaId = rodadaRes.rows[0].id;
         rodadaAtual = { id: rodadaId, count: 0 };
         criadas++;
       }
       rodadaAtual.count++;
       // Verifica se partida já existe (mesmo times e data)
+      const dataISO = normalizarDataHoraBR(jogo.data, jogo.hora);
       const existe = await pool.query('SELECT id FROM partida WHERE rodada_id = $1 AND time1 = $2 AND time2 = $3 AND data_partida = $4', [
-        rodadaId, jogo.time_casa, jogo.time_fora, `${jogo.data} ${jogo.hora}`
+        rodadaId, jogo.time_casa, jogo.time_fora, dataISO
       ]);
       if (existe.rows.length) { jogosIgnorados++; continue; }
       await pool.query('INSERT INTO partida (rodada_id, time1, time2, data_partida) VALUES ($1, $2, $3, $4)', [
-        rodadaId, jogo.time_casa, jogo.time_fora, `${jogo.data} ${jogo.hora}`
+        rodadaId, jogo.time_casa, jogo.time_fora, dataISO
       ]);
       jogosCriados++;
     }
-    return res.json({ ok: true, rodadas_criadas: criadas, jogos_criados: jogosCriados, jogos_ignorados: jogosIgnorados });
+    return res.json({ ok: true, campeonato_id: campeonatoId, rodadas_criadas: criadas, jogos_criados: jogosCriados, jogos_ignorados: jogosIgnorados });
   } catch (err) {
     console.error('Erro upload-jogos-pdf:', err);
     return res.status(500).json({ erro: 'Falha ao processar PDF.' });
