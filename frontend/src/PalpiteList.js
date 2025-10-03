@@ -68,15 +68,17 @@ export default function ApostarRodada() {
 
   // Carrega status de bloqueio para todas as partidas
   const carregarLockStatusPartidas = useCallback(async (partidasList) => {
-    const statusMap = {};
-    for (const partida of partidasList) {
+    // Faz todas as requisições em paralelo para acelerar o carregamento
+    const promises = partidasList.map(async (partida) => {
       try {
         const lockStatus = await checkPartidaLock(partida.id);
-        statusMap[partida.id] = lockStatus;
+        return [partida.id, lockStatus];
       } catch (error) {
-        statusMap[partida.id] = { locked: true, matchLocked: true };
+        return [partida.id, { locked: true, matchLocked: true }];
       }
-    }
+    });
+    const results = await Promise.all(promises);
+    const statusMap = Object.fromEntries(results);
     setPartidasLockStatus(statusMap);
   }, [checkPartidaLock]);
 

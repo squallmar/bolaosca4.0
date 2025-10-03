@@ -7,6 +7,9 @@ backend/node_modules/
 /dist/
 /build/
 coverage/
+frontend/dist/
+frontend/build/
+frontend/coverage/
 
 # Environment and local configs
 .env
@@ -14,6 +17,7 @@ coverage/
 *.local
 .vscode/
 .idea/
+cookies.txt
 
 # Logs
 npm-debug.log*
