@@ -1,5 +1,15 @@
-// --- Upload e processamento automático de PDF de jogos ---
+import express from 'express';
+import PDFDocument from 'pdfkit';
+import pool from './db.js';
+import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { sanitizeText, sanitizeMediaUrl } from './utils.js';
+import { v2 as cloudinary } from 'cloudinary';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+
+const router = express.Router();
 
 // Função baseada no modelo do usuário
 async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
@@ -115,17 +125,6 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
   }
 });
 
-import express from 'express';
-import PDFDocument from 'pdfkit';
-import pool from './db.js';
-import jwt from 'jsonwebtoken';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { sanitizeText, sanitizeMediaUrl } from './utils.js';
-import { v2 as cloudinary } from 'cloudinary';
-
-const router = express.Router();
 
 // Middleware para verificar admin (aceita cookie httpOnly ou Bearer)
 async function isAdmin(req, res, next) {
