@@ -1,0 +1,59 @@
+/* login-principal-main-header.css */
+
+/* Estilos para o contêiner principal */
+.login-principal-main-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para a área do logo */
+.login-principal-main-header-logo-container {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.login-principal-main-header-logo-image {
+  width: 45px;
+  height: 45px;
+  margin-right: 12px;
+}
+
+.login-principal-main-header-logo-text {
+  font-size: 1.6em;
+  font-weight: 700;
+  color: #333;
+}
+
+/* Estilos para a navegação */
+.login-principal-main-header-nav {
+  display: flex;
+  gap: 25px;
+}
+
+.login-principal-main-header-nav-link {
+  text-decoration: none;
+  color: #555;
+  font-weight: 500;
+  padding: 10px 15px;
+  border-radius: 6px;
+  transition: background-color 0.3s;
+}
+
+.login-principal-main-header-nav-link:hover {
+  background-color: #f0f0f0;
+}
+
+.login-principal-main-header-nav-link.active {
+  background-color: #e6e6e6;
+  color: #000;
+}
+
+/* Estilos para o ícone do menu mobile */
+.login-principal-main-header-mobile-toggle {
+  display: none; /* Esconde em telas desktop */
+}

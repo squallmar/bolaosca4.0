@@ -1,0 +1,458 @@
+/* Reset e estilos base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Evita “pulos” horizontais quando aparece/desaparece a barra de rolagem */
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  color: #2c3e50;
+  line-height: 1.6;
+  font-size: 16px; /* baseline estável para todas as páginas */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Mantém a barra de rolagem vertical sempre reservada para evitar deslocamentos do cabeçalho */
+  overflow-y: scroll;
+}
+body.no-scroll { overflow: hidden; }
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header e Navegação */
+.header {
+  width: 100%;
+  background: linear-gradient(135deg, #1a2a3a 0%, #2c3e50 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header-container {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 20px;  /* Reduzido de 32px para 20px */
+  padding: 0 20px;  /* Reduzido de 24px para 20px */
+  height: 70px;  /* Reduzido de 80px para 70px para um header mais compacto */
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  margin-top: -2px!important;
+  gap: 12px;
+  text-decoration: none;
+  flex-shrink: 0; /* evita encolher e quebrar o texto do logo */
+}
+
+.logo-image {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2px solid #FFD700;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+
+.logo-image:hover {
+  transform: scale(1.1);
+}
+
+.logo-text {
+  /* Ouro normal no menu */
+  color: #DAA520; /* Goldenrod */
+  text-shadow: none;
+  font-weight: 400; /* Luckiest Guy controla o peso */
+  font-size: 24px;
+  letter-spacing: 1px;
+  font-family: 'Luckiest Guy', 'Montserrat Alternates', 'Montserrat', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  white-space: nowrap; /* mantém "Bolão SCA" em uma única linha */
+}
+
+/* Navegação Desktop */
+.header-container {
+  display: grid;
+  grid-template-columns: auto 1fr auto; /* logo | nav center | user info */
+  align-items: center;
+  gap: 32px;
+  padding: 0 24px;
+  height: 80px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.desktop-nav {
+  display: flex;
+  gap: 1px;  /* Reduzido de 16px para 6px */
+  margin-top: -2px!important;
+  justify-self: center; /* centraliza horizontalmente na coluna do meio */
+  align-self: center;
+  
+}
+
+/* Avatar à direita sempre */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 5px !important;
+  margin-top: -20px !important;
+  margin-right: -10px !important;
+  min-width: 120px;
+  max-width: 180px;
+  height: 42px;
+  box-sizing: border-box;
+  justify-content: flex-end; /* posiciona conteúdo (nome + avatar) alinhado à direita dentro da caixa */
+  text-decoration: none;
+  overflow: hidden; /* evita estouro horizontal */
+  background: none;
+  position: static;
+  right: auto;
+  top: auto;
+  transform: none;
+  z-index: 2;
+  justify-self: end;
+}
+
+.user-info img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.user-info span {
+  font-weight: bold;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+  font-size: 16px;
+}
+
+@media (max-width: 900px) {
+  .header-container {
+    grid-template-columns: 1fr;
+    height: auto;
+    gap: 12px;
+    padding: 0 8px;
+  }
+  
+  .desktop-nav {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+    justify-self: start;
+  }
+  
+  .user-info {
+    justify-content: flex-start;
+    max-width: 120px;
+    margin-bottom: 8px;
+  }
+  
+  .user-info span {
+    max-width: 60px;
+    font-size: 14px;
+  }
+}
+
+.mobile-menu-toggle {
+  order: 4;
+}
+
+.nav-link {
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 12px;  /* Reduzido de 10px 16px para 8px 12px */
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;  /* Reduzido de 6px para 4px */
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-link::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #FFD700;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
+}
+
+.nav-link:hover::before,
+.nav-link.active::before {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-icon {
+  font-size: 16px;  /* Reduzido de 18px para 16px */
+  margin-right: 2px;  /* Adicionado um espaçamento mínimo para não ficar colado */
+}
+
+/* Menu Mobile */
+.mobile-menu-toggle { display: none; flex-direction: column; justify-content: space-around; width: 34px; height: 34px; background: transparent; border: none; cursor: pointer; padding: 4px; position: relative; }
+.mobile-menu-toggle span { width: 100%; height: 3px; background: #fff; border-radius: 2px; transition: all .35s ease; transform-origin: center; }
+.mobile-menu-toggle.open span:nth-child(1) { transform: translateY(10px) rotate(45deg); }
+.mobile-menu-toggle.open span:nth-child(2) { opacity: 0; }
+.mobile-menu-toggle.open span:nth-child(3) { transform: translateY(-10px) rotate(-45deg); }
+
+.mobile-nav { display: flex; flex-direction: column; background: #2c3e50; padding: 0 0 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 0; overflow: hidden; transition: max-height .45s ease; }
+.mobile-nav.open { max-height: 620px; }
+
+.mobile-nav-link {
+  color: #fff;
+  text-decoration: none;
+  padding: 10px 12px;  /* Reduzido de 12px 16px para 10px 12px */
+  border-radius: 6px;
+  margin-bottom: 6px;  /* Reduzido de 8px para 6px */
+  display: flex;
+  align-items: center;
+  gap: 5px;  /* Reduzido de 8px para 5px */
+  transition: background 0.3s ease;
+}
+
+.mobile-nav-link:hover,
+.mobile-nav-link.active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Conteúdo Principal */
+.main-content {
+  flex: 1;
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Página Inicial */
+.home-container {
+  padding: 40px 0;
+}
+
+.hero-section {
+  text-align: center;
+  margin-bottom: 15px;
+  padding: 0 20px;
+}
+
+.hero-escudo {
+  width: 195px;
+  height: 160px;
+  border-radius: 50%;
+  border: 3px solid #FFD700;
+  background: #fff;
+  padding: 12px; /* anel branco ao redor da imagem */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  margin: -40px auto 0; /* sobe o escudo um pouco */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* garante formato do círculo no container */
+}
+
+.hero-escudo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* não corta a imagem, apenas ajusta */
+  border-radius: 50%; /* opcional; mantém bordas suaves se a imagem for quadrada */
+}
+
+.hero-title {
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 800;
+  color: #2c3e50;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #2c3e50 0%, #FFD700 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: clamp(16px, 2.5vw, 20px);
+  color: #5a6b7c;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* Cards de Funcionalidades */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+  padding: 0 16px;
+}
+
+.feature-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: center;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: linear-gradient(90deg, #FFD700, #4CAF50, #F44336);
+  opacity: 0.7;
+}
+
+.feature-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+}
+
+.card-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #2c3e50;
+}
+
+.card-description {
+  color: #5a6b7c;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.card-button {
+  display: inline-block;
+  padding: 10px 18px;
+  color: white;
+  text-decoration: none;
+  border-radius: 999px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+
+.card-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.footer-note {
+  text-align: center;
+  color: #8c9bab;
+  font-size: 14px;
+  margin-top: 40px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .header-container {
+    padding: 0 16px;
+    height: 70px;
+  }
+  
+  .desktop-nav { display: none; }
+  .mobile-menu-toggle { display: flex; }
+  .mobile-nav { margin: 0 12px; border: 1px solid #1d2b36; border-radius: 12px; }
+  
+  .main-content {
+    padding: 16px;
+  }
+  
+  .hero-section {
+    margin-bottom: 40px;
+  }
+  
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .feature-card {
+    padding: 24px 16px;
+  }
+  
+  .user-info {
+    position: static;
+    right: auto;
+    top: auto;
+    transform: none;
+    max-width: 120px;
+  }
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feature-card {
+  animation: fadeIn 0.6s ease forwards;
+}
+
+.feature-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.feature-card:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Ultra-pequenas telas */
+@media (max-width: 420px) {
+  .logo-text { font-size: 20px; }
+  .user-info span { display: none; }
+  .user-info { max-width: 50px; }
+  .nav-link { padding: 8px 10px; font-size: 14px; }
+  .mobile-nav-link { padding: 10px 10px; font-size: 15px; }
+}
