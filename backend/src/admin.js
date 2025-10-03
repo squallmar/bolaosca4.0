@@ -125,7 +125,7 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
   }
 
   // Segunda tentativa: pdf-parse (texto corrido)
-  if (jogosExtraidos.length === 0 && pdfParseFn) {
+  if (jogosExtraidos.length === 0 && typeof pdfParseFn === 'function') {
     const parsed = await pdfParseFn(Buffer.from(bin));
     const texto = parsed.text || '';
     const linhas = texto.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
@@ -187,10 +187,14 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
       // Em modo debug, tente retornar amostra de linhas para facilitar ajuste de regex
       if (debug) {
         try {
-          const parsed = await pdfParseFn(Buffer.from(req.file.buffer)).catch(()=>null);
-          const texto = parsed?.text || '';
-          const linhas = texto.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-          return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF', amostra: linhas.slice(0, 40) });
+          if (typeof pdfParseFn === 'function') {
+            const parsed = await pdfParseFn(Buffer.from(req.file.buffer)).catch(()=>null);
+            const texto = parsed?.text || '';
+            const linhas = texto.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+            return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF', amostra: linhas.slice(0, 40) });
+          } else {
+            return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF', amostra: ['[pdf-parse indisponível no servidor]', 'Reenvie o PDF e compartilhe algumas linhas do arquivo para ajustarmos o parser.'] });
+          }
         } catch {}
       }
       return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF' });
