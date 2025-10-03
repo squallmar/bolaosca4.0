@@ -807,47 +807,47 @@ function BolaoList() {
               className="form-select"
               style={{ maxWidth: 280 }}
             >
-              <option value="">Atual por campeonato</option>
+              <option value="">Rodada atual</option>
               {rodadas.map(r => (
                 <option key={r.id} value={r.id}>{r.nome}</option>
               ))}
             </select>
-            {selectedRodadaId && (
-              <button
-                type="button"
-                onClick={() => setSelectedRodadaId('')}
-                className="action-button small"
-                style={{ background: '#f0f0f0', border: '1px solid #ddd' }}
-              >
-                Limpar filtro
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setSelectedRodadaId('')}
+              className="action-button small"
+              style={{ background: '#f0f0f0', border: '1px solid #ddd', marginLeft: 8 }}
+            >
+              Mostrar só a atual
+            </button>
           </div>
           <div className="lock-status-grid">
-            {Object.entries(rodadaPartidas).map(([rodadaId, partidas]) => (
-              partidas.map(partida => {
-                const lockStatus = partidasLockStatus[partida.id] || {};
-                return (
-                  <div key={partida.id} className={`lock-status-item ${lockStatus.locked ? 'locked' : 'unlocked'}`}>
-                    <div className="partida-info">
-                      <strong>{partida.time1} vs {partida.time2}</strong>
-                      <span className="rodada-info">Rodada: {rodadas.find(r => r.id == rodadaId)?.nome || rodadaId}</span>
+            {Object.entries(rodadaPartidas)
+              .filter(([rodadaId]) => !selectedRodadaId || String(rodadaId) === String(selectedRodadaId))
+              .map(([rodadaId, partidas]) => (
+                partidas.map(partida => {
+                  const lockStatus = partidasLockStatus[partida.id] || {};
+                  return (
+                    <div key={partida.id} className={`lock-status-item ${lockStatus.locked ? 'locked' : 'unlocked'}`}>
+                      <div className="partida-info">
+                        <strong>{partida.time1} vs {partida.time2}</strong>
+                        <span className="rodada-info">Rodada: {rodadas.find(r => r.id == rodadaId)?.nome || rodadaId}</span>
+                      </div>
+                      <div className="lock-status">
+                        {lockStatus.locked ? (
+                          <span className="status-badge locked">
+                            🔒 BLOQUEADA
+                            {lockStatus.matchLocked && <span className="reason">(Após 14h)</span>}
+                            {lockStatus.pending && <span className="reason">(Aguardando admin)</span>}
+                          </span>
+                        ) : (
+                          <span className="status-badge unlocked">🔓 LIBERADA</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="lock-status">
-                      {lockStatus.locked ? (
-                        <span className="status-badge locked">
-                          🔒 BLOQUEADA
-                          {lockStatus.matchLocked && <span className="reason">(Após 14h)</span>}
-                          {lockStatus.pending && <span className="reason">(Aguardando admin)</span>}
-                        </span>
-                      ) : (
-                        <span className="status-badge unlocked">🔓 LIBERADA</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            ))}
+                  );
+                })
+              ))}
           </div>
         </div>
       )}
