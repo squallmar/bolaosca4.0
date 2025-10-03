@@ -68,6 +68,38 @@ function AdminPanel() {
         <p>Gerencie usuários, campeonatos, rodadas e partidas</p>
       </div>
 
+      {/* Upload de PDF de Jogos */}
+      <div className="bolao-panel-card">
+        <h2>Atualizar Jogos via PDF</h2>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!window.pdfFile) return alert('Selecione um PDF!');
+            const formData = new FormData();
+            formData.append('pdf', window.pdfFile);
+            try {
+              const res = await api.post('/admin/upload-jogos-pdf', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+              });
+              alert(`Rodadas criadas: ${res.data.rodadas_criadas}\nJogos criados: ${res.data.jogos_criados}\nIgnorados: ${res.data.jogos_ignorados}`);
+            } catch (err) {
+              alert('Erro ao enviar PDF: ' + (err?.response?.data?.erro || err.message));
+            }
+          }}
+          style={{ marginBottom: 20 }}
+        >
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={e => window.pdfFile = e.target.files[0]}
+            required
+          />
+          <button type="submit" className="bolao-panel-authorize-btn" style={{ marginLeft: 10 }}>
+            Enviar PDF de Jogos
+          </button>
+        </form>
+      </div>
+
       <div className="bolao-panel-content">
         {/* Usuários pendentes */}
         <div className="bolao-panel-card">
