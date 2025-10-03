@@ -52,6 +52,10 @@ function AdminPanel() {
       try {
         const res = await api.get('/bolao/campeonatos-todos');
         setCampeonatos(res.data || []);
+        // Se nenhum selecionado e houver itens, pré-seleciona o primeiro
+        if ((!campeonatoId || campeonatoId === '') && Array.isArray(res.data) && res.data.length > 0) {
+          setCampeonatoId(String(res.data[0].id));
+        }
       } catch (e) {
         console.error('Falha ao carregar campeonatos', e);
       }
@@ -96,9 +100,8 @@ function AdminPanel() {
             formData.append('campeonatoId', String(campeonatoId));
             try {
               const url = debugPDF ? '/admin/upload-jogos-pdf?debug=true' : '/admin/upload-jogos-pdf';
-              const res = await api.post(url, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-              });
+              // Não defina manualmente o Content-Type; deixe o navegador/axios definir o boundary
+              const res = await api.post(url, formData);
               alert(`Rodadas criadas: ${res.data.rodadas_criadas}\nJogos criados: ${res.data.jogos_criados}\nIgnorados: ${res.data.jogos_ignorados}`);
             } catch (err) {
               const msg = err?.response?.data?.erro || err.message;
