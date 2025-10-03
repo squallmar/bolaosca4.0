@@ -8,7 +8,8 @@ import fs from 'fs';
 import { sanitizeText, sanitizeMediaUrl } from './utils.js';
 import { v2 as cloudinary } from 'cloudinary';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-import pdfParse from 'pdf-parse';
+import * as pdfParseNS from 'pdf-parse';
+const pdfParseFn = (pdfParseNS && (pdfParseNS.default || pdfParseNS));
 
 const router = express.Router();
 
@@ -101,7 +102,7 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
 
   // Segunda tentativa: pdf-parse (texto corrido)
   if (jogosExtraidos.length === 0) {
-    const parsed = await pdfParse(Buffer.from(bin));
+  const parsed = await pdfParseFn(Buffer.from(bin));
     const texto = parsed.text || '';
     const linhas = texto.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
@@ -157,12 +158,11 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
     // Extrai jogos
   const debug = String(req.query?.debug || '').toLowerCase() === 'true';
   const jogos = await extrairJogosDoPDF(tempPath, { debug });
-    fs.unlinkSync(tempPath);
   if (!jogos.length) {
       // Em modo debug, tente retornar amostra de linhas para facilitar ajuste de regex
       if (debug) {
         try {
-          const parsed = await pdfParse(fs.readFileSync(tempPath)).catch(()=>null);
+          const parsed = await pdfParseFn(Buffer.from(req.file.buffer)).catch(()=>null);
           const texto = parsed?.text || '';
           const linhas = texto.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
           return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF', amostra: linhas.slice(0, 40) });
@@ -170,6 +170,8 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
       }
       return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF' });
     }
+    // Remove o arquivo temporário após uso
+    try { fs.unlinkSync(tempPath); } catch {}
     // util para normalizar data/hora em formato YYYY-MM-DD HH:mm
     function normalizarDataHoraBR(d, h) {
       try {
