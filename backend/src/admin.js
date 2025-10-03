@@ -49,17 +49,23 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
       });
       if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
 
-      const date = '(?:\\d{2}\\/\\d{2}\\/(?:\\d{2}|\\d{4}))';
-      const time = '(?:\\d{2}:\\d{2}|\\d{2}h\\d{2})';
+      const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
+      const time = '(?:\\d{2}[:h\\.]\\d{2}|\\d{2}h?)';
       const sep = '(?:x|X|vs\\.?)';
       const patterns = [
         new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
         new RegExp(`^(${date})\\s*-\\s*(${time})\\s*-\\s*(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
         new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s*-\\s*(${time})\\s*-\\s*(${date})$`, 'i'),
         new RegExp(`^[A-Za-zçÇéÉáÁíÍõÕúÚâÂêÊôÔ]{2,}\\s+(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
+        new RegExp(`^(${time})\\s+(.+?)\\s+(${sep})\\s+(.+?)\\s+(${date})$`, 'i'),
       ];
       linhas.forEach(linha => {
-        const l = linha.replace(/[\u2012-\u2015\u2212\u2010]/g, '-').replace(/\s+/g, ' ').trim();
+        let l = linha
+          .replace(/[\u2012-\u2015\u2212\u2010]/g, '-')
+          .replace(/\s+/g, ' ')
+          .trim();
+        // Remove prefixos de dia da semana comuns
+        l = l.replace(/^(SEG|TER|QUA|QUI|SEX|SAB|SÁB|DOM|SEGUNDA|TERÇA|QUARTA|QUINTA|SEXTA|SABADO|SÁBADO|DOMINGO)[,:]?\s+/i, '');
         for (const re of patterns) {
           const m = l.match(re);
           if (m) {
@@ -74,8 +80,15 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
               fora = m[3];
               horaJogo = m[4];
               dataJogo = m[5];
+            } else if (re === patterns[4]) {
+              horaJogo = m[1];
+              casa = m[2];
+              fora = m[4];
+              dataJogo = m[5];
             }
             if (/^\d{2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
+            if (/^\d{2}h$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':00');
+            if (/^\d{2}\.\d{2}$/.test(horaJogo)) horaJogo = horaJogo.replace('.', ':');
             jogosExtraidos.push({ time_casa: casa.trim(), time_fora: fora.trim(), data: dataJogo.trim(), hora: horaJogo.trim() });
             break;
           }
@@ -91,22 +104,30 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
     const parsed = await pdfParse(Buffer.from(bin));
     const texto = parsed.text || '';
     const linhas = texto.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-    const date = '(?:\\d{2}\\/\\d{2}\\/(?:\\d{2}|\\d{4}))';
-    const time = '(?:\\d{2}:\\d{2}|\\d{2}h\\d{2})';
+    const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
+    const time = '(?:\\d{2}[:h\\.]\\d{2}|\\d{2}h?)';
     const sep = '(?:x|X|vs\\.?)';
     const patterns = [
       new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
       new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s+(${date})\\s+(${time})$`, 'i'),
+      new RegExp(`^(${time})\\s+(.+?)\\s+(${sep})\\s+(.+?)\\s+(${date})$`, 'i'),
     ];
     for (const linha of linhas) {
-      const l = linha.replace(/[\u2012-\u2015\u2212\u2010]/g, '-').replace(/\s+/g, ' ').trim();
+      let l = linha
+        .replace(/[\u2012-\u2015\u2212\u2010]/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim();
+      l = l.replace(/^(SEG|TER|QUA|QUI|SEX|SAB|SÁB|DOM|SEGUNDA|TERÇA|QUARTA|QUINTA|SEXTA|SABADO|SÁBADO|DOMINGO)[,:]?\s+/i, '');
       for (const re of patterns) {
         const m = l.match(re);
         if (m) {
           let dataJogo, horaJogo, casa, fora;
           if (re === patterns[0]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[5]; }
-          else { casa = m[1]; fora = m[3]; dataJogo = m[4]; horaJogo = m[5]; }
+          else if (re === patterns[1]) { casa = m[1]; fora = m[3]; dataJogo = m[4]; horaJogo = m[5]; }
+          else if (re === patterns[2]) { horaJogo = m[1]; casa = m[2]; fora = m[4]; dataJogo = m[5]; }
           if (/^\d{2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
+          if (/^\d{2}h$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':00');
+          if (/^\d{2}\.\d{2}$/.test(horaJogo)) horaJogo = horaJogo.replace('.', ':');
           jogosExtraidos.push({ time_casa: casa.trim(), time_fora: fora.trim(), data: dataJogo.trim(), hora: horaJogo.trim() });
           break;
         }
@@ -137,20 +158,36 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
   const debug = String(req.query?.debug || '').toLowerCase() === 'true';
   const jogos = await extrairJogosDoPDF(tempPath, { debug });
     fs.unlinkSync(tempPath);
-  if (!jogos.length) return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF' });
+  if (!jogos.length) {
+      // Em modo debug, tente retornar amostra de linhas para facilitar ajuste de regex
+      if (debug) {
+        try {
+          const parsed = await pdfParse(fs.readFileSync(tempPath)).catch(()=>null);
+          const texto = parsed?.text || '';
+          const linhas = texto.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+          return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF', amostra: linhas.slice(0, 40) });
+        } catch {}
+      }
+      return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF' });
+    }
     // util para normalizar data/hora em formato YYYY-MM-DD HH:mm
     function normalizarDataHoraBR(d, h) {
       try {
-        const m = String(d).match(/(\d{2})\/(\d{2})\/(\d{2,4})/);
+        const m = String(d).match(/(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/);
         if (!m) return null;
         let [_, dd, mm, yy] = m;
-        if (yy.length === 2) yy = String(2000 + Number(yy));
+        if (!yy) yy = String(new Date().getFullYear());
+        else if (yy.length === 2) yy = String(2000 + Number(yy));
         let hh = '00', min = '00';
         const t = String(h || '').trim();
         if (t) {
-          const th = t.replace('h', ':');
-          const mt = th.match(/^(\d{2}):(\d{2})$/);
+          const norm = t.replace('h', ':').replace('.', ':');
+          let mt = norm.match(/^(\d{2}):(\d{2})$/);
           if (mt) { hh = mt[1]; min = mt[2]; }
+          else {
+            mt = norm.match(/^(\d{2})$/);
+            if (mt) { hh = mt[1]; min = '00'; }
+          }
         }
         return `${yy}-${mm}-${dd} ${hh}:${min}`; // YYYY-MM-DD HH:mm
       } catch (e) {
