@@ -1,3 +1,119 @@
+// --- Upload e processamento automático de PDF de jogos ---
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+
+// Função baseada no modelo do usuário
+async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
+  const { maxPages = 300, debug = false } = opts;
+  const data = new Uint8Array(fs.readFileSync(caminhoPDF));
+  const loadingTask = pdfjsLib.getDocument({ data });
+  const pdfDoc = await loadingTask.promise;
+  const nPages = Math.min(pdfDoc.numPages, maxPages);
+  const jogosExtraidos = [];
+  for (let i = 1; i <= nPages; i++) {
+    const page = await pdfDoc.getPage(i);
+    const content = await page.getTextContent();
+    let linhas = [];
+    let linhaAtual = '';
+    let ultimaY = null;
+    content.items.forEach(item => {
+      const y = item.transform[5];
+      const str = (item.str || '').trim();
+      if (!str) return;
+      if (ultimaY !== null && Math.abs(ultimaY - y) > 6) {
+        if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
+        linhaAtual = str;
+      } else {
+        linhaAtual += ' ' + str;
+      }
+      ultimaY = y;
+    });
+    if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
+    // Regex e parsing conforme modelo do usuário (resumido)
+    const date = '(?:\\d{2}\\/\\d{2}\\/(?:\\d{2}|\\d{4}))';
+    const time = '(?:\\d{2}:\\d{2}|\\d{2}h\\d{2})';
+    const sep = '(?:x|X|vs\\.?)';
+    const patterns = [
+      new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
+      new RegExp(`^(${date})\\s*-\\s*(${time})\\s*-\\s*(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
+      new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s*-\\s*(${time})\\s*-\\s*(${date})$`, 'i'),
+      new RegExp(`^[A-Za-zçÇéÉáÁíÍõÕúÚâÂêÊôÔ]{2,}\\s+(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
+    ];
+    linhas.forEach(linha => {
+      const l = linha.replace(/[\u2012-\u2015\u2212\u2010]/g, '-').replace(/\s+/g, ' ').trim();
+      for (const re of patterns) {
+        const m = l.match(re);
+        if (m) {
+          let dataJogo, horaJogo, casa, fora;
+          if (re === patterns[0] || re === patterns[1] || re === patterns[3]) {
+            dataJogo = m[1];
+            horaJogo = m[2];
+            casa = m[3];
+            fora = m[5];
+          } else if (re === patterns[2]) {
+            casa = m[1];
+            fora = m[3];
+            horaJogo = m[4];
+            dataJogo = m[5];
+          }
+          if (/^\d{2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
+          jogosExtraidos.push({
+            time_casa: (casa || '').trim(),
+            time_fora: (fora || '').trim(),
+            data: (dataJogo || '').trim(),
+            hora: (horaJogo || '').trim(),
+          });
+          break;
+        }
+      }
+    });
+  }
+  return jogosExtraidos;
+}
+
+// Endpoint para upload e processamento automático do PDF de jogos
+router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ erro: 'PDF não enviado' });
+    // Salva PDF temporariamente
+    const tempPath = path.join('/tmp', `jogos_${Date.now()}.pdf`);
+    fs.writeFileSync(tempPath, req.file.buffer);
+    // Extrai jogos
+    const jogos = await extrairJogosDoPDF(tempPath);
+    fs.unlinkSync(tempPath);
+    if (!jogos.length) return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF' });
+    // Busca última rodada existente
+    const rodadasRes = await pool.query('SELECT id, nome FROM rodada ORDER BY id DESC LIMIT 1');
+    let rodadaNum = rodadasRes.rows.length ? parseInt(rodadasRes.rows[0].nome) || rodadasRes.rows[0].id : 0;
+    let rodadaId = null;
+    let rodadaAtual = null;
+    let criadas = 0, jogosCriados = 0, jogosIgnorados = 0;
+    for (const [idx, jogo] of jogos.entries()) {
+      // Cria nova rodada a cada 10 jogos
+      if (!rodadaAtual || rodadaAtual.count >= 10) {
+        rodadaNum++;
+        const nome = `${rodadaNum}ª Rodada`;
+        const rodadaRes = await pool.query('INSERT INTO rodada (nome) VALUES ($1) RETURNING id', [nome]);
+        rodadaId = rodadaRes.rows[0].id;
+        rodadaAtual = { id: rodadaId, count: 0 };
+        criadas++;
+      }
+      rodadaAtual.count++;
+      // Verifica se partida já existe (mesmo times e data)
+      const existe = await pool.query('SELECT id FROM partida WHERE rodada_id = $1 AND time1 = $2 AND time2 = $3 AND data_partida = $4', [
+        rodadaId, jogo.time_casa, jogo.time_fora, `${jogo.data} ${jogo.hora}`
+      ]);
+      if (existe.rows.length) { jogosIgnorados++; continue; }
+      await pool.query('INSERT INTO partida (rodada_id, time1, time2, data_partida) VALUES ($1, $2, $3, $4)', [
+        rodadaId, jogo.time_casa, jogo.time_fora, `${jogo.data} ${jogo.hora}`
+      ]);
+      jogosCriados++;
+    }
+    return res.json({ ok: true, rodadas_criadas: criadas, jogos_criados: jogosCriados, jogos_ignorados: jogosIgnorados });
+  } catch (err) {
+    console.error('Erro upload-jogos-pdf:', err);
+    return res.status(500).json({ erro: 'Falha ao processar PDF.' });
+  }
+});
 
 import express from 'express';
 import PDFDocument from 'pdfkit';
