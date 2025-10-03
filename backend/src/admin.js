@@ -77,7 +77,15 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
       const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
       const time = '(?:\\d{2}[:h\\.]\\d{2}|\\d{2}h?)';
       const sep = '(?:x|X|vs\\.?)';
+      const placar = '(?:\\d+\\s*[xX]\\s*\\d+|\\-\\s*[xX]\\s*\\-|-)';
       const patterns = [
+        // Linhas com placar entre os times: data hora CASA 2 x 1 FORA
+        new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+${placar}\\s+(.+)$`, 'i'),
+        // Ordem invertida com placar e data/hora no fim
+        new RegExp(`^(.+?)\\s+${placar}\\s+(.+?)\\s+(${date})\\s+(${time})$`, 'i'),
+        // Hora no início, depois times com placar, e data no fim
+        new RegExp(`^(${time})\\s+(.+?)\\s+${placar}\\s+(.+?)\\s+(${date})$`, 'i'),
+        // Formatos antigos sem placar explícito
         new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
         new RegExp(`^(${date})\\s*-\\s*(${time})\\s*-\\s*(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
         new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s*-\\s*(${time})\\s*-\\s*(${date})$`, 'i'),
@@ -95,17 +103,32 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
           const m = l.match(re);
           if (m) {
             let dataJogo, horaJogo, casa, fora;
-            if (re === patterns[0] || re === patterns[1] || re === patterns[3]) {
+            if (re === patterns[0]) { // date time CASA placar FORA
+              dataJogo = m[1];
+              horaJogo = m[2];
+              casa = m[3];
+              fora = m[4];
+            } else if (re === patterns[1]) { // CASA placar FORA date time
+              casa = m[1];
+              fora = m[2];
+              dataJogo = m[3];
+              horaJogo = m[4];
+            } else if (re === patterns[2]) { // time CASA placar FORA date
+              horaJogo = m[1];
+              casa = m[2];
+              fora = m[3];
+              dataJogo = m[4];
+            } else if (re === patterns[3] || re === patterns[4] || re === patterns[6]) { // formatos sem placar
               dataJogo = m[1];
               horaJogo = m[2];
               casa = m[3];
               fora = m[5];
-            } else if (re === patterns[2]) {
+            } else if (re === patterns[5]) { // CASA sep FORA - time - date
               casa = m[1];
               fora = m[3];
               horaJogo = m[4];
               dataJogo = m[5];
-            } else if (re === patterns[4]) {
+            } else if (re === patterns[7]) { // time CASA sep FORA date
               horaJogo = m[1];
               casa = m[2];
               fora = m[4];
@@ -114,7 +137,10 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
             if (/^\d{2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
             if (/^\d{2}h$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':00');
             if (/^\d{2}\.\d{2}$/.test(horaJogo)) horaJogo = horaJogo.replace('.', ':');
-            jogosExtraidos.push({ time_casa: casa.trim(), time_fora: fora.trim(), data: dataJogo.trim(), hora: horaJogo.trim() });
+            // Remove colunas extras tipo " - Local - Transmissão"
+            casa = String(casa || '').replace(/\s+-\s+.*$/, '').trim();
+            fora = String(fora || '').replace(/\s+-\s+.*$/, '').trim();
+            jogosExtraidos.push({ time_casa: casa, time_fora: fora, data: String(dataJogo).trim(), hora: String(horaJogo).trim() });
             break;
           }
         }
@@ -132,7 +158,11 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
     const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
     const time = '(?:\\d{2}[:h\\.]\\d{2}|\\d{2}h?)';
     const sep = '(?:x|X|vs\\.?)';
+    const placar = '(?:\\d+\\s*[xX]\\s*\\d+|\\-\\s*[xX]\\s*\\-|-)';
     const patterns = [
+      new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+${placar}\\s+(.+)$`, 'i'),
+      new RegExp(`^(.+?)\\s+${placar}\\s+(.+?)\\s+(${date})\\s+(${time})$`, 'i'),
+      new RegExp(`^(${time})\\s+(.+?)\\s+${placar}\\s+(.+?)\\s+(${date})$`, 'i'),
       new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
       new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s+(${date})\\s+(${time})$`, 'i'),
       new RegExp(`^(${time})\\s+(.+?)\\s+(${sep})\\s+(.+?)\\s+(${date})$`, 'i'),
@@ -147,13 +177,18 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
         const m = l.match(re);
         if (m) {
           let dataJogo, horaJogo, casa, fora;
-          if (re === patterns[0]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[5]; }
-          else if (re === patterns[1]) { casa = m[1]; fora = m[3]; dataJogo = m[4]; horaJogo = m[5]; }
-          else if (re === patterns[2]) { horaJogo = m[1]; casa = m[2]; fora = m[4]; dataJogo = m[5]; }
+          if (re === patterns[0]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[4]; }
+          else if (re === patterns[1]) { casa = m[1]; fora = m[2]; dataJogo = m[3]; horaJogo = m[4]; }
+          else if (re === patterns[2]) { horaJogo = m[1]; casa = m[2]; fora = m[3]; dataJogo = m[4]; }
+          else if (re === patterns[3]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[5]; }
+          else if (re === patterns[4]) { casa = m[1]; fora = m[3]; dataJogo = m[4]; horaJogo = m[5]; }
+          else if (re === patterns[5]) { horaJogo = m[1]; casa = m[2]; fora = m[4]; dataJogo = m[5]; }
           if (/^\d{2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
           if (/^\d{2}h$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':00');
           if (/^\d{2}\.\d{2}$/.test(horaJogo)) horaJogo = horaJogo.replace('.', ':');
-          jogosExtraidos.push({ time_casa: casa.trim(), time_fora: fora.trim(), data: dataJogo.trim(), hora: horaJogo.trim() });
+          casa = String(casa || '').replace(/\s+-\s+.*$/, '').trim();
+          fora = String(fora || '').replace(/\s+-\s+.*$/, '').trim();
+          jogosExtraidos.push({ time_casa: casa, time_fora: fora, data: String(dataJogo).trim(), hora: String(horaJogo).trim() });
           break;
         }
       }
@@ -165,6 +200,52 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
   // Se ainda vazio e sem pdfParse disponível, apenas retorna o que temos (0) e deixamos o chamador lidar
 
   return jogosExtraidos;
+}
+
+// Extrai jogos a partir de texto simples (uma linha por jogo)
+function extrairJogosDoTexto(texto) {
+  const jogos = [];
+  if (!texto || typeof texto !== 'string') return jogos;
+  const linhas = texto.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
+  const time = '(?:\\d{2}[:h\\.]\\d{2}|\\d{2}h?)';
+  const sep = '(?:x|X|vs\\.?)';
+  const placar = '(?:\\d+\\s*[xX]\\s*\\d+|\\-\\s*[xX]\\s*\\-|-)';
+  const patterns = [
+    new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+${placar}\\s+(.+)$`, 'i'),
+    new RegExp(`^(.+?)\\s+${placar}\\s+(.+?)\\s+(${date})\\s+(${time})$`, 'i'),
+    new RegExp(`^(${time})\\s+(.+?)\\s+${placar}\\s+(.+?)\\s+(${date})$`, 'i'),
+    new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
+    new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s+(${date})\\s+(${time})$`, 'i'),
+    new RegExp(`^(${time})\\s+(.+?)\\s+(${sep})\\s+(.+?)\\s+(${date})$`, 'i'),
+  ];
+  for (const linha of linhas) {
+    let l = linha
+      .replace(/[\u2012-\u2015\u2212\u2010]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim();
+    l = l.replace(/^(SEG|TER|QUA|QUI|SEX|SAB|SÁB|DOM|SEGUNDA|TERÇA|QUARTA|QUINTA|SEXTA|SABADO|SÁBADO|DOMINGO)[,:]?\s+/i, '');
+    for (const re of patterns) {
+      const m = l.match(re);
+      if (m) {
+        let dataJogo, horaJogo, casa, fora;
+        if (re === patterns[0]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[4]; }
+        else if (re === patterns[1]) { casa = m[1]; fora = m[2]; dataJogo = m[3]; horaJogo = m[4]; }
+        else if (re === patterns[2]) { horaJogo = m[1]; casa = m[2]; fora = m[3]; dataJogo = m[4]; }
+        else if (re === patterns[3]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[5]; }
+        else if (re === patterns[4]) { casa = m[1]; fora = m[3]; dataJogo = m[4]; horaJogo = m[5]; }
+        else if (re === patterns[5]) { horaJogo = m[1]; casa = m[2]; fora = m[4]; dataJogo = m[5]; }
+        if (/^\d{2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
+        if (/^\d{2}h$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':00');
+        if (/^\d{2}\.\d{2}$/.test(horaJogo)) horaJogo = horaJogo.replace('.', ':');
+        casa = String(casa || '').replace(/\s+-\s+.*$/, '').trim();
+        fora = String(fora || '').replace(/\s+-\s+.*$/, '').trim();
+        jogos.push({ time_casa: casa, time_fora: fora, data: String(dataJogo).trim(), hora: String(horaJogo).trim() });
+        break;
+      }
+    }
+  }
+  return jogos;
 }
 
 // Gera amostra de linhas usando somente pdfjs (sem pdf-parse)
@@ -307,6 +388,90 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
   } catch (err) {
     console.error('Erro upload-jogos-pdf:', err);
     return res.status(500).json({ erro: 'Falha ao processar PDF.' });
+  }
+});
+
+// Fallback: importar jogos via texto simples (colar linhas)
+router.post('/upload-jogos-texto', isAdmin, async (req, res) => {
+  try {
+    const campeonatoIdRaw = req.body?.campeonatoId || req.body?.campeonato_id;
+    const campeonatoId = Number(campeonatoIdRaw);
+    const texto = req.body?.texto || '';
+    const debug = String(req.query?.debug || '').toLowerCase() === 'true';
+    if (!campeonatoId || Number.isNaN(campeonatoId)) {
+      return res.status(400).json({ erro: 'campeonatoId é obrigatório' });
+    }
+    if (!texto || typeof texto !== 'string' || texto.trim().length < 3) {
+      return res.status(400).json({ erro: 'Texto vazio ou inválido' });
+    }
+    const jogos = extrairJogosDoTexto(texto);
+    if (!jogos.length) {
+      if (debug) {
+        const amostra = texto.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).slice(0, 40);
+        return res.status(400).json({ erro: 'Nenhum jogo reconhecido no texto', amostra });
+      }
+      return res.status(400).json({ erro: 'Nenhum jogo reconhecido no texto' });
+    }
+
+    function normalizarDataHoraBR(d, h) {
+      try {
+        const m = String(d).match(/(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/);
+        if (!m) return null;
+        let [_, dd, mm, yy] = m;
+        if (!yy) yy = String(new Date().getFullYear());
+        else if (yy.length === 2) yy = String(2000 + Number(yy));
+        let hh = '00', min = '00';
+        const t = String(h || '').trim();
+        if (t) {
+          const norm = t.replace('h', ':').replace('.', ':');
+          let mt = norm.match(/^(\d{2}):(\d{2})$/);
+          if (mt) { hh = mt[1]; min = mt[2]; }
+          else {
+            mt = norm.match(/^(\d{2})$/);
+            if (mt) { hh = mt[1]; min = '00'; }
+          }
+        }
+        return `${yy}-${mm}-${dd} ${hh}:${min}`;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Busca e prepara rodadas como no endpoint de PDF
+    const rodadasRes = await pool.query('SELECT id, nome FROM rodada WHERE campeonato_id = $1 ORDER BY id DESC LIMIT 1', [campeonatoId]);
+    let rodadaNum = rodadasRes.rows.length ? (parseInt(rodadasRes.rows[0].nome) || rodadasRes.rows[0].id) : 0;
+    let rodadaId = rodadasRes.rows.length ? rodadasRes.rows[0].id : null;
+    let countNaRodadaAtual = 0;
+    if (rodadaId) {
+      const { rows } = await pool.query('SELECT COUNT(*)::int AS c FROM partida WHERE rodada_id = $1', [rodadaId]);
+      countNaRodadaAtual = rows[0]?.c || 0;
+    }
+    let rodadaAtual = rodadaId ? { id: rodadaId, count: countNaRodadaAtual } : null;
+    let criadas = 0, jogosCriados = 0, jogosIgnorados = 0;
+    for (const jogo of jogos) {
+      if (!rodadaAtual || rodadaAtual.count >= 10) {
+        rodadaNum++;
+        const nome = `${rodadaNum}ª Rodada`;
+        const rodadaRes = await pool.query('INSERT INTO rodada (nome, campeonato_id) VALUES ($1, $2) RETURNING id', [nome, campeonatoId]);
+        rodadaId = rodadaRes.rows[0].id;
+        rodadaAtual = { id: rodadaId, count: 0 };
+        criadas++;
+      }
+      rodadaAtual.count++;
+      const dataISO = normalizarDataHoraBR(jogo.data, jogo.hora);
+      const existe = await pool.query('SELECT id FROM partida WHERE rodada_id = $1 AND time1 = $2 AND time2 = $3 AND data_partida = $4', [
+        rodadaId, jogo.time_casa, jogo.time_fora, dataISO
+      ]);
+      if (existe.rows.length) { jogosIgnorados++; continue; }
+      await pool.query('INSERT INTO partida (rodada_id, time1, time2, data_partida) VALUES ($1, $2, $3, $4)', [
+        rodadaId, jogo.time_casa, jogo.time_fora, dataISO
+      ]);
+      jogosCriados++;
+    }
+    return res.json({ ok: true, campeonato_id: campeonatoId, rodadas_criadas: criadas, jogos_criados: jogosCriados, jogos_ignorados: jogosIgnorados });
+  } catch (err) {
+    console.error('Erro upload-jogos-texto:', err);
+    return res.status(500).json({ erro: 'Falha ao processar texto.' });
   }
 });
 

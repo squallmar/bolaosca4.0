@@ -14,6 +14,7 @@ function AdminPanel() {
   const [campeonatos, setCampeonatos] = useState([]);
   const [campeonatoId, setCampeonatoId] = useState('');
   const [debugPDF, setDebugPDF] = useState(false);
+  const [textoJogos, setTextoJogos] = useState('');
 
   async function fetchPendentes() {
     try {
@@ -139,6 +140,61 @@ function AdminPanel() {
             Enviar PDF de Jogos
           </button>
         </form>
+      </div>
+
+      {/* Fallback: Importar Jogos por Texto */}
+      <div className="bolao-panel-card">
+        <h2>Importar Jogos por Texto</h2>
+        <p style={{ marginTop: 0, color: '#666' }}>
+          Cole abaixo uma linha por jogo. Formatos aceitos, por exemplo: 12/10 16:00 Time A x Time B
+        </p>
+        <div style={{ marginBottom: 10 }}>
+          <select
+            value={campeonatoId}
+            onChange={(e) => setCampeonatoId(e.target.value)}
+            required
+            style={{ marginRight: 10 }}
+          >
+            <option value="">Selecione o campeonato</option>
+            {campeonatos.map(c => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+          <label style={{ marginRight: 10 }}>
+            <input type="checkbox" checked={debugPDF} onChange={e => setDebugPDF(e.target.checked)} /> Modo Debug
+          </label>
+        </div>
+        <textarea
+          value={textoJogos}
+          onChange={(e) => setTextoJogos(e.target.value)}
+          placeholder="Ex.:\n12/10 16:00 Athletico-PR x Grêmio\n13/10 18:30 Santos x Corinthians"
+          rows={6}
+          style={{ width: '100%', fontFamily: 'monospace' }}
+        />
+        <div style={{ marginTop: 10 }}>
+          <button
+            className="bolao-panel-authorize-btn"
+            onClick={async () => {
+              if (!campeonatoId) return alert('Selecione um campeonato');
+              if (!textoJogos.trim()) return alert('Informe o texto com os jogos');
+              try {
+                const url = debugPDF ? '/admin/upload-jogos-texto?debug=true' : '/admin/upload-jogos-texto';
+                const res = await api.post(url, { campeonatoId: String(campeonatoId), texto: textoJogos });
+                alert(`Rodadas criadas: ${res.data.rodadas_criadas}\nJogos criados: ${res.data.jogos_criados}\nIgnorados: ${res.data.jogos_ignorados}`);
+              } catch (err) {
+                const msg = err?.response?.data?.erro || err.message;
+                const amostra = err?.response?.data?.amostra;
+                if (amostra && Array.isArray(amostra)) {
+                  alert('Erro ao importar texto: ' + msg + '\n\nLinhas (até 40):\n- ' + amostra.join('\n- '));
+                } else {
+                  alert('Erro ao importar texto: ' + msg);
+                }
+              }
+            }}
+          >
+            Importar Texto de Jogos
+          </button>
+        </div>
       </div>
 
       <div className="bolao-panel-content">
