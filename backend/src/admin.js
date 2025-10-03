@@ -167,6 +167,45 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
   return jogosExtraidos;
 }
 
+// Gera amostra de linhas usando somente pdfjs (sem pdf-parse)
+async function amostraLinhasViaPdfjs(buffer, { maxPages = 50 } = {}) {
+  try {
+    const data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
+      pdfjsLib.GlobalWorkerOptions.standardFontDataUrl = pdfjsLib.GlobalWorkerOptions.standardFontDataUrl || '';
+    }
+    const loadingTask = pdfjsLib.getDocument({ data });
+    const pdfDoc = await loadingTask.promise;
+    const nPages = Math.min(pdfDoc.numPages, maxPages);
+    const linhasTotais = [];
+    for (let i = 1; i <= nPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const content = await page.getTextContent();
+      let linhas = [];
+      let linhaAtual = '';
+      let ultimaY = null;
+      content.items.forEach(item => {
+        const y = item.transform[5];
+        const str = (item.str || '').trim();
+        if (!str) return;
+        if (ultimaY !== null && Math.abs(ultimaY - y) > 6) {
+          if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
+          linhaAtual = str;
+        } else {
+          linhaAtual += ' ' + str;
+        }
+        ultimaY = y;
+      });
+      if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
+      linhas.forEach(l => linhasTotais.push(l));
+      if (linhasTotais.length >= 200) break; // limite para debug
+    }
+    return linhasTotais;
+  } catch (e) {
+    return [];
+  }
+}
+
 // Endpoint para upload e processamento automático do PDF de jogos
 router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res) => {
   try {
@@ -193,7 +232,11 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
             const linhas = texto.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
             return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF', amostra: linhas.slice(0, 40) });
           } else {
-            return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF', amostra: ['[pdf-parse indisponível no servidor]', 'Reenvie o PDF e compartilhe algumas linhas do arquivo para ajustarmos o parser.'] });
+            const linhas = await amostraLinhasViaPdfjs(req.file.buffer);
+            if (linhas.length) {
+              return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF', amostra: linhas.slice(0, 40) });
+            }
+            return res.status(400).json({ erro: 'Nenhum jogo extraído do PDF', amostra: ['[pdf-parse indisponível no servidor]', '[pdfjs amostra vazia]', 'Reenvie o PDF e compartilhe algumas linhas do arquivo para ajustarmos o parser.'] });
           }
         } catch {}
       }
