@@ -13,6 +13,7 @@ function AdminPanel() {
   const [error, setError] = useState('');
   const [campeonatos, setCampeonatos] = useState([]);
   const [campeonatoId, setCampeonatoId] = useState('');
+  const [debugPDF, setDebugPDF] = useState(false);
 
   async function fetchPendentes() {
     try {
@@ -94,16 +95,26 @@ function AdminPanel() {
             formData.append('pdf', window.pdfFile);
             formData.append('campeonatoId', String(campeonatoId));
             try {
-              const res = await api.post('/admin/upload-jogos-pdf', formData, {
+              const url = debugPDF ? '/admin/upload-jogos-pdf?debug=true' : '/admin/upload-jogos-pdf';
+              const res = await api.post(url, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
               });
               alert(`Rodadas criadas: ${res.data.rodadas_criadas}\nJogos criados: ${res.data.jogos_criados}\nIgnorados: ${res.data.jogos_ignorados}`);
             } catch (err) {
-              alert('Erro ao enviar PDF: ' + (err?.response?.data?.erro || err.message));
+              const msg = err?.response?.data?.erro || err.message;
+              const amostra = err?.response?.data?.amostra;
+              if (amostra && Array.isArray(amostra)) {
+                alert('Erro ao enviar PDF: ' + msg + '\n\nAmostra de linhas do PDF (até 40):\n- ' + amostra.join('\n- '));
+              } else {
+                alert('Erro ao enviar PDF: ' + msg);
+              }
             }
           }}
           style={{ marginBottom: 20 }}
         >
+          <label style={{ marginRight: 10 }}>
+            <input type="checkbox" checked={debugPDF} onChange={e => setDebugPDF(e.target.checked)} /> Modo Debug
+          </label>
           <select
             value={campeonatoId}
             onChange={(e) => setCampeonatoId(e.target.value)}
