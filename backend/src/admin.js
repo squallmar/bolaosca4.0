@@ -11,6 +11,11 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const router = express.Router();
 
+// Configuração do multer (deve vir antes de qualquer uso em rotas)
+// Usar memoryStorage para produção (Vercel/Render não tem filesystem persistente)
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
 // Função baseada no modelo do usuário
 async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
   const { maxPages = 300, debug = false } = opts;
@@ -296,10 +301,7 @@ router.get('/relatorio-campeonato/:campeonatoId', isAdmin, async (req, res) => {
     res.status(500).json({ erro: 'Erro ao gerar relatório PDF.' });
   }
 });
-// Configuração do multer para uploads de imagem (apenas uma declaração)
-// Usar memoryStorage para produção (Vercel/Render não tem filesystem)
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// (config do multer movida para o topo do arquivo)
 
 // Listar usuários não autorizados
 router.get('/usuarios-pendentes', isAdmin, async (req, res) => {
