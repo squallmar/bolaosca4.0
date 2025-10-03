@@ -39,6 +39,7 @@
   border-radius: 14px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   padding: 28px 22px;
+  margin-bottom: 10px;
   flex: 2;
   min-width: 320px;
   border: 1px solid #e2e8f0;
