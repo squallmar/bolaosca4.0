@@ -26,11 +26,8 @@ export default function ApostarRodada() {
   const [erro, setErro] = useState('');
   const [ok, setOk] = useState('');
   const [timesMap, setTimesMap] = useState({}); // slug(nome) => escudo_url
-  const [weekendLocked, setWeekendLocked] = useState(false);
   const [lockInfo, setLockInfo] = useState({ locked: false, weekend: false, pending: false });
   const [editando, setEditando] = useState({}); // controla edição por partida
-  const [lockCountdown, setLockCountdown] = useState(''); // texto com tempo restante até fechamento
-  const [lockChrono, setLockChrono] = useState(''); // cronômetro HH:MM:SS
   const [partidasLockStatus, setPartidasLockStatus] = useState({}); // status de bloqueio por partida
 
   // Carrega times do backend
@@ -222,105 +219,20 @@ export default function ApostarRodada() {
   }, []);
 
   useEffect(() => { carregarRodadas(); }, [carregarRodadas]);
-  // Atualiza flag de bloqueio global (preferindo backend /palpite/lock)
+  // Atualiza status global de pendência (segunda-feira aguardando finalização)
   useEffect(() => {
     async function pollServer() {
       try {
         const { data } = await api.get('/palpite/lock');
         setLockInfo(data || {});
-        // locked = pending finalização pelo admin (segunda)
-        if (typeof data?.locked === 'boolean') setWeekendLocked(!!data.locked);
       } catch {
-        // Em caso de erro, não aplica bloqueio global
-        setWeekendLocked(false);
+        // Em caso de erro, mantém estado anterior
       }
     }
     pollServer();
     const id = setInterval(() => { pollServer(); }, 60 * 1000);
     return () => clearInterval(id);
   }, []);
-
-  // Contagem regressiva até sábado 13:59 (fechamento) quando ainda aberto
-  useEffect(() => {
-    function updateCountdown() {
-      if (weekendLocked) { setLockCountdown(''); return; }
-      const now = new Date();
-      // Próximo sábado 13:59 local
-      const target = (() => {
-        const n = new Date(now);
-        const day = n.getDay();
-        // Se hoje é sábado
-        if (day === 6) {
-          const sameDayTarget = new Date(now);
-            sameDayTarget.setHours(13,59,0,0);
-          if (now <= sameDayTarget) return sameDayTarget; // ainda antes do corte hoje
-          // já passou do corte: pega sábado da semana seguinte
-          const next = new Date(now);
-          next.setDate(next.getDate() + 7);
-          next.setHours(13,59,0,0);
-          return next;
-        }
-        // Dias até sábado (6)
-        const diffDays = (6 - day + 7) % 7; // 0..6
-        const t = new Date(now);
-        t.setDate(t.getDate() + diffDays);
-        t.setHours(13,59,0,0);
-        return t;
-      })();
-      const ms = target - now;
-      if (ms <= 0) { setLockCountdown(''); return; }
-      const totalMin = Math.floor(ms / 60000);
-      const dias = Math.floor(totalMin / (60*24));
-      const horas = Math.floor((totalMin % (60*24)) / 60);
-      const mins = totalMin % 60;
-      let parts = [];
-      if (dias) parts.push(dias + (dias === 1 ? ' dia' : ' dias'));
-      if (horas) parts.push(horas + 'h');
-      if (mins && dias === 0) parts.push(mins + 'm');
-      if (!parts.length) parts = ['< 1m'];
-      setLockCountdown(parts.join(' '));
-    }
-    updateCountdown();
-    const id = setInterval(updateCountdown, 60 * 1000);
-    return () => clearInterval(id);
-  }, [weekendLocked]);
-
-  // Cronômetro em segundos (HH:MM:SS) até sábado 13:59
-  useEffect(() => {
-    let interval;
-    function pad(n){return String(n).padStart(2,'0');}
-    function computeTarget(now){
-      const day = now.getDay();
-      if (day === 6) { // sábado
-        const t = new Date(now);
-        t.setHours(13,59,0,0);
-        if (now <= t) return t;
-        const nxt = new Date(now); nxt.setDate(nxt.getDate()+7); nxt.setHours(13,59,0,0); return nxt;
-      }
-      const diffDays = (6 - day + 7) % 7;
-      const target = new Date(now);
-      target.setDate(target.getDate()+diffDays);
-      target.setHours(13,59,0,0);
-      return target;
-    }
-    function tick(){
-      if (weekendLocked){ setLockChrono(''); return; }
-      const now = new Date();
-      const target = computeTarget(now);
-      let ms = target - now;
-      if (ms <= 0){ setLockChrono('00:00:00'); return; }
-      const totalSec = Math.floor(ms/1000);
-      const h = Math.floor(totalSec/3600);
-      const m = Math.floor((totalSec%3600)/60);
-      const s = totalSec%60;
-      // Limita horas para mostrar até 99 (suficiente)
-      const hh = h>99? '99' : pad(h);
-      setLockChrono(`${hh}:${pad(m)}:${pad(s)}`);
-    }
-    tick();
-    interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-  }, [weekendLocked]);
   
   useEffect(() => {
     if (!rodadaId) return;
@@ -336,7 +248,7 @@ export default function ApostarRodada() {
     const lockStatus = partidasLockStatus[partida.id] || await checkPartidaLock(partida.id);
     if (lockStatus.locked) {
       if (lockStatus.matchLocked) {
-        setErro('Apostas encerradas para esta partida (apostas permitidas apenas até 14h do dia do jogo).');
+        setErro('Apostas encerradas: permitido apenas até 1h antes do jogo.');
         return;
       }
       if (lockStatus.pending) {
@@ -388,7 +300,6 @@ export default function ApostarRodada() {
     return partidas.filter(p => {
       const partidaLockStatus = partidasLockStatus[p.id] || {};
       const bloqueado = !!(
-        weekendLocked || 
         p.finalizada || 
         p.finalizado || 
         p.resultado || 
@@ -398,7 +309,7 @@ export default function ApostarRodada() {
       );
       return !bloqueado && !palpites[p.id];
     }).length;
-  }, [partidas, palpites, weekendLocked, rodadaAtual, partidasLockStatus]);
+  }, [partidas, palpites, rodadaAtual, partidasLockStatus]);
 
   return (
     <div className="apostar-container">
@@ -419,17 +330,11 @@ export default function ApostarRodada() {
         </div>
         <div className="header-gradient"></div>
       </div>
-      <div className={`apostas-aviso ${weekendLocked ? 'fechado' : ''}`}>
-        <strong>{weekendLocked ? 'APOSTAS ENCERRADAS' : 'APOSTAS ABERTAS'}</strong>
-        {!weekendLocked && lockCountdown && <span> • Fecham em {lockCountdown}</span>}
-        {weekendLocked && <span> • Reabrem na segunda-feira.</span>}
-        {!weekendLocked && lockChrono && (
-          <div className="apostas-timer">
-            <span className="label">Tempo restante:</span>
-            <span className="cronometro" aria-label="Tempo restante para fechar apostas">{lockChrono}</span>
-          </div>
-        )}
-        <div className="apostas-aviso-sub">Corte: sábado 13:59 (último minuto antes das 14h).</div>
+      <div className={`apostas-aviso ${lockInfo?.pending ? 'fechado' : ''}`}>
+        <strong>{lockInfo?.pending ? 'APOSTAS BLOQUEADAS' : 'APOSTAS ABERTAS'}</strong>
+        {!lockInfo?.pending && <span> • As apostas fecham 1h antes de cada jogo.</span>}
+        {lockInfo?.pending && <span> • Aguardando finalização da rodada pelo admin.</span>}
+        <div className="apostas-aviso-sub">Regra: fechamento por partida (1 hora antes do início).</div>
       </div>
       <div className="content-wrapper">
         <div className="controls-section">
@@ -548,7 +453,7 @@ export default function ApostarRodada() {
                   {partidaLockStatus.matchLocked && !p._started && !p.resultado && (
                     <div className="status-badge match-locked">
                       <span className="badge-icon">🔒</span>
-                      Apostas encerradas (após 14h)
+                      Apostas encerradas (1h antes do jogo)
                     </div>
                   )}
                   {p.resultado && (() => {
