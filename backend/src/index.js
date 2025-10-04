@@ -870,6 +870,10 @@ async function bootstrap() {
   // Ensure required columns for partidas/rodadas used by endpoints
   await pool.query(`ALTER TABLE partida ADD COLUMN IF NOT EXISTS data_partida TIMESTAMP`);
   await pool.query(`ALTER TABLE partida ADD COLUMN IF NOT EXISTS resultado TEXT`);
+  // Novos campos exibidos/atualizados no admin e importações de PDF
+  await pool.query(`ALTER TABLE partida ADD COLUMN IF NOT EXISTS local TEXT`);
+  await pool.query(`ALTER TABLE partida ADD COLUMN IF NOT EXISTS transmissao TEXT`);
+  await pool.query(`ALTER TABLE partida ADD COLUMN IF NOT EXISTS placar VARCHAR(15)`);
   await pool.query(`ALTER TABLE rodada ADD COLUMN IF NOT EXISTS campeonato_id INTEGER REFERENCES campeonato(id) ON DELETE CASCADE`);
 
   // Unique palpite per (usuario, partida)
