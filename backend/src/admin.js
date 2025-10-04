@@ -1103,6 +1103,85 @@ function notifyBlockedIP(ip, email, nome_usuario) {
   });
 }
 
+// Diagnóstico de rodadas: última finalizada, rodada atual, pendências
+router.get('/diagnostico-rodadas', isAdmin, async (req, res) => {
+  try {
+    const campeonatoId = req.query?.campeonatoId ? Number(req.query.campeonatoId) : null;
+
+    // Última rodada finalizada (todas partidas com resultado)
+    const params = [];
+    let whereCamp = '';
+    if (campeonatoId) { whereCamp = 'WHERE r.campeonato_id = $1'; params.push(campeonatoId); }
+    const ultimaSql = `
+      SELECT r.id, r.nome, r.campeonato_id
+        FROM rodada r
+        JOIN partida p ON p.rodada_id = r.id
+       ${whereCamp}
+       GROUP BY r.id
+      HAVING COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) > 0
+         AND COUNT(p.id) FILTER (WHERE p.resultado IS NOT NULL) = COUNT(p.id)
+       ORDER BY r.id DESC
+       LIMIT 1`;
+    const { rows: ultimaRows } = await pool.query(ultimaSql, params);
+    const ultimaFinalizada = ultimaRows[0] || null;
+
+    // Rodada atual (mesma regra do /bolao/rodada-atual)
+    const atualSql = `
+      WITH rodadas AS (
+        SELECT r.id, r.nome, r.campeonato_id,
+               COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) AS total,
+               COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) AS finalizadas,
+               MIN(p.data_partida) AS start_at
+          FROM rodada r
+          LEFT JOIN partida p ON p.rodada_id = r.id
+         ${campeonatoId ? 'WHERE r.campeonato_id = $1' : ''}
+         GROUP BY r.id
+      ), completas AS (
+        SELECT id FROM rodadas WHERE total > 0 AND finalizadas = total ORDER BY id ASC
+      )
+      SELECT r.id, r.nome
+        FROM rodada r
+       ${campeonatoId ? 'WHERE r.campeonato_id = $1' : ''}
+       ORDER BY r.id ASC`;
+    const { rows: allR } = await pool.query(atualSql, params);
+    let rodadaAtual = null;
+    if (allR.length) {
+      const comp = await pool.query(
+        `SELECT r.id
+           FROM rodada r
+           JOIN partida p ON p.rodada_id = r.id
+          ${campeonatoId ? 'WHERE r.campeonato_id = $1' : ''}
+          GROUP BY r.id
+         HAVING COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) > 0
+            AND COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) = COUNT(p.id)
+          ORDER BY r.id ASC`,
+        params
+      );
+      const lastCompId = comp.rows.length ? comp.rows[comp.rows.length - 1].id : null;
+      const lastIdx = lastCompId ? allR.findIndex(r => r.id === lastCompId) : -1;
+      rodadaAtual = allR[Math.min(allR.length - 1, Math.max(0, lastIdx + 1))] || null;
+    }
+
+    // Pendências por rodada: total, com resultado, faltando
+    const pendSql = `
+      SELECT r.id, r.nome, r.campeonato_id,
+             COUNT(p.id) AS total,
+             COUNT(p.id) FILTER (WHERE p.resultado IS NOT NULL) AS com_resultado,
+             COUNT(p.id) FILTER (WHERE p.resultado IS NULL) AS pendentes
+        FROM rodada r
+        LEFT JOIN partida p ON p.rodada_id = r.id
+       ${campeonatoId ? 'WHERE r.campeonato_id = $1' : ''}
+       GROUP BY r.id
+       ORDER BY r.id ASC`;
+    const { rows: pendRows } = await pool.query(pendSql, params);
+
+    res.json({ ultimaFinalizada, rodadaAtual, pendencias: pendRows });
+  } catch (e) {
+    console.error('Erro /admin/diagnostico-rodadas:', e);
+    res.status(500).json({ erro: 'Falha ao calcular diagnóstico' });
+  }
+});
+
 export { notifyBlockedIP };
 export default router;
 
