@@ -398,6 +398,7 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
     fs.writeFileSync(tempPath, req.file.buffer);
     // Extrai jogos
   const debug = String(req.query?.debug || '').toLowerCase() === 'true';
+  const forceYear = req.query?.forceYear ? Number(req.query.forceYear) : (req.body?.forceYear ? Number(req.body.forceYear) : null);
   const jogos = await extrairJogosDoPDF(tempPath, { debug });
   if (!jogos.length) {
       // Em modo debug, tente retornar amostra de linhas para facilitar ajuste de regex
@@ -427,7 +428,7 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
         const m = String(d).match(/(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/);
         if (!m) return null;
         let [_, dd, mm, yy] = m;
-        if (!yy) yy = String(new Date().getFullYear());
+        if (!yy) yy = String(forceYear || new Date().getFullYear());
         else if (yy.length === 2) yy = String(2000 + Number(yy));
         let hh = '00', min = '00';
         const t = String(h || '').trim();
@@ -512,7 +513,8 @@ router.post('/upload-jogos-texto', isAdmin, async (req, res) => {
     const campeonatoIdRaw = req.body?.campeonatoId || req.body?.campeonato_id;
     const campeonatoId = Number(campeonatoIdRaw);
     const texto = req.body?.texto || '';
-    const debug = String(req.query?.debug || '').toLowerCase() === 'true';
+  const debug = String(req.query?.debug || '').toLowerCase() === 'true';
+  const forceYear = req.query?.forceYear ? Number(req.query.forceYear) : (req.body?.forceYear ? Number(req.body.forceYear) : null);
     if (!campeonatoId || Number.isNaN(campeonatoId)) {
       return res.status(400).json({ erro: 'campeonatoId é obrigatório' });
     }
@@ -533,7 +535,7 @@ router.post('/upload-jogos-texto', isAdmin, async (req, res) => {
         const m = String(d).match(/(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/);
         if (!m) return null;
         let [_, dd, mm, yy] = m;
-        if (!yy) yy = String(new Date().getFullYear());
+        if (!yy) yy = String(forceYear || new Date().getFullYear());
         else if (yy.length === 2) yy = String(2000 + Number(yy));
         let hh = '00', min = '00';
         const t = String(h || '').trim();
@@ -966,11 +968,60 @@ router.post('/limpar-rodadas', isAdmin, async (req, res) => {
     const { rows } = await pool.query('SELECT id, nome FROM rodada WHERE campeonato_id = $1 AND nome = ANY($2::text[])', [campeonatoId, nomes]);
     if (!rows.length) return res.json({ ok: true, removidas: 0 });
     const ids = rows.map(r => r.id);
+    // Apagar palpites das partidas nessas rodadas, depois partidas e por fim rodadas
+    await pool.query('DELETE FROM palpite WHERE partida_id IN (SELECT id FROM partida WHERE rodada_id = ANY($1::int[]))', [ids]);
     await pool.query('DELETE FROM partida WHERE rodada_id = ANY($1::int[])', [ids]);
     await pool.query('DELETE FROM rodada WHERE id = ANY($1::int[])', [ids]);
     return res.json({ ok: true, removidas: rows.length });
   } catch (e) {
     console.error('Erro /admin/limpar-rodadas:', e);
     return res.status(500).json({ erro: 'Falha ao limpar rodadas' });
+  }
+});
+
+// Reset abrangente por campeonato: de->ate, a partir de N, ou tudo
+// Body: { campeonatoId, de, ate } OU { campeonatoId, aPartirDe } OU { campeonatoId, tudo: true }
+router.post('/reset-campeonato', isAdmin, async (req, res) => {
+  try {
+    const campeonatoId = Number(req.body?.campeonatoId || req.body?.campeonato_id);
+    const de = req.body?.de ? Number(req.body.de) : null;
+    const ate = req.body?.ate ? Number(req.body.ate) : null;
+    const aPartirDe = req.body?.aPartirDe ? Number(req.body.aPartirDe) : null;
+    const tudo = req.body?.tudo === true || String(req.body?.tudo).toLowerCase() === 'true';
+    if (!campeonatoId || Number.isNaN(campeonatoId)) return res.status(400).json({ erro: 'campeonatoId inválido' });
+
+    let rodadaIds = [];
+    if (tudo) {
+      const r = await pool.query('SELECT id FROM rodada WHERE campeonato_id = $1', [campeonatoId]);
+      rodadaIds = r.rows.map(x => x.id);
+    } else if (aPartirDe && !Number.isNaN(aPartirDe)) {
+      const r = await pool.query('SELECT id FROM rodada WHERE campeonato_id = $1 AND nome ~ $2', [campeonatoId, '^[0-9]+ª Rodada$']);
+      // filtra comparando número extraído do nome
+      rodadaIds = r.rows.filter(() => true).map(x => x.id);
+      // Busca novamente com número para precisão
+      const r2 = await pool.query('SELECT id, nome FROM rodada WHERE campeonato_id = $1', [campeonatoId]);
+      rodadaIds = r2.rows.filter(rr => {
+        const m = String(rr.nome||'').match(/^(\d+)/);
+        const num = m ? Number(m[1]) : NaN;
+        return !Number.isNaN(num) && num >= aPartirDe;
+      }).map(rr => rr.id);
+    } else if (de && ate && de <= ate) {
+      const nomes = [];
+      for (let n = de; n <= ate; n++) nomes.push(`${n}ª Rodada`);
+      const r = await pool.query('SELECT id FROM rodada WHERE campeonato_id = $1 AND nome = ANY($2::text[])', [campeonatoId, nomes]);
+      rodadaIds = r.rows.map(x => x.id);
+    } else {
+      return res.status(400).json({ erro: 'Informe de/ate, aPartirDe ou tudo=true' });
+    }
+
+    if (!rodadaIds.length) return res.json({ ok: true, removidas: 0, partidas: 0, palpites: 0 });
+    const ids = rodadaIds;
+    const delPalpites = await pool.query('WITH p AS (SELECT id FROM partida WHERE rodada_id = ANY($1::int[])) DELETE FROM palpite WHERE partida_id IN (SELECT id FROM p)', [ids]);
+    const delPartidas = await pool.query('DELETE FROM partida WHERE rodada_id = ANY($1::int[])', [ids]);
+    const delRodadas = await pool.query('DELETE FROM rodada WHERE id = ANY($1::int[])', [ids]);
+    return res.json({ ok: true, removidas: delRodadas.rowCount || 0, partidas: delPartidas.rowCount || 0, palpites: delPalpites.rowCount || 0 });
+  } catch (e) {
+    console.error('Erro /admin/reset-campeonato:', e);
+    return res.status(500).json({ erro: 'Falha ao resetar campeonato' });
   }
 });
