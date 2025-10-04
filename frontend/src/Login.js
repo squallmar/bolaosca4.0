@@ -9,6 +9,7 @@ function Login() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
   const handleBack = () => {
@@ -59,26 +60,41 @@ function Login() {
         </div>
         <form onSubmit={handleLogin} className="auth-form">
           <div className="form-group">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              className="auth-input"
-              autoComplete="username"
-            />
+            <div className="input-with-icon">
+              <span className="icon-left" aria-hidden>📧</span>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                className="auth-input"
+                autoComplete="username"
+              />
+            </div>
           </div>
           <div className="form-group">
-            <input
-              type="password"
-              placeholder="Senha"
-              value={senha}
-              onChange={e => setSenha(e.target.value)}
-              required
-              className="auth-input"
-              autoComplete="current-password"
-            />
+            <div className="input-with-icon">
+              <span className="icon-left" aria-hidden>🔒</span>
+              <input
+                type={showPwd ? 'text' : 'password'}
+                placeholder="Senha"
+                value={senha}
+                onChange={e => setSenha(e.target.value)}
+                required
+                className="auth-input"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="icon-right"
+                onClick={() => setShowPwd(v => !v)}
+                aria-label={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
+                title={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                {showPwd ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
           {erro && <div className="error-message">{erro}</div>}
           <button

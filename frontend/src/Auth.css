@@ -149,6 +149,43 @@
   }
 }
 
+/* Inputs com ícones dentro */
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon .auth-input {
+  padding-left: 42px; /* espaço para o ícone esquerdo */
+  padding-right: 42px; /* espaço para o botão olho */
+}
+
+.input-with-icon .icon-left {
+  position: absolute;
+  left: 12px;
+  color: #7f8c8d;
+  font-size: 18px;
+  pointer-events: none;
+}
+
+.input-with-icon .icon-right {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #7f8c8d;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.input-with-icon .icon-right:hover {
+  color: #2c3e50;
+}
+
 /* Responsividade */
 @media (max-width: 480px) {
   .auth-card {
