@@ -156,8 +156,10 @@
 }
 
 .input-with-icon .auth-input {
-  padding-left: 42px;   /* espaço p/ ícone esquerdo */
-  padding-right: 42px;  /* espaço p/ olho direito */
+  width: 100%;
+  box-sizing: border-box;   /* garante cálculo com padding */
+  padding-left: 42px;
+  padding-right: 42px;      /* espaço para o olho */
 }
 
 .input-with-icon .icon-left {
@@ -172,14 +174,14 @@
 
 .input-with-icon .icon-right-btn {
   position: absolute;
-  right: 12px;           /* dentro do input */
+  right: 12px;              /* dentro do input */
   top: 50%;
   transform: translateY(-50%);
-  height: 32px;          /* clique confortável */
+  z-index: 2;
+  height: 32px;
   width: 32px;
   border: 0;
   background: transparent;
-  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
