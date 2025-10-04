@@ -4,6 +4,40 @@ import api from './services/api';
 import { useAuth } from './authContext';
 import './Auth.css';
 
+function IconMail(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <polyline points="3,7 12,13 21,7" />
+    </svg>
+  );
+}
+function IconLock(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
+      <rect x="3" y="11" width="18" height="10" rx="2" />
+      <path d="M7 11V8a5 5 0 0 1 10 0v3" />
+    </svg>
+  );
+}
+function IconEye(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+function IconEyeOff(props) {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
+      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a20.78 20.78 0 0 1 5.06-5.94" />
+      <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a20.78 20.78 0 0 1-3.22 4.21" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
+
 function Login() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -61,7 +95,7 @@ function Login() {
         <form onSubmit={handleLogin} className="auth-form">
           <div className="form-group">
             <div className="input-with-icon">
-              <span className="icon-left" aria-hidden>📧</span>
+              <span className="icon-left"><IconMail /></span>
               <input
                 type="email"
                 placeholder="Email"
@@ -73,9 +107,10 @@ function Login() {
               />
             </div>
           </div>
+
           <div className="form-group">
             <div className="input-with-icon">
-              <span className="icon-left" aria-hidden>🔒</span>
+              <span className="icon-left"><IconLock /></span>
               <input
                 type={showPwd ? 'text' : 'password'}
                 placeholder="Senha"
@@ -87,21 +122,21 @@ function Login() {
               />
               <button
                 type="button"
-                className="icon-right"
+                className="icon-right-btn"
                 onClick={() => setShowPwd(v => !v)}
                 aria-label={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
                 title={showPwd ? 'Ocultar senha' : 'Mostrar senha'}
               >
-                {showPwd ? '🙈' : '👁️'}
+                {showPwd ? <IconEyeOff /> : <IconEye />}
               </button>
             </div>
           </div>
+
           {erro && <div className="error-message">{erro}</div>}
           <button
             type="submit"
             className="auth-button"
             onClick={(e) => {
-              // Safety net: garante que o handler dispare mesmo se o submit default for prevenido por algo externo
               if (e && typeof e.preventDefault === 'function') e.preventDefault();
               handleLogin(e);
             }}
