@@ -20,6 +20,8 @@ export default function Profile() {
   // estado para trocar senha
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
+  const [showPwdA, setShowPwdA] = useState(false);
+  const [showPwdN, setShowPwdN] = useState(false);
 
   if (!nome) return <div className="profile-container">Faça login para acessar o perfil.</div>;
 
@@ -253,13 +255,35 @@ export default function Profile() {
           <form className="profile-password" onSubmit={onChangePassword}>
             <div className="field">
               <label>Senha atual</label>
-              <input type="password" value={senhaAtual} onChange={(e)=>setSenhaAtual(e.target.value)} maxLength={32} />
+              <div style={{position:'relative'}}>
+              <input type={showPwdA ? 'text' : 'password'} value={senhaAtual} onChange={(e)=>setSenhaAtual(e.target.value)} maxLength={32} />
+              <button type="button" onClick={()=>setShowPwdA(v=>!v)}
+                style={{position:'absolute', right:8, top:8, background:'transparent', border:'none', cursor:'pointer'}}
+                aria-label={showPwdA ? 'Ocultar senha' : 'Mostrar senha'}>
+                {showPwdA ? '🙈' : '👁️'}
+              </button>
+              </div>
               <div className="helper">Digite sua senha atual.</div>
             </div>
             <div className="field">
               <label>Nova senha</label>
-              <input type="password" value={novaSenha} onChange={(e)=>setNovaSenha(e.target.value)} maxLength={8} />
+              <div style={{position:'relative'}}>
+              <input type={showPwdN ? 'text' : 'password'} value={novaSenha} onChange={(e)=>setNovaSenha(e.target.value)} maxLength={8} />
+              <button type="button" onClick={()=>setShowPwdN(v=>!v)}
+                style={{position:'absolute', right:8, top:8, background:'transparent', border:'none', cursor:'pointer'}}
+                aria-label={showPwdN ? 'Ocultar senha' : 'Mostrar senha'}>
+                {showPwdN ? '🙈' : '👁️'}
+              </button>
+              </div>
               <div className="helper">Use de 4 a 8 caracteres. ({novaSenha.length}/8)</div>
+              <div style={{height:6, background:'#1f2937', borderRadius:4, overflow:'hidden'}} aria-hidden>
+                {(()=>{
+                  const len = novaSenha.length;
+                  const pct = Math.min(100, Math.floor((len/8)*100));
+                  const color = len >= 6 ? '#10b981' : len >= 4 ? '#f59e0b' : '#ef4444';
+                  return <div style={{width:`${pct}%`, height:'100%', background:color}} />;
+                })()}
+              </div>
             </div>
             <button type="submit" className="btn" disabled={loading}>Alterar senha</button>
           </form>

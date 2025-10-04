@@ -17,6 +17,8 @@ const Register = () => {
   });
   const [avatarFile, setAvatarFile] = useState(null);
   const [errors, setErrors] = useState({});
+  const [showPwd, setShowPwd] = useState(false);
+  const [showPwd2, setShowPwd2] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -140,8 +142,9 @@ const Register = () => {
           </div>
           <div className="form-group">
             <label htmlFor="senha">Senha</label>
+            <div style={{position:'relative'}}>
             <input
-              type="password"
+              type={showPwd ? 'text' : 'password'}
               id="senha"
               name="senha"
               value={formData.senha}
@@ -151,13 +154,29 @@ const Register = () => {
               autoComplete="new-password"
               maxLength={8}
             />
+            <button type="button" onClick={()=>setShowPwd(v=>!v)}
+              style={{position:'absolute', right:8, top:8, background:'transparent', border:'none', cursor:'pointer'}}
+              aria-label={showPwd ? 'Ocultar senha' : 'Mostrar senha'}>
+              {showPwd ? '🙈' : '👁️'}
+            </button>
+            </div>
             <small style={{display:'block', marginTop:4, color:'#666'}}>Use de 4 a 8 caracteres. Especiais são permitidos. ({formData.senha.length}/8)</small>
+            {/* Medidor simples de força (informativo) */}
+            <div style={{height:6, background:'#eee', borderRadius:4, overflow:'hidden', marginTop:6}} aria-hidden>
+              {(()=>{
+                const len = formData.senha.length;
+                const pct = Math.min(100, Math.floor((len/8)*100));
+                const color = len >= 6 ? '#4caf50' : len >= 4 ? '#ffc107' : '#f44336';
+                return <div style={{width:`${pct}%`, height:'100%', background:color}} />;
+              })()}
+            </div>
             {errors.senha && <span className="error-text">{errors.senha}</span>}
           </div>
           <div className="form-group">
             <label htmlFor="confirmarSenha">Confirmar Senha</label>
+            <div style={{position:'relative'}}>
             <input
-              type="password"
+              type={showPwd2 ? 'text' : 'password'}
               id="confirmarSenha"
               name="confirmarSenha"
               value={formData.confirmarSenha}
@@ -167,6 +186,12 @@ const Register = () => {
               autoComplete="new-password"
               maxLength={8}
             />
+            <button type="button" onClick={()=>setShowPwd2(v=>!v)}
+              style={{position:'absolute', right:8, top:8, background:'transparent', border:'none', cursor:'pointer'}}
+              aria-label={showPwd2 ? 'Ocultar senha' : 'Mostrar senha'}>
+              {showPwd2 ? '🙈' : '👁️'}
+            </button>
+            </div>
             <small style={{display:'block', marginTop:4, color:'#666'}}>Repita a senha (4 a 8 caracteres). ({formData.confirmarSenha.length}/8)</small>
             {errors.confirmarSenha && <span className="error-text">{errors.confirmarSenha}</span>}
           </div>
