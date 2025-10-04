@@ -145,9 +145,9 @@ export default function Profile() {
     e.preventDefault();
     setMessage('');
     setStatus('');
-    if (!senhaAtual || !novaSenha || novaSenha.length < 6) {
+    if (!senhaAtual || !novaSenha || novaSenha.length < 4 || novaSenha.length > 8) {
       setStatus('error');
-      setMessage('Preencha a senha atual e a nova senha (mín. 6).');
+      setMessage('Preencha a senha atual e a nova senha (de 4 a 8 caracteres).');
       return;
     }
     try {

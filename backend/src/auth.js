@@ -367,8 +367,8 @@ router.patch('/me/senha', exigirAutenticacao, async (req, res) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ erro: 'Sessão expirada. Faça login novamente.' });
     const { senhaAtual, novaSenha } = req.body || {};
-    if (!senhaAtual || !novaSenha || novaSenha.length < 10 || !/[A-Z]/.test(novaSenha) || !/[a-z]/.test(novaSenha) || !/[0-9]/.test(novaSenha)) {
-      return res.status(400).json({ erro: 'Nova senha fraca. Requisitos: mínimo 10 caracteres, incluir maiúscula, minúscula e número.' });
+    if (!senhaAtual || typeof novaSenha !== 'string' || novaSenha.length < 4 || novaSenha.length > 8) {
+      return res.status(400).json({ erro: 'Nova senha deve ter entre 4 e 8 caracteres.' });
     }
     const rows = await safeQuery(pool, 'SELECT senha FROM usuario WHERE id = $1', [userId]);
     const hash = rows[0]?.senha;
