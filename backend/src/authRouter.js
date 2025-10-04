@@ -11,6 +11,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 router.post('/register', async (req, res) => {
   const { nome, email, senha, tipo } = req.body;
   try {
+    if (typeof senha !== 'string' || senha.length < 4 || senha.length > 8) {
+      return res.status(400).json({ erro: 'Senha deve ter entre 4 e 8 caracteres.' });
+    }
     const hash = await bcrypt.hash(senha, 10);
     const rows = await safeQuery(
       pool,

@@ -22,6 +22,10 @@ router.post('/register', upload.single('avatar'), async (req, res) => {
       return res.status(400).json({ erro: 'Campos obrigatórios ausentes' });
     }
 
+    if (typeof senha !== 'string' || senha.length < 4 || senha.length > 8) {
+      return res.status(400).json({ erro: 'Senha deve ter entre 4 e 8 caracteres.' });
+    }
+
     // Se um arquivo de avatar foi enviado, faça o upload para o Cloudinary
     if (req.file) {
       const result = await cloudinary.v2.uploader.upload(
@@ -236,8 +240,8 @@ router.patch('/:id/senha', auth, async (req, res) => {
   if (!perm.ok) return res.status(perm.status).json({ error: perm.msg });
   try {
     const { id } = req.params;
-    const { senha } = req.body || {};
-    if (!senha || senha.length < 6) return res.status(400).json({ error: 'Senha inválida' });
+  const { senha } = req.body || {};
+  if (typeof senha !== 'string' || senha.length < 4 || senha.length > 8) return res.status(400).json({ error: 'Senha deve ter entre 4 e 8 caracteres.' });
   const cost = Number(process.env.BCRYPT_COST) >= 10 && Number(process.env.BCRYPT_COST) <= 14 ? Number(process.env.BCRYPT_COST) : 12;
   const hash = await bcrypt.hash(senha, cost);
     const { rowCount } = await pool.query(`UPDATE usuario SET senha = $1 WHERE id = $2`, [hash, id]);

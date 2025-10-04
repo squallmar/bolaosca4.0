@@ -45,10 +45,7 @@ const Register = () => {
     if (!formData.email.trim()) newErrors.email = 'Email é obrigatório';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email inválido';
     if (!formData.senha) newErrors.senha = 'Senha é obrigatória';
-    else if (formData.senha.length < 10) newErrors.senha = 'Mínimo 10 caracteres';
-    else if (!/[A-Z]/.test(formData.senha) || !/[a-z]/.test(formData.senha) || !/[0-9]/.test(formData.senha)) {
-      newErrors.senha = 'Use maiúscula, minúscula e número';
-    }
+    else if (formData.senha.length < 4 || formData.senha.length > 8) newErrors.senha = 'Use de 4 a 8 caracteres (pode ter especiais)';
     if (formData.senha !== formData.confirmarSenha) newErrors.confirmarSenha = 'As senhas não coincidem';
     if (!formData.apelido.trim()) newErrors.apelido = 'Apelido é obrigatório';
     if (!formData.contato.trim()) newErrors.contato = 'Contato é obrigatório';

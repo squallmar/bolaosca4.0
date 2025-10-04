@@ -189,11 +189,9 @@ router.post('/register', uploadLocalAvatar.single('avatar'), async (req, res) =>
       return res.status(400).json({ erro: 'Senha ausente' });
     }
 
-    const devRelaxed = process.env.NODE_ENV !== 'production' && process.env.RELAX_PWD === 'true';
-    if (!devRelaxed) {
-      if (senha.length < 10 || !/[A-Z]/.test(senha) || !/[a-z]/.test(senha) || !/[0-9]/.test(senha)) {
-        return res.status(400).json({ erro: 'Senha fraca. Requisitos: mínimo 10 caracteres, incluir maiúscula, minúscula e número.' });
-      }
+    // Política solicitada: tamanho mínimo 4 e máximo 8, podendo usar especiais (sem exigências de classe)
+    if (typeof senha !== 'string' || senha.length < 4 || senha.length > 8) {
+      return res.status(400).json({ erro: 'Senha deve ter entre 4 e 8 caracteres.' });
     }
 
     const cost = Number(process.env.BCRYPT_COST) >= 10 && Number(process.env.BCRYPT_COST) <= 14 ? Number(process.env.BCRYPT_COST) : 12;
