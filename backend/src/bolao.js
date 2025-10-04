@@ -29,14 +29,13 @@ router.delete('/partida/:id', exigirAutenticacao, exigirRole('admin'), async (re
 // Editar partida (apenas admin) - inclui data/hora do jogo
 router.put('/partida/:id', exigirAutenticacao, exigirRole('admin'), async (req, res) => {
   const { id } = req.params;
-  const { time1, time2, dataJogo } = req.body; // recebe dataJogo (string "YYYY-MM-DDTHH:mm")
-  
+  const { time1, time2, dataJogo, local, transmissao, placar } = req.body; // dataJogo: "YYYY-MM-DDTHH:mm"
+
   try {
     await safeQuery(
-      pool, 
-      // Usa a coluna correta no banco: data_partida
-      'UPDATE partida SET time1 = $1, time2 = $2, data_partida = $3 WHERE id = $4', 
-      [time1, time2, dataJogo || null, id]
+      pool,
+      'UPDATE partida SET time1 = $1, time2 = $2, data_partida = $3, local = $4, transmissao = $5, placar = $6 WHERE id = $7',
+      [time1, time2, dataJogo || null, local || null, transmissao || null, placar || null, id]
     );
     res.json({ sucesso: true });
   } catch (err) {
@@ -351,6 +350,9 @@ router.get('/rodada/:rodadaId/partidas', async (req, res) => {
         p.time2,
         p.resultado,
         p.data_partida AS data_jogo,
+        p.local,
+        p.transmissao,
+        p.placar,
         COALESCE(p.finalizada, false) AS finalizada,
         t1.escudo_url AS time1_escudo,
         t2.escudo_url AS time2_escudo

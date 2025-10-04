@@ -126,6 +126,84 @@ function promptDateTime(mensagem, valorPadrao = '') {
     };
   });
 }
+
+// Modal completo para editar uma partida (time1, time2, data/hora, local, transmissão, placar)
+function promptEditarPartida(partida) {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,.55);
+      display: flex; align-items: center; justify-content: center; z-index: 10001;`;
+
+    const card = document.createElement('div');
+    card.style.cssText = `background:#fff; border-radius:12px; width: min(640px, 96vw); padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.2);`;
+
+    const title = document.createElement('h3');
+    title.textContent = 'Editar Partida';
+    title.style.cssText = 'margin: 0 0 10px;';
+    card.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid; grid-template-columns: 1fr 1fr; gap:10px;';
+
+    const mkInput = (label, type, value, attrs={}) => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex; flex-direction:column; gap:6px;';
+      const l = document.createElement('label'); l.textContent = label; l.style.cssText = 'font-weight:600;';
+      const inp = document.createElement('input'); inp.type = type; inp.value = value || '';
+      inp.style.cssText = 'padding:10px 12px; border:1px solid #e0e0e0; border-radius:8px;';
+      Object.entries(attrs).forEach(([k,v]) => inp.setAttribute(k, v));
+      wrap.appendChild(l); wrap.appendChild(inp);
+      return { wrap, inp };
+    };
+
+    const iTime1 = mkInput('Time 1 (casa)', 'text', partida.time1 || '');
+    const iTime2 = mkInput('Time 2 (fora)', 'text', partida.time2 || '');
+    const iData  = mkInput('Data/Hora', 'datetime-local', partida.data_jogo ? toInputValue(partida.data_jogo) : '');
+    const iLocal = mkInput('Local', 'text', partida.local || '');
+    const iTrans = mkInput('Transmissão', 'text', partida.transmissao || '');
+    const iPlac  = mkInput('Placar', 'text', partida.placar || '', { placeholder: 'Ex.: 2 x 1' });
+
+    grid.appendChild(iTime1.wrap);
+    grid.appendChild(iTime2.wrap);
+    grid.appendChild(iData.wrap);
+    grid.appendChild(iLocal.wrap);
+    grid.appendChild(iTrans.wrap);
+    grid.appendChild(iPlac.wrap);
+    card.appendChild(grid);
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex; gap:10px; justify-content:flex-end; margin-top:12px;';
+    const btnCancel = document.createElement('button');
+    btnCancel.textContent = 'Cancelar';
+    btnCancel.style.cssText = 'padding:8px 12px; border-radius:8px; border:1px solid #e0e0e0; background:#fff;';
+    const btnOk = document.createElement('button');
+    btnOk.textContent = 'Salvar';
+    btnOk.style.cssText = 'padding:8px 12px; border-radius:8px; border:1px solid #1976d2; background:#1976d2; color:#fff;';
+    actions.appendChild(btnCancel); actions.appendChild(btnOk);
+    card.appendChild(actions);
+
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+
+    btnCancel.onclick = () => { document.body.removeChild(modal); resolve(null); };
+    btnOk.onclick = () => {
+      const payload = {
+        time1: iTime1.inp.value.trim(),
+        time2: iTime2.inp.value.trim(),
+        dataJogo: iData.inp.value ? fromInputValue(iData.inp.value) : '',
+        local: iLocal.inp.value.trim(),
+        transmissao: iTrans.inp.value.trim(),
+        placar: iPlac.inp.value.trim()
+      };
+      document.body.removeChild(modal);
+      resolve(payload);
+    };
+
+    // fecha clicando fora
+    modal.onclick = (e) => { if (e.target === modal) { document.body.removeChild(modal); resolve(null); } };
+  });
+}
 // Autenticação agora via cookie httpOnly; não precisamos mais injetar Authorization manual
 async function tryGet(urls, config = {}) {
   let lastErr;
@@ -224,6 +302,10 @@ export default function AdminBoloes() {
   const [rodadaPartidas, setRodadaPartidas] = useState({});
   const [expandedCamps, setExpandedCamps] = useState({});
   const [selectedRodadaId, setSelectedRodadaId] = useState('');
+  // NOVO: visão Jogos atuais (chips e tabela)
+  const [rodadaResumo, setRodadaResumo] = useState([]); // [{id,nome,jogos}]
+  const [rodadaSelTabela, setRodadaSelTabela] = useState(''); // id da rodada selecionada na tabela
+  const [jogosTabela, setJogosTabela] = useState([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [timesMap, setTimesMap] = useState({});
@@ -307,6 +389,50 @@ export default function AdminBoloes() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  // NOVO: Recalcula resumo de rodadas e define seleção padrão da tabela
+  useEffect(() => {
+    // Monta resumo como array única de rodadas com contagem de jogos
+    const allRodadas = Object.values(campeonatoRodadas).flat();
+    const resumo = allRodadas.map(r => ({
+      id: r.id,
+      nome: r.nome || `Rodada ${r.id}`,
+      jogos: Array.isArray(rodadaPartidas[r.id]) ? rodadaPartidas[r.id].length : 0,
+      finalizada: !!r.finalizada,
+    })).filter(r => r.jogos > 0);
+    // Ordena por número quando possível, senão por nome
+    resumo.sort((a,b) => {
+      const na = (String(a.nome).match(/^(\d+)/) || [])[1];
+      const nb = (String(b.nome).match(/^(\d+)/) || [])[1];
+      if (na && nb) return Number(na) - Number(nb);
+      return String(a.nome).localeCompare(String(b.nome));
+    });
+    setRodadaResumo(resumo);
+
+    // Define rodada padrão: primeira não finalizada com jogos; senão a última com jogos
+    let padrao = '';
+    const naoFinal = resumo.find(r => !r.finalizada);
+    padrao = naoFinal?.id ? String(naoFinal.id) : (resumo.length ? String(resumo[resumo.length - 1].id) : '');
+    setRodadaSelTabela(prev => prev || padrao);
+  }, [campeonatoRodadas, rodadaPartidas]);
+
+  // NOVO: Atualiza jogos da tabela ao trocar a rodada selecionada
+  useEffect(() => {
+    const id = rodadaSelTabela;
+    if (!id) {
+      // Todas: concatena todas as partidas e inclui o nome da rodada
+      const all = [];
+      for (const r of rodadaResumo) {
+        const list = rodadaPartidas[r.id] || [];
+        for (const p of list) all.push({ ...p, _rodadaNome: r.nome });
+      }
+      setJogosTabela(all);
+    } else {
+      const r = rodadaResumo.find(x => String(x.id) === String(id));
+      const list = (rodadaPartidas[id] || []).map(p => ({ ...p, _rodadaNome: r?.nome || '' }));
+      setJogosTabela(list);
+    }
+  }, [rodadaSelTabela, rodadaResumo, rodadaPartidas]);
+
   const toggleCampExpand = (campId) =>
     setExpandedCamps(prev => ({ ...prev, [campId]: !prev[campId] }));
 
@@ -358,14 +484,10 @@ export default function AdminBoloes() {
     fetchAll();
   }
 
-  // MODIFICADO: Função de editar partida agora inclui dataJogo
-  async function editarPartida(id, t1, t2, dataJogo) {
-    if (!t1?.trim() || !t2?.trim()) return;
-    await api.put(`/bolao/partida/${id}`, { 
-      time1: t1, 
-      time2: t2, 
-      dataJogo: dataJogo // ← NOVO
-    });
+  // Editar partida: aceita objeto completo
+  async function editarPartida(id, payload) {
+    if (!payload?.time1?.trim() || !payload?.time2?.trim()) return;
+    await api.put(`/bolao/partida/${id}`, payload);
     fetchAll();
   }
 
@@ -415,6 +537,112 @@ export default function AdminBoloes() {
 
         {loading && <div className="info-row">Carregando...</div>}
         {msg && <div className="info-row error">{msg}</div>}
+
+        {/* NOVO: Jogos atuais com chips e tabela resumida */}
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-header" style={{ borderBottom: 'none', marginBottom: 0 }}>
+            <div className="title">Jogos atuais</div>
+          </div>
+          {rodadaResumo.length > 0 ? (
+            <>
+              <div className="rounds-bar" title="Filtrar por rodada" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className={`btn btn-light btn-sm ${!rodadaSelTabela ? 'active' : ''}`}
+                  onClick={() => setRodadaSelTabela('')}
+                >Todas</button>
+                {rodadaResumo.map(r => (
+                  <button
+                    key={String(r.id)}
+                    type="button"
+                    className={`btn btn-light btn-sm ${String(rodadaSelTabela) === String(r.id) ? 'active' : ''}`}
+                    onClick={() => setRodadaSelTabela(String(r.id))}
+                    title={`${r.jogos || 0} jogos`}
+                  >
+                    {r.nome} <span className="badge" style={{ marginLeft: 6 }}>{r.jogos || 0}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: 8 }}>Rodada</th>
+                      <th style={{ textAlign: 'left', padding: 8 }}>Data</th>
+                      <th style={{ textAlign: 'left', padding: 8 }}>Hora</th>
+                      <th style={{ textAlign: 'left', padding: 8 }}>Casa</th>
+                      <th style={{ textAlign: 'center', padding: 8 }}>Placar</th>
+                      <th style={{ textAlign: 'left', padding: 8 }}>Fora</th>
+                      <th style={{ textAlign: 'left', padding: 8 }}>Local</th>
+                      <th style={{ textAlign: 'left', padding: 8 }}>Transmissão</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jogosTabela.map(j => {
+                      const dt = typeof j.data_jogo === 'string' ? j.data_jogo : '';
+                      let dataBR = '-'; let horaBR = '-';
+                      if (dt) {
+                        // formatBR -> dd/mm/yyyy HH:mm
+                        const full = formatBR(dt);
+                        const sp = full.split(' ');
+                        dataBR = sp[0] || '-';
+                        horaBR = sp[1] || '-';
+                      }
+                      const cleanLocal = (s) => {
+                        if (!s) return '-';
+                        return String(s).replace(/\s*Transmiss[ãa]o:\s*.*$/i, '').trim() || '-';
+                      };
+                      const getTransmissao = (row) => {
+                        if (row?.transmissao) return row.transmissao;
+                        const m = String(row?.local || '').match(/Transmiss[ãa]o:\s*(.*)$/i);
+                        return m ? m[1].trim() : '-';
+                      };
+                      return (
+                        <tr key={j.id}>
+                          <td>{j._rodadaNome || '-'}</td>
+                          <td>{dataBR}</td>
+                          <td>{horaBR}</td>
+                          <td>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                              {j.escudo1 ? (
+                                <img alt={j.time1} src={j.escudo1} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border, #e0e0e0)' }} />
+                              ) : null}
+                              <span>{j.time1}</span>
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>{j.placar || '-'}</td>
+                          <td>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                              {j.escudo2 ? (
+                                <img alt={j.time2} src={j.escudo2} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border, #e0e0e0)' }} />
+                              ) : null}
+                              <span>{j.time2}</span>
+                            </span>
+                          </td>
+                          <td>{cleanLocal(j.local)}</td>
+                          <td>{getTransmissao(j)}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              onClick={async () => {
+                                const dados = await promptEditarPartida(j);
+                                if (!dados) return;
+                                await editarPartida(j.id, dados);
+                              }}
+                            >Editar</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <div className="empty">Sem jogos carregados ainda</div>
+          )}
+        </div>
 
         <div className="list">
           {boloes.map((b, idx) => (
@@ -566,19 +794,9 @@ export default function AdminBoloes() {
                                               {/* MODIFICADO: Botão de editar partida agora inclui data */}
                                                 <button
                                                   onClick={async () => {
-                                                    const novaData = await promptDateTime(
-                                                      'Nova data e hora do jogo:', 
-                                                      p.data_jogo ? toInputValue(p.data_jogo) : ''
-                                                    );
-                                                    
-                                                    if (novaData === null) return; // Usuário cancelou
-                                                    
-                                                    editarPartida(
-                                                      p.id,
-                                                      prompt('Novo time 1:', p.time1) || p.time1,
-                                                      prompt('Novo time 2:', p.time2) || p.time2,
-                                                      novaData ? fromInputValue(novaData) : '' // Se o usuário apagar a data, envia string vazia
-                                                    );
+                                                    const dados = await promptEditarPartida(p);
+                                                    if (!dados) return;
+                                                    editarPartida(p.id, dados);
                                                   }}
                                                   className="btn btn-primary btn-sm"
                                                 >

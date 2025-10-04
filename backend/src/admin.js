@@ -116,19 +116,22 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
               casa = m[2];
               fora = m[3];
               dataJogo = m[4];
-            } else if (re === patterns[3] || re === patterns[4] || re === patterns[6]) { // formatos sem placar
+            } else if (re === patterns[3]) { // date time CASA sep FORA (sem placar)
               dataJogo = m[1];
               horaJogo = m[2];
               casa = m[3];
+              // m[4] é o separador
               fora = m[5];
-            } else if (re === patterns[5]) { // CASA sep FORA - time - date
+            } else if (re === patterns[4]) { // CASA sep FORA date time (sem placar)
               casa = m[1];
+              // m[2] sep
               fora = m[3];
-              horaJogo = m[4];
-              dataJogo = m[5];
-            } else if (re === patterns[7]) { // time CASA sep FORA date
+              dataJogo = m[4];
+              horaJogo = m[5];
+            } else if (re === patterns[5]) { // time CASA sep FORA date (sem placar)
               horaJogo = m[1];
               casa = m[2];
+              // m[3] sep
               fora = m[4];
               dataJogo = m[5];
             }
@@ -274,7 +277,7 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
           let dataJogo, horaJogo, casa, fora;
           if (re === patterns[0]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[4]; }
           else if (re === patterns[1]) { casa = m[1]; fora = m[2]; dataJogo = m[3]; horaJogo = m[4]; }
-          else if (re === patterns[2) { horaJogo = m[1]; casa = m[2]; fora = m[3]; dataJogo = m[4]; }
+          else if (re === patterns[2]) { horaJogo = m[1]; casa = m[2]; fora = m[3]; dataJogo = m[4]; }
           else if (re === patterns[3]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[5]; }
           else if (re === patterns[4]) { casa = m[1]; fora = m[3]; dataJogo = m[4]; horaJogo = m[5]; }
           else if (re === patterns[5]) { horaJogo = m[1]; casa = m[2]; fora = m[4]; dataJogo = m[5]; }
@@ -495,9 +498,18 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
         alvoRodadaId, jogo.time_casa, jogo.time_fora, dataISO
       ]);
       if (existe.rows.length) { jogosIgnorados++; continue; }
-      await pool.query('INSERT INTO partida (rodada_id, time1, time2, data_partida) VALUES ($1, $2, $3, $4)', [
-        alvoRodadaId, jogo.time_casa, jogo.time_fora, dataISO
-      ]);
+      await pool.query(
+        'INSERT INTO partida (rodada_id, time1, time2, data_partida, local, transmissao, placar) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [
+          alvoRodadaId,
+          jogo.time_casa,
+          jogo.time_fora,
+          dataISO,
+          jogo.local || null,
+          jogo.transmissao || null,
+          jogo.placar || null
+        ]
+      );
       jogosCriados++;
     }
     return res.json({ ok: true, campeonato_id: campeonatoId, rodadas_criadas: criadas, jogos_criados: jogosCriados, jogos_ignorados: jogosIgnorados });
@@ -598,9 +610,18 @@ router.post('/upload-jogos-texto', isAdmin, async (req, res) => {
         alvoRodadaId, jogo.time_casa, jogo.time_fora, dataISO
       ]);
       if (existe.rows.length) { jogosIgnorados++; continue; }
-      await pool.query('INSERT INTO partida (rodada_id, time1, time2, data_partida) VALUES ($1, $2, $3, $4)', [
-        alvoRodadaId, jogo.time_casa, jogo.time_fora, dataISO
-      ]);
+      await pool.query(
+        'INSERT INTO partida (rodada_id, time1, time2, data_partida, local, transmissao, placar) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [
+          alvoRodadaId,
+          jogo.time_casa,
+          jogo.time_fora,
+          dataISO,
+          jogo.local || null,
+          jogo.transmissao || null,
+          jogo.placar || null
+        ]
+      );
       jogosCriados++;
     }
     return res.json({ ok: true, campeonato_id: campeonatoId, rodadas_criadas: criadas, jogos_criados: jogosCriados, jogos_ignorados: jogosIgnorados });
