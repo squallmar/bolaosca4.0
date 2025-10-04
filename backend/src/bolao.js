@@ -18,31 +18,76 @@ router.get('/campeonatos-todos', async (req, res) => {
 // Rodada atual baseada em datas das partidas (horário de São Paulo)
 router.get('/rodada-atual', async (req, res) => {
   try {
+    const campeonatoId = req.query?.campeonatoId ? Number(req.query.campeonatoId) : null;
+    // Regra: rodada atual = próxima depois da última rodada COMPLETA (todas partidas com resultado/placar)
     const sql = `
-      WITH ranges AS (
-        SELECT r.id,
-               r.nome,
-               MIN(p.data_partida) AS start_at,
-               MAX(p.data_partida) AS end_at,
-               COUNT(p.id) AS total
+      WITH rodadas AS (
+        SELECT r.id, r.nome, r.campeonato_id,
+               COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) AS total,
+               COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) AS finalizadas,
+               MIN(p.data_partida) AS start_at
           FROM rodada r
           LEFT JOIN partida p ON p.rodada_id = r.id
+         ${campeonatoId ? 'WHERE r.campeonato_id = $1' : ''}
          GROUP BY r.id
+      ), ultima_completa AS (
+        SELECT id, nome, campeonato_id, start_at
+          FROM rodadas
+         WHERE total > 0 AND finalizadas = total
+         ORDER BY start_at DESC NULLS LAST, id DESC
+         LIMIT 1
       )
-      SELECT id, nome
-        FROM ranges
-    ORDER BY CASE
-               WHEN start_at IS NULL THEN 3
-               WHEN (now() AT TIME ZONE 'America/Sao_Paulo') < start_at THEN 0  -- próxima (futura) primeiro
-               WHEN (now() AT TIME ZONE 'America/Sao_Paulo') BETWEEN start_at AND end_at THEN 1 -- em andamento
-               ELSE 2 -- passada
-             END,
-             start_at NULLS LAST,
-             id ASC
-       LIMIT 1`;
-    const { rows } = await pool.query(sql);
-    if (!rows.length) return res.json({ id: null, nome: null });
-    res.json(rows[0]);
+      SELECT r.id, r.nome
+        FROM rodada r
+        JOIN (${campeonatoId ? 'SELECT * FROM rodada WHERE campeonato_id = $1' : 'SELECT * FROM rodada'}) rr ON rr.id = r.id
+       WHERE r.campeonato_id = COALESCE((SELECT campeonato_id FROM ultima_completa), r.campeonato_id)
+       ORDER BY r.id ASC`;
+    const params = campeonatoId ? [campeonatoId] : [];
+    const { rows: all } = await pool.query(sql, params);
+    if (!all.length) return res.json({ id: null, nome: null });
+    // encontra a próxima depois da última completa
+    let lastCompleteIdx = -1;
+    if (campeonatoId) {
+      const { rows: lc } = await pool.query(
+        `SELECT id FROM rodada r
+          WHERE r.campeonato_id = $1 AND EXISTS (
+            SELECT 1 FROM partida p WHERE p.rodada_id = r.id
+          )
+          ORDER BY r.id ASC`, [campeonatoId]
+      );
+      // pega a última do conjunto que está completa
+      const compRows = await pool.query(
+        `SELECT r.id
+           FROM rodada r
+           JOIN partida p ON p.rodada_id = r.id
+          WHERE r.campeonato_id = $1
+          GROUP BY r.id
+         HAVING COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) > 0
+            AND COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) = COUNT(p.id)
+          ORDER BY r.id ASC`, [campeonatoId]
+      );
+      if (compRows.rows.length) {
+        const lastCompleteId = compRows.rows[compRows.rows.length - 1].id;
+        lastCompleteIdx = all.findIndex(r => r.id === lastCompleteId);
+      }
+    } else {
+      // sem filtro: detecta globalmente
+      const { rows: comp } = await pool.query(
+        `SELECT r.id
+           FROM rodada r
+           JOIN partida p ON p.rodada_id = r.id
+          GROUP BY r.id
+         HAVING COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) > 0
+            AND COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) = COUNT(p.id)
+          ORDER BY r.id ASC`
+      );
+      if (comp.length) {
+        const lastCompleteId = comp[comp.length - 1].id;
+        lastCompleteIdx = all.findIndex(r => r.id === lastCompleteId);
+      }
+    }
+    const nextIdx = Math.min(all.length - 1, Math.max(0, lastCompleteIdx + 1));
+    return res.json(all[nextIdx]);
   } catch (err) {
     res.status(500).json({ erro: 'Erro ao calcular rodada atual', detalhes: err.message });
   }

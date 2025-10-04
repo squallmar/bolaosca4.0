@@ -33,7 +33,7 @@ function getBRTimeParts(d = new Date()) {
   return { day, hour };
 }
 
-// NOVA REGRA: Bloqueia apostas a partir de 14:00 no dia do jogo (horário de Brasília)
+// REGRA ATUALIZADA: Bloqueia apostas/edições 1h antes do início do jogo (horário de São Paulo)
 async function isMatchLocked(partidaId) {
   try {
     // Busca a data do jogo usando a coluna correta do schema: data_partida
@@ -56,26 +56,14 @@ async function isMatchLocked(partidaId) {
     
     const dataJogo = new Date(partida.data_partida);
     const agora = new Date();
-    
-    // Converte para horário de Brasília para comparação
-    const dataJogoBR = new Date(dataJogo.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    // Constrói timestamps em America/Sao_Paulo por string para evitar drift
+    const inicioBR = new Date(dataJogo.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
     const agoraBR = new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-    
-    // Extrai apenas a data (YYYY-MM-DD) para comparação
-    const dataJogoStr = dataJogoBR.toISOString().split('T')[0];
-    const agoraStr = agoraBR.toISOString().split('T')[0];
-    
-    // Se já passou do dia do jogo, bloqueia
-    if (agoraStr > dataJogoStr) {
-      return true;
-    }
-    
-    // Se é o mesmo dia, bloqueia a partir das 14:00
-    if (agoraStr === dataJogoStr && agoraBR.getHours() >= 14) {
-      return true;
-    }
-    
-    return false;
+
+    // Horário de bloqueio = 1h antes do início
+    const bloqueioMs = 60 * 60 * 1000;
+    const limite = new Date(inicioBR.getTime() - bloqueioMs);
+    return agoraBR >= limite;
     
   } catch (error) {
     console.error('Erro ao verificar bloqueio da partida:', error);
@@ -193,7 +181,7 @@ router.post('/apostar/:partidaId', exigirAutenticacao, async (req, res) => {
   if (matchLocked || pending) {
     return res.status(409).json({ 
       erro: matchLocked 
-        ? 'Apostas fechadas para esta partida (apostas permitidas apenas até 14h do dia do jogo).' 
+        ? 'Apostas fechadas: permitido apenas até 1h antes do jogo.' 
         : 'Apostas bloqueadas: aguardando finalização da rodada pelo admin.'
     });
   }
