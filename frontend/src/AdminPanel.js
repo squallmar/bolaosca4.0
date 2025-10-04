@@ -15,6 +15,15 @@ function AdminPanel() {
   const [campeonatoId, setCampeonatoId] = useState('');
   const [debugPDF, setDebugPDF] = useState(false);
   const [textoJogos, setTextoJogos] = useState('');
+  // Reset controls
+  const [resetMode, setResetMode] = useState('tudo'); // 'tudo' | 'aPartir' | 'faixa'
+  const [aPartirDe, setAPartirDe] = useState('');
+  const [de, setDe] = useState('');
+  const [ate, setAte] = useState('');
+  const [resetting, setResetting] = useState(false);
+  // Optional forceYear for imports
+  const [forceYearPDF, setForceYearPDF] = useState('');
+  const [forceYearTexto, setForceYearTexto] = useState('');
 
   async function fetchPendentes() {
     try {
@@ -99,8 +108,15 @@ function AdminPanel() {
             const formData = new FormData();
             formData.append('pdf', window.pdfFile);
             formData.append('campeonatoId', String(campeonatoId));
+            if (forceYearPDF && String(forceYearPDF).trim()) {
+              formData.append('forceYear', String(forceYearPDF).trim());
+            }
             try {
-              const url = debugPDF ? '/admin/upload-jogos-pdf?debug=true' : '/admin/upload-jogos-pdf';
+              let url = '/admin/upload-jogos-pdf';
+              const params = [];
+              if (debugPDF) params.push('debug=true');
+              if (forceYearPDF && String(forceYearPDF).trim()) params.push(`forceYear=${encodeURIComponent(String(forceYearPDF).trim())}`);
+              if (params.length) url += `?${params.join('&')}`;
               // Não defina manualmente o Content-Type; deixe o navegador/axios definir o boundary
               const res = await api.post(url, formData);
               alert(`Rodadas criadas: ${res.data.rodadas_criadas}\nJogos criados: ${res.data.jogos_criados}\nIgnorados: ${res.data.jogos_ignorados}`);
@@ -130,6 +146,14 @@ function AdminPanel() {
               <option key={c.id} value={c.id}>{c.nome}</option>
             ))}
           </select>
+          <input
+            type="number"
+            inputMode="numeric"
+            placeholder="forceYear (opcional)"
+            value={forceYearPDF}
+            onChange={e => setForceYearPDF(e.target.value)}
+            style={{ width: 150, marginRight: 10 }}
+          />
           <input
             type="file"
             accept="application/pdf"
@@ -163,6 +187,14 @@ function AdminPanel() {
           <label style={{ marginRight: 10 }}>
             <input type="checkbox" checked={debugPDF} onChange={e => setDebugPDF(e.target.checked)} /> Modo Debug
           </label>
+          <input
+            type="number"
+            inputMode="numeric"
+            placeholder="forceYear (opcional)"
+            value={forceYearTexto}
+            onChange={e => setForceYearTexto(e.target.value)}
+            style={{ width: 150 }}
+          />
         </div>
         <textarea
           value={textoJogos}
@@ -178,8 +210,12 @@ function AdminPanel() {
               if (!campeonatoId) return alert('Selecione um campeonato');
               if (!textoJogos.trim()) return alert('Informe o texto com os jogos');
               try {
-                const url = debugPDF ? '/admin/upload-jogos-texto?debug=true' : '/admin/upload-jogos-texto';
-                const res = await api.post(url, { campeonatoId: String(campeonatoId), texto: textoJogos });
+                let url = '/admin/upload-jogos-texto';
+                const params = [];
+                if (debugPDF) params.push('debug=true');
+                if (forceYearTexto && String(forceYearTexto).trim()) params.push(`forceYear=${encodeURIComponent(String(forceYearTexto).trim())}`);
+                if (params.length) url += `?${params.join('&')}`;
+                const res = await api.post(url, { campeonatoId: String(campeonatoId), texto: textoJogos, ...(forceYearTexto ? { forceYear: String(forceYearTexto).trim() } : {}) });
                 alert(`Rodadas criadas: ${res.data.rodadas_criadas}\nJogos criados: ${res.data.jogos_criados}\nIgnorados: ${res.data.jogos_ignorados}`);
               } catch (err) {
                 const msg = err?.response?.data?.erro || err.message;
@@ -195,6 +231,130 @@ function AdminPanel() {
             Importar Texto de Jogos
           </button>
         </div>
+      </div>
+
+      {/* Reset de Campeonato: rodadas, jogos e ranking (palpites) */}
+      <div className="bolao-panel-card">
+        <h2>Resetar Campeonato (Rodadas/Jogos/Ranking)</h2>
+        <p style={{ marginTop: 0, color: '#666' }}>
+          Zera apenas rodadas, partidas e palpites (ranking). Não afeta usuários, times ou campeonatos.
+        </p>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
+          <select
+            value={campeonatoId}
+            onChange={(e) => setCampeonatoId(e.target.value)}
+            required
+          >
+            <option value="">Selecione o campeonato</option>
+            {campeonatos.map(c => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+          <label style={{ marginRight: 10 }}>
+            <input
+              type="radio"
+              name="resetMode"
+              value="tudo"
+              checked={resetMode === 'tudo'}
+              onChange={() => setResetMode('tudo')}
+            />{' '}Zerar tudo
+          </label>
+          <label style={{ marginRight: 10 }}>
+            <input
+              type="radio"
+              name="resetMode"
+              value="aPartir"
+              checked={resetMode === 'aPartir'}
+              onChange={() => setResetMode('aPartir')}
+            />{' '}A partir da rodada
+          </label>
+          {resetMode === 'aPartir' && (
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder="Ex.: 1 ou 27"
+              value={aPartirDe}
+              onChange={e => setAPartirDe(e.target.value)}
+              style={{ width: 120 }}
+            />
+          )}
+          <label style={{ marginRight: 10 }}>
+            <input
+              type="radio"
+              name="resetMode"
+              value="faixa"
+              checked={resetMode === 'faixa'}
+              onChange={() => setResetMode('faixa')}
+            />{' '}Faixa
+          </label>
+          {resetMode === 'faixa' && (
+            <>
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="De"
+                value={de}
+                onChange={e => setDe(e.target.value)}
+                style={{ width: 80 }}
+              />
+              <span>até</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                placeholder="Até"
+                value={ate}
+                onChange={e => setAte(e.target.value)}
+                style={{ width: 80 }}
+              />
+            </>
+          )}
+          <button
+            className="bolao-panel-authorize-btn"
+            disabled={resetting}
+            onClick={async () => {
+              if (!campeonatoId) return alert('Selecione um campeonato');
+              const confirmMsg = resetMode === 'tudo'
+                ? 'Confirma zerar TODAS as rodadas, jogos e palpites deste campeonato? Esta ação não pode ser desfeita.'
+                : resetMode === 'aPartir'
+                  ? `Confirma zerar da rodada ${aPartirDe} em diante?`
+                  : `Confirma zerar da rodada ${de} até ${ate}?`;
+              if (!window.confirm(confirmMsg)) return;
+              try {
+                setResetting(true);
+                const body = { campeonatoId: String(campeonatoId) };
+                if (resetMode === 'tudo') {
+                  body.tudo = true;
+                } else if (resetMode === 'aPartir') {
+                  if (!aPartirDe || Number.isNaN(Number(aPartirDe))) {
+                    setResetting(false);
+                    return alert('Informe a rodada inicial');
+                  }
+                  body.aPartirDe = Number(aPartirDe);
+                } else if (resetMode === 'faixa') {
+                  if (!de || !ate || Number(de) > Number(ate)) {
+                    setResetting(false);
+                    return alert('Informe uma faixa válida: De / Até');
+                  }
+                  body.de = Number(de);
+                  body.ate = Number(ate);
+                }
+                const res = await api.post('/admin/reset-campeonato', body);
+                alert(`Reset OK. Rodadas removidas: ${res.data.removidas}\nPartidas removidas: ${res.data.partidas}\nPalpites removidos: ${res.data.palpites}`);
+              } catch (err) {
+                const msg = err?.response?.data?.erro || err.message;
+                alert('Erro ao resetar: ' + msg);
+              } finally {
+                setResetting(false);
+              }
+            }}
+            style={{ marginLeft: 'auto' }}
+          >
+            {resetting ? 'Resetando…' : 'Resetar Campeonato'}
+          </button>
+        </div>
+        <small style={{ color: '#999' }}>
+          Dica: após resetar, reenvie o PDF completo (1–38) usando forceYear se necessário para padronizar as datas.
+        </small>
       </div>
 
       <div className="bolao-panel-content">
