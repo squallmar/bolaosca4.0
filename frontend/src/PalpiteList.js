@@ -91,6 +91,59 @@ export default function ApostarRodada() {
       : `${API}/uploads/escudos/_default.png`;
   }, [timesMap]);
 
+  // Nome curto para caber no card, mantendo o nome completo no title
+  const shortName = useCallback((nome) => {
+    if (!nome) return '';
+    let n = String(nome).trim();
+    // Remove sufixos comuns
+    n = n.replace(/\bSAF\b/gi, '').replace(/\s{2,}/g, ' ').trim();
+    // Mapeia alguns nomes longos para versões curtas
+    const map = new Map([
+      ['ATLÉTICO MINEIRO', 'ATLÉTICO-MG'],
+      ['ATLÉTICO MINEIRO SAF', 'ATLÉTICO-MG'],
+      ['ATLÉTICO MINEIRO', 'ATLÉTICO-MG'],
+      ['ATLÉTICO PARANAENSE', 'ATHLETICO-PR'],
+      ['ATHLETICO PARANAENSE', 'ATHLETICO-PR'],
+      ['ATHLETICO', 'ATHLETICO-PR'],
+      ['BOTAFOGO FR', 'BOTAFOGO'],
+      ['AMÉRICA MINEIRO', 'AMÉRICA-MG'],
+      ['SÃO PAULO', 'SÃO PAULO'],
+      ['VASCO DA GAMA', 'VASCO'],
+      ['RED BULL BRAGANTINO', 'RB BRAGANTINO'],
+      ['RED BULL', 'RB BRAGANTINO'],
+      ['FLUMINENSE', 'FLUMINENSE'],
+      ['FLAMENGO', 'FLAMENGO'],
+      ['INTERNACIONAL', 'INTER'],
+      ['GRÊMIO', 'GRÊMIO'],
+      ['CRUZEIRO', 'CRUZEIRO'],
+      ['CORINTHIANS', 'CORINTHIANS'],
+      ['CORITIBA', 'CORITIBA'],
+      ['GOIÁS', 'GOIÁS'],
+      ['FORTALEZA', 'FORTALEZA'],
+      ['BAHIA', 'BAHIA'],
+      ['CEARÁ', 'CEARÁ'],
+      ['SPORT RECIFE', 'SPORT'],
+      ['SPORT', 'SPORT'],
+      ['JUVENTUDE', 'JUVENTUDE'],
+      ['CRICIÚMA', 'CRICIÚMA'],
+      ['MIRASSOL', 'MIRASSOL'],
+      ['NÁUTICO', 'NÁUTICO'],
+      ['PALMEIRAS', 'PALMEIRAS'],
+      ['SANTOS', 'SANTOS']
+    ]);
+    // Tenta o match exato primeiro
+    const exact = map.get(n.toUpperCase());
+    if (exact) return exact;
+    // Heurística: transforma "NOME UF" em "NOME-UF"
+    const uf = n.match(/\b([A-Z]{2})\b/);
+    if (uf) {
+      const base = n.replace(/\b([A-Z]{2})\b/, '').trim().replace(/\s{2,}/g, ' ');
+      if (base.length <= 14) return `${base}-${uf[1]}`;
+    }
+    // Se ainda muito longo, corta com ellipsis
+    return n.length > 16 ? n.slice(0, 14) + '…' : n;
+  }, []);
+
   const carregarRodadas = useCallback(async () => {
     try {
       const { data } = await api.get('/bolao/rodadas-todas');
@@ -557,7 +610,7 @@ export default function ApostarRodada() {
                       alt={p.time1}
                       onError={(e)=>{ e.currentTarget.src = `${API}/uploads/escudos/_default.png`; }}
                     />
-                    <div className="team-name">{p.time1}</div>
+                    <div className="team-name" title={p.time1}>{shortName(p.time1)}</div>
                   </div>
 
                   <div className="match-center">
@@ -573,7 +626,7 @@ export default function ApostarRodada() {
                       alt={p.time2}
                       onError={(e)=>{ e.currentTarget.src = `${API}/uploads/escudos/_default.png`; }}
                     />
-                    <div className="team-name">{p.time2}</div>
+                    <div className="team-name" title={p.time2}>{shortName(p.time2)}</div>
                   </div>
                 </div>
 
@@ -1215,12 +1268,12 @@ export default function ApostarRodada() {
         
         .team-name {
           font-weight: 700;
-          font-size: 16px;
+          font-size: 15px;
           text-align: center;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          max-width: 120px;
+          max-width: 110px;
           margin: 0 auto;
         }
         
