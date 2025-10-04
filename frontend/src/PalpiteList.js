@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import api from './services/api';
 
 import { API_BASE as API } from './config';
+import { formatBR } from './utils/formatBR';
 
 // Função para gerar slug
 function slugify(nome = '') {
@@ -125,14 +126,15 @@ export default function ApostarRodada() {
       // marca client-side se já começou
       const now = Date.now();
       const norm = lista.map(p => {
+        // Usar sempre data_jogo do backend; normalizar para 'YYYY-MM-DD HH:mm'
+        const raw = p.data_jogo || p.data || '';
+        const s = String(raw || '').replace('Z', '').replace('T', ' ');
+        const m = s.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+        const ymdhm = m ? `${m[1]} ${m[2]}` : '';
         let ts = null;
-        try {
-          if (typeof p.data === 'number') ts = p.data;
-          else if (p.data && /^\d+$/.test(String(p.data))) ts = parseInt(p.data, 10);
-          else if (p.data) ts = new Date(String(p.data).replace(' ', 'T')).getTime();
-        } catch {}
+        try { if (ymdhm) ts = new Date(ymdhm.replace(' ', 'T')).getTime(); } catch {}
         const started = ts && !isNaN(ts) ? ts <= now : false;
-        return { ...p, _started: started };
+        return { ...p, _started: started, _data_str: ymdhm };
       });
       setPartidas(norm);
       // Carrega status de bloqueio para as partidas
@@ -469,7 +471,14 @@ export default function ApostarRodada() {
             return (
               <div key={p.id} className={`match-card ${bloqueado ? 'blocked' : ''}`}>
                 <div className="match-header">
-                  <div className="match-badge">Jogo {idx + 1}</div>
+                  <div className="match-badge-row">
+                    <div className="match-badge">Jogo {idx + 1}</div>
+                    { (p._data_str || p.data_jogo) && (
+                      <div className="match-date-badge" title="Data do jogo">
+                        {formatBR(p._data_str || String(p.data_jogo).replace('T',' ').replace('Z','').slice(0,16))}
+                      </div>
+                    )}
+                  </div>
                   {weekendLocked && (
                     <div className="status-badge finished">
                       <span className="badge-icon">🔒</span>
@@ -1137,6 +1146,12 @@ export default function ApostarRodada() {
           gap: 8px;
           min-width: 90px;
         }
+        .match-badge-row {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
         
         .match-badge {
           padding: 4px 12px;
@@ -1146,6 +1161,17 @@ export default function ApostarRodada() {
           font-weight: 600;
           font-size: 14px;
           border: 1px solid #dbeafe;
+        }
+
+        .match-date-badge {
+          padding: 4px 10px;
+          border-radius: 999px;
+          background: #f1f5f9;
+          color: #334155;
+          font-weight: 600;
+          font-size: 13px;
+          border: 1px solid #e2e8f0;
+          white-space: nowrap;
         }
         
         .result-badge {
