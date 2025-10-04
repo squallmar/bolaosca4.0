@@ -8,7 +8,6 @@ function Login() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -71,24 +70,15 @@ function Login() {
             />
           </div>
           <div className="form-group">
-            <div style={{position:'relative'}}>
             <input
-              type={showPwd ? 'text' : 'password'}
+              type="password"
               placeholder="Senha"
               value={senha}
               onChange={e => setSenha(e.target.value)}
               required
               className="auth-input"
               autoComplete="current-password"
-              maxLength={8}
             />
-            <button type="button" onClick={()=>setShowPwd(v=>!v)}
-              style={{position:'absolute', right:8, top:8, background:'transparent', border:'none', cursor:'pointer'}}
-              aria-label={showPwd ? 'Ocultar senha' : 'Mostrar senha'}>
-              {showPwd ? '🙈' : '👁️'}
-            </button>
-            </div>
-            <small style={{display:'block', marginTop:4, color:'#666'}}>Use 4–8 caracteres.</small>
           </div>
           {erro && <div className="error-message">{erro}</div>}
           <button
