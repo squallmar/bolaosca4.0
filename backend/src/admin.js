@@ -75,7 +75,7 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
       });
       if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
       // Guarda linhas agregadas para tentativa multi-linha posterior
-      linhas.forEach(l => linhasTodasPaginas.push(l));
+  linhas.forEach(l => linhasTodasPaginas.push(l));
 
       const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
       const time = '(?:\\d{2}[:h\\.]\\d{2}|\\d{2}h?)';
@@ -138,8 +138,9 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
               dataJogo = m[5];
             }
             if (/^\d{2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
-            if (/^\d{2}h$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':00');
-            if (/^\d{2}\.\d{2}$/.test(horaJogo)) horaJogo = horaJogo.replace('.', ':');
+            if (/^\d{1,2}h$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':00');
+            if (/^\d{1,2}\.\d{2}$/.test(horaJogo)) horaJogo = horaJogo.replace('.', ':');
+            if (/^\d{1,2}$/.test(horaJogo)) horaJogo = horaJogo.padStart(2,'0') + ':00';
             // Remove colunas extras tipo " - Local - Transmissão"
             casa = String(casa || '').replace(/\s+-\s+.*$/, '').trim();
             fora = String(fora || '').replace(/\s+-\s+.*$/, '').trim();
@@ -148,6 +149,52 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
           }
         }
       });
+    }
+    // Nova passagem: parser orientado a rodadas, varrendo sequencialmente as linhas
+    if (linhasTodasPaginas.length) {
+      let rodadaAtualNum = null;
+      const metaRe = /^(Ref:|Local:|Transmiss[oã]o:|Transmissao:|Est[aá]dio:|Estadio:)/i;
+      const soPlacarRe = /^\s*\d+\s*[xX\-]\s*\d+\s*$/;
+      function isMeta(s){ return metaRe.test(s); }
+      function cleanTeam(s){ return String(s||'').replace(/\s+-\s+.*$/, '').trim(); }
+      for (let idx = 0; idx < linhasTodasPaginas.length; idx++) {
+        const raw = linhasTodasPaginas[idx] || '';
+        const l = raw.replace(/\s+/g,' ').trim();
+        const rMatch = l.match(/Rodada:\s*(\d{1,3})/i);
+        if (rMatch) { rodadaAtualNum = parseInt(rMatch[1], 10); continue; }
+        const m = l.match(/Data:\s*(\d{2}\/\d{2}(?:\/(?:\d{2}|\d{4}))?).*?(?:às|as)\s+(\d{1,2}(?::|\.|h)?\d{2}|\d{1,2}h?)/i);
+        if (!m) continue;
+        const dataJogo = m[1];
+        let horaJogo = m[2] || '';
+        // Procura times nas linhas anteriores próximas até encontrar outro bloco/meta
+        const candidatos = [];
+        for (let k = idx - 1; k >= 0 && k >= idx - 8; k--) {
+          const s = (linhasTodasPaginas[k] || '').trim();
+          if (!s) continue;
+          if (/^Rodada:/i.test(s)) break;
+          if (isMeta(s)) continue;
+          if (soPlacarRe.test(s)) continue;
+          if (/^Data:/i.test(s)) continue;
+          candidatos.push(s);
+          if (candidatos.length >= 4) break;
+        }
+        if (candidatos.length < 2) continue;
+        let casa = candidatos[1] || candidatos[candidatos.length-1];
+        let fora = candidatos[0];
+        casa = cleanTeam(casa);
+        fora = cleanTeam(fora);
+        if (!casa || !fora) continue;
+        if (/^\d{1,2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
+        if (/^\d{1,2}h$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':00');
+        if (/^\d{1,2}\.\d{2}$/.test(horaJogo)) horaJogo = horaJogo.replace('.', ':');
+        if (/^\d{1,2}$/.test(horaJogo)) horaJogo = horaJogo.padStart(2,'0') + ':00';
+        const jogo = { time_casa: casa, time_fora: fora, data: String(dataJogo).trim(), hora: String(horaJogo).trim() };
+        if (typeof rodadaAtualNum === 'number' && !Number.isNaN(rodadaAtualNum)) jogo.rodada = rodadaAtualNum;
+        jogosExtraidos.push(jogo);
+      }
+      if (debug && jogosExtraidos.length === 0) {
+        console.warn('[PDF] Parser multi-linha também não encontrou jogos. Amostra:', linhasTodasPaginas.slice(0,30));
+      }
     }
     // Se nada encontrado até agora, tenta modo multi-linha (layout em cartões/tabela)
     if (jogosExtraidos.length === 0 && linhasTodasPaginas.length) {
@@ -399,37 +446,56 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
       }
     }
 
-    // Busca última rodada do campeonato alvo
-    const rodadasRes = await pool.query('SELECT id, nome FROM rodada WHERE campeonato_id = $1 ORDER BY id DESC LIMIT 1', [campeonatoId]);
-    let rodadaNum = rodadasRes.rows.length ? (parseInt(rodadasRes.rows[0].nome) || rodadasRes.rows[0].id) : 0;
-    let rodadaId = rodadasRes.rows.length ? rodadasRes.rows[0].id : null;
-    // Se houver rodada existente, verifica quantas partidas já tem (para preencher até 10)
-    let countNaRodadaAtual = 0;
-    if (rodadaId) {
-      const { rows } = await pool.query('SELECT COUNT(*)::int AS c FROM partida WHERE rodada_id = $1', [rodadaId]);
-      countNaRodadaAtual = rows[0]?.c || 0;
+    // Funções auxiliares para obter/criar rodada por número
+    async function getRodadaIdByNumero(numero) {
+      const nome = `${numero}ª Rodada`;
+      const r = await pool.query('SELECT id FROM rodada WHERE campeonato_id = $1 AND nome ILIKE $2 LIMIT 1', [campeonatoId, nome]);
+      if (r.rows.length) return r.rows[0].id;
+      const ins = await pool.query('INSERT INTO rodada (nome, campeonato_id) VALUES ($1, $2) RETURNING id', [nome, campeonatoId]);
+      return ins.rows[0].id;
     }
-    let rodadaAtual = rodadaId ? { id: rodadaId, count: countNaRodadaAtual } : null;
-    let criadas = 0, jogosCriados = 0, jogosIgnorados = 0;
-    for (const [idx, jogo] of jogos.entries()) {
-      // Cria nova rodada a cada 10 jogos
-      if (!rodadaAtual || rodadaAtual.count >= 10) {
-        rodadaNum++;
-        const nome = `${rodadaNum}ª Rodada`;
-        const rodadaRes = await pool.query('INSERT INTO rodada (nome, campeonato_id) VALUES ($1, $2) RETURNING id', [nome, campeonatoId]);
-        rodadaId = rodadaRes.rows[0].id;
-        rodadaAtual = { id: rodadaId, count: 0 };
-        criadas++;
+    async function getUltimaRodadaAtual() {
+      const rodadasRes = await pool.query('SELECT id, nome FROM rodada WHERE campeonato_id = $1 ORDER BY id DESC LIMIT 1', [campeonatoId]);
+      let rodadaNum = rodadasRes.rows.length ? (parseInt(rodadasRes.rows[0].nome) || rodadasRes.rows[0].id) : 0;
+      let rodadaId = rodadasRes.rows.length ? rodadasRes.rows[0].id : null;
+      let countNaRodadaAtual = 0;
+      if (rodadaId) {
+        const { rows } = await pool.query('SELECT COUNT(*)::int AS c FROM partida WHERE rodada_id = $1', [rodadaId]);
+        countNaRodadaAtual = rows[0]?.c || 0;
       }
-      rodadaAtual.count++;
-      // Verifica se partida já existe (mesmo times e data)
+      return { rodadaNum, rodadaId, countNaRodadaAtual };
+    }
+
+    let criadas = 0, jogosCriados = 0, jogosIgnorados = 0;
+    // Preparar estado para fallback de agrupamento por 10 (quando rodada não vier do PDF)
+    let fallbackState = await getUltimaRodadaAtual();
+    let rodadaAtual = fallbackState.rodadaId ? { id: fallbackState.rodadaId, count: fallbackState.countNaRodadaAtual, num: fallbackState.rodadaNum } : null;
+
+    for (const jogo of jogos) {
+      let alvoRodadaId;
+      // Se o parser identificou rodada explícita, usamos ela
+      if (typeof jogo.rodada === 'number' && !Number.isNaN(jogo.rodada)) {
+        alvoRodadaId = await getRodadaIdByNumero(jogo.rodada);
+      } else {
+        // Fallback: manter regra anterior de 10 jogos por rodada
+        if (!rodadaAtual || rodadaAtual.count >= 10) {
+          const proxNum = (rodadaAtual?.num || fallbackState.rodadaNum) + 1;
+          const nome = `${proxNum}ª Rodada`;
+          const rodadaRes = await pool.query('INSERT INTO rodada (nome, campeonato_id) VALUES ($1, $2) RETURNING id', [nome, campeonatoId]);
+          rodadaAtual = { id: rodadaRes.rows[0].id, count: 0, num: proxNum };
+          criadas++;
+        }
+        alvoRodadaId = rodadaAtual.id;
+        rodadaAtual.count++;
+      }
+
       const dataISO = normalizarDataHoraBR(jogo.data, jogo.hora);
       const existe = await pool.query('SELECT id FROM partida WHERE rodada_id = $1 AND time1 = $2 AND time2 = $3 AND data_partida = $4', [
-        rodadaId, jogo.time_casa, jogo.time_fora, dataISO
+        alvoRodadaId, jogo.time_casa, jogo.time_fora, dataISO
       ]);
       if (existe.rows.length) { jogosIgnorados++; continue; }
       await pool.query('INSERT INTO partida (rodada_id, time1, time2, data_partida) VALUES ($1, $2, $3, $4)', [
-        rodadaId, jogo.time_casa, jogo.time_fora, dataISO
+        alvoRodadaId, jogo.time_casa, jogo.time_fora, dataISO
       ]);
       jogosCriados++;
     }
@@ -473,47 +539,65 @@ router.post('/upload-jogos-texto', isAdmin, async (req, res) => {
         const t = String(h || '').trim();
         if (t) {
           const norm = t.replace('h', ':').replace('.', ':');
-          let mt = norm.match(/^(\d{2}):(\d{2})$/);
+          let mt = norm.match(/^(\d{1,2}):(\d{2})$/);
           if (mt) { hh = mt[1]; min = mt[2]; }
           else {
-            mt = norm.match(/^(\d{2})$/);
+            mt = norm.match(/^(\d{1,2})$/);
             if (mt) { hh = mt[1]; min = '00'; }
           }
         }
+        if (hh.length === 1) hh = '0' + hh;
         return `${yy}-${mm}-${dd} ${hh}:${min}`;
       } catch (e) {
         return null;
       }
     }
 
-    // Busca e prepara rodadas como no endpoint de PDF
-    const rodadasRes = await pool.query('SELECT id, nome FROM rodada WHERE campeonato_id = $1 ORDER BY id DESC LIMIT 1', [campeonatoId]);
-    let rodadaNum = rodadasRes.rows.length ? (parseInt(rodadasRes.rows[0].nome) || rodadasRes.rows[0].id) : 0;
-    let rodadaId = rodadasRes.rows.length ? rodadasRes.rows[0].id : null;
-    let countNaRodadaAtual = 0;
-    if (rodadaId) {
-      const { rows } = await pool.query('SELECT COUNT(*)::int AS c FROM partida WHERE rodada_id = $1', [rodadaId]);
-      countNaRodadaAtual = rows[0]?.c || 0;
+    // Preparar helpers iguais ao endpoint de PDF
+    async function getRodadaIdByNumero(numero) {
+      const nome = `${numero}ª Rodada`;
+      const r = await pool.query('SELECT id FROM rodada WHERE campeonato_id = $1 AND nome ILIKE $2 LIMIT 1', [campeonatoId, nome]);
+      if (r.rows.length) return r.rows[0].id;
+      const ins = await pool.query('INSERT INTO rodada (nome, campeonato_id) VALUES ($1, $2) RETURNING id', [nome, campeonatoId]);
+      return ins.rows[0].id;
     }
-    let rodadaAtual = rodadaId ? { id: rodadaId, count: countNaRodadaAtual } : null;
-    let criadas = 0, jogosCriados = 0, jogosIgnorados = 0;
-    for (const jogo of jogos) {
-      if (!rodadaAtual || rodadaAtual.count >= 10) {
-        rodadaNum++;
-        const nome = `${rodadaNum}ª Rodada`;
-        const rodadaRes = await pool.query('INSERT INTO rodada (nome, campeonato_id) VALUES ($1, $2) RETURNING id', [nome, campeonatoId]);
-        rodadaId = rodadaRes.rows[0].id;
-        rodadaAtual = { id: rodadaId, count: 0 };
-        criadas++;
+    async function getUltimaRodadaAtual() {
+      const rodadasRes = await pool.query('SELECT id, nome FROM rodada WHERE campeonato_id = $1 ORDER BY id DESC LIMIT 1', [campeonatoId]);
+      let rodadaNum = rodadasRes.rows.length ? (parseInt(rodadasRes.rows[0].nome) || rodadasRes.rows[0].id) : 0;
+      let rodadaId = rodadasRes.rows.length ? rodadasRes.rows[0].id : null;
+      let countNaRodadaAtual = 0;
+      if (rodadaId) {
+        const { rows } = await pool.query('SELECT COUNT(*)::int AS c FROM partida WHERE rodada_id = $1', [rodadaId]);
+        countNaRodadaAtual = rows[0]?.c || 0;
       }
-      rodadaAtual.count++;
+      return { rodadaNum, rodadaId, countNaRodadaAtual };
+    }
+
+    let criadas = 0, jogosCriados = 0, jogosIgnorados = 0;
+    let fallbackState = await getUltimaRodadaAtual();
+    let rodadaAtual = fallbackState.rodadaId ? { id: fallbackState.rodadaId, count: fallbackState.countNaRodadaAtual, num: fallbackState.rodadaNum } : null;
+    for (const jogo of jogos) {
+      let alvoRodadaId;
+      if (typeof jogo.rodada === 'number' && !Number.isNaN(jogo.rodada)) {
+        alvoRodadaId = await getRodadaIdByNumero(jogo.rodada);
+      } else {
+        if (!rodadaAtual || rodadaAtual.count >= 10) {
+          const proxNum = (rodadaAtual?.num || fallbackState.rodadaNum) + 1;
+          const nome = `${proxNum}ª Rodada`;
+          const rodadaRes = await pool.query('INSERT INTO rodada (nome, campeonato_id) VALUES ($1, $2) RETURNING id', [nome, campeonatoId]);
+          rodadaAtual = { id: rodadaRes.rows[0].id, count: 0, num: proxNum };
+          criadas++;
+        }
+        alvoRodadaId = rodadaAtual.id;
+        rodadaAtual.count++;
+      }
       const dataISO = normalizarDataHoraBR(jogo.data, jogo.hora);
       const existe = await pool.query('SELECT id FROM partida WHERE rodada_id = $1 AND time1 = $2 AND time2 = $3 AND data_partida = $4', [
-        rodadaId, jogo.time_casa, jogo.time_fora, dataISO
+        alvoRodadaId, jogo.time_casa, jogo.time_fora, dataISO
       ]);
       if (existe.rows.length) { jogosIgnorados++; continue; }
       await pool.query('INSERT INTO partida (rodada_id, time1, time2, data_partida) VALUES ($1, $2, $3, $4)', [
-        rodadaId, jogo.time_casa, jogo.time_fora, dataISO
+        alvoRodadaId, jogo.time_casa, jogo.time_fora, dataISO
       ]);
       jogosCriados++;
     }
