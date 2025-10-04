@@ -224,26 +224,19 @@ export default function ApostarRodada() {
   useEffect(() => { carregarRodadas(); }, [carregarRodadas]);
   // Atualiza flag de bloqueio global (preferindo backend /palpite/lock)
   useEffect(() => {
-    function computeLock() {
-      // fallback local
-      const now = new Date();
-      const day = now.getDay();
-      const hour = now.getHours();
-      const localLocked = (day === 6 && hour >= 14) || (day === 0);
-      setWeekendLocked(localLocked);
-    }
     async function pollServer() {
       try {
         const { data } = await api.get('/palpite/lock');
         setLockInfo(data || {});
+        // locked = pending finalização pelo admin (segunda)
         if (typeof data?.locked === 'boolean') setWeekendLocked(!!data.locked);
       } catch {
-        computeLock();
+        // Em caso de erro, não aplica bloqueio global
+        setWeekendLocked(false);
       }
     }
-    computeLock();
     pollServer();
-    const id = setInterval(() => { computeLock(); pollServer(); }, 60 * 1000);
+    const id = setInterval(() => { pollServer(); }, 60 * 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -485,11 +478,11 @@ export default function ApostarRodada() {
             </div>
           </div>
         )}
-        {weekendLocked && (
+        {lockInfo?.pending && (
           <div className="alert error">
             <div className="alert-content">
               <span className="alert-icon">🔒</span>
-              <span>{lockInfo.pending ? 'Apostas bloqueadas: aguardando finalização da rodada pelo admin.' : 'Apostas fechadas (Depois das 14h, não é permitido alterar o palpite).'}</span>
+              <span>Apostas bloqueadas: aguardando finalização da rodada pelo admin.</span>
             </div>
           </div>
         )}
@@ -510,7 +503,7 @@ export default function ApostarRodada() {
           </div>
         )}
 
-        {!loading && !weekendLocked && !rodadaAtual?.finalizada && faltandoJogos > 0 && (
+        {!loading && !rodadaAtual?.finalizada && faltandoJogos > 0 && (
           <div className="faltando-bets-alert">
             <span className="icon">⏳</span>
             Faltam <strong>{faltandoJogos}</strong> {faltandoJogos === 1 ? 'jogo' : 'jogos'} para você apostar.
@@ -521,7 +514,6 @@ export default function ApostarRodada() {
           {partidas.map((p, idx) => {
             const partidaLockStatus = partidasLockStatus[p.id] || {};
             const bloqueado = !!(
-              weekendLocked || 
               p.finalizada || 
               p.finalizado || 
               p.resultado || 
@@ -541,10 +533,10 @@ export default function ApostarRodada() {
                       </div>
                     )}
                   </div>
-                  {weekendLocked && (
+                  {lockInfo?.pending && (
                     <div className="status-badge finished">
                       <span className="badge-icon">🔒</span>
-                      {lockInfo?.pending ? 'Aguardando finalização da rodada (admin)' : 'Apostas fechadas (Encerrada as 14h Sábado.)'}
+                      Aguardando finalização da rodada (admin)
                     </div>
                   )}
                   {p._started && !p.resultado && (

@@ -33,9 +33,9 @@ router.get('/rodada-atual', async (req, res) => {
         FROM ranges
     ORDER BY CASE
                WHEN start_at IS NULL THEN 3
-               WHEN (now() AT TIME ZONE 'America/Sao_Paulo') BETWEEN start_at AND end_at THEN 0
-               WHEN (now() AT TIME ZONE 'America/Sao_Paulo') < start_at THEN 1
-               ELSE 2
+               WHEN (now() AT TIME ZONE 'America/Sao_Paulo') < start_at THEN 0  -- próxima (futura) primeiro
+               WHEN (now() AT TIME ZONE 'America/Sao_Paulo') BETWEEN start_at AND end_at THEN 1 -- em andamento
+               ELSE 2 -- passada
              END,
              start_at NULLS LAST,
              id ASC
