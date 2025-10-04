@@ -8,6 +8,7 @@ function Login() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
   const handleBack = () => {
@@ -21,8 +22,11 @@ function Login() {
   async function handleLogin(e) {
     e.preventDefault();
     setErro('');
+    if (loading) return;
+    setLoading(true);
     try {
-  const res = await api.post('/auth/login', { email, senha }, { withCredentials: true }); // ✅ garante cookie
+      console.log('[Login] submit clicked');
+      const res = await api.post('/auth/login', { email, senha }, { withCredentials: true }); // ✅ garante cookie
   const u = res.data?.usuario || {};
   const avatarUrlFromApi = u.avatarUrl || u.avatar_url || u.foto || u.fotoUrl || u.foto_url || u.imageUrl || null;
   // usa token retornado (se presente) como fallback Bearer quando cookie cross-site for bloqueado
@@ -39,6 +43,9 @@ function Login() {
       }
     } catch (err) {
       setErro(err.response?.data?.erro || 'Erro ao logar');
+      console.warn('[Login] falha no login:', err?.response?.status, err?.response?.data || err?.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -74,7 +81,18 @@ function Login() {
             />
           </div>
           {erro && <div className="error-message">{erro}</div>}
-          <button type="submit" className="auth-button">Entrar</button>
+          <button
+            type="submit"
+            className="auth-button"
+            onClick={(e) => {
+              // Safety net: garante que o handler dispare mesmo se o submit default for prevenido por algo externo
+              if (e && typeof e.preventDefault === 'function') e.preventDefault();
+              handleLogin(e);
+            }}
+            disabled={loading}
+          >
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
         </form>
         <div className="auth-footer">
           <p>Não tem conta? <Link to="/register">Cadastre-se</Link></p>
