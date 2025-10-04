@@ -951,3 +951,26 @@ function notifyBlockedIP(ip, email, nome_usuario) {
 
 export { notifyBlockedIP };
 export default router;
+
+// Utilitário de limpeza: remover rodadas por faixa de números de um campeonato
+// Ex.: POST /admin/limpar-rodadas { campeonatoId: 3, de: 27, ate: 38 }
+router.post('/limpar-rodadas', isAdmin, async (req, res) => {
+  try {
+    const campeonatoId = Number(req.body?.campeonatoId || req.body?.campeonato_id);
+    const de = Number(req.body?.de);
+    const ate = Number(req.body?.ate || req.body?.até || req.body?.ateNumero);
+    if (!campeonatoId || Number.isNaN(campeonatoId)) return res.status(400).json({ erro: 'campeonatoId inválido' });
+    if (!de || !ate || de > ate) return res.status(400).json({ erro: 'Informe faixa válida: de/ate' });
+    const nomes = [];
+    for (let n = de; n <= ate; n++) nomes.push(`${n}ª Rodada`);
+    const { rows } = await pool.query('SELECT id, nome FROM rodada WHERE campeonato_id = $1 AND nome = ANY($2::text[])', [campeonatoId, nomes]);
+    if (!rows.length) return res.json({ ok: true, removidas: 0 });
+    const ids = rows.map(r => r.id);
+    await pool.query('DELETE FROM partida WHERE rodada_id = ANY($1::int[])', [ids]);
+    await pool.query('DELETE FROM rodada WHERE id = ANY($1::int[])', [ids]);
+    return res.json({ ok: true, removidas: rows.length });
+  } catch (e) {
+    console.error('Erro /admin/limpar-rodadas:', e);
+    return res.status(500).json({ erro: 'Falha ao limpar rodadas' });
+  }
+});
