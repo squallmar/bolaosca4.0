@@ -550,7 +550,6 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
       const existe = await pool.query('SELECT id FROM partida WHERE rodada_id = $1 AND time1 = $2 AND time2 = $3 AND data_partida = $4', [
         alvoRodadaId, jogo.time_casa, jogo.time_fora, dataISO
       ]);
-      if (existe.rows.length) { jogosIgnorados++; continue; }
       // Deriva resultado do placar quando disponível
       let resultado = null;
       if (jogo.placar) {
@@ -561,22 +560,78 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
           resultado = g1 === g2 ? 'EMPATE' : (g1 > g2 ? 'TIME1' : 'TIME2');
         }
       }
-      await pool.query(
-        'INSERT INTO partida (rodada_id, time1, time2, data_partida, local, transmissao, placar, resultado) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-        [
-          alvoRodadaId,
-          jogo.time_casa,
-          jogo.time_fora,
-          dataISO,
-          jogo.local || null,
-          jogo.transmissao || null,
-          jogo.placar || null,
-          resultado
-        ]
-      );
-      jogosCriados++;
+      if (existe.rows.length) {
+        const pid = existe.rows[0].id;
+        // Atualiza campos com COALESCE mantendo os já existentes quando input vier vazio
+        await pool.query(
+          `UPDATE partida SET 
+             local = COALESCE($1, local),
+             transmissao = COALESCE($2, transmissao),
+             placar = COALESCE($3, placar),
+             resultado = COALESCE($4, resultado),
+             finalizada = CASE WHEN COALESCE($4, resultado) IS NOT NULL THEN true ELSE finalizada END
+           WHERE id = $5`,
+          [jogo.local || null, jogo.transmissao || null, jogo.placar || null, resultado, pid]
+        );
+        // Pontua palpites se passamos a ter resultado
+        const resApply = resultado || (await pool.query('SELECT resultado FROM partida WHERE id = $1', [pid])).rows[0]?.resultado;
+        if (resApply) {
+          await pool.query(
+            `UPDATE palpite p
+             SET pontos = CASE
+               WHEN $2 = 'EMPATE' AND LOWER(p.palpite) = 'empate' THEN 1
+               WHEN $2 = 'TIME1'  AND LOWER(p.palpite) = 'time1'  THEN 1
+               WHEN $2 = 'TIME2'  AND LOWER(p.palpite) = 'time2'  THEN 1
+               ELSE 0 END
+             WHERE p.partida_id = $1`,
+            [pid, resApply]
+          );
+        }
+        jogosAtualizados++;
+      } else {
+        const ins = await pool.query(
+          'INSERT INTO partida (rodada_id, time1, time2, data_partida, local, transmissao, placar, resultado, finalizada) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
+          [
+            alvoRodadaId,
+            jogo.time_casa,
+            jogo.time_fora,
+            dataISO,
+            jogo.local || null,
+            jogo.transmissao || null,
+            jogo.placar || null,
+            resultado,
+            resultado ? true : false
+          ]
+        );
+        const pid = ins.rows[0].id;
+        if (resultado) {
+          await pool.query(
+            `UPDATE palpite p
+             SET pontos = CASE
+               WHEN $2 = 'EMPATE' AND LOWER(p.palpite) = 'empate' THEN 1
+               WHEN $2 = 'TIME1'  AND LOWER(p.palpite) = 'time1'  THEN 1
+               WHEN $2 = 'TIME2'  AND LOWER(p.palpite) = 'time2'  THEN 1
+               ELSE 0 END
+             WHERE p.partida_id = $1`,
+            [pid, resultado]
+          );
+        }
+        jogosCriados++;
+      }
+      rodadasAfetadas.add(alvoRodadaId);
     }
-    return res.json({ ok: true, campeonato_id: campeonatoId, rodadas_criadas: criadas, jogos_criados: jogosCriados, jogos_ignorados: jogosIgnorados });
+    // Finaliza automaticamente rodadas completas com todos os resultados
+    for (const rid of rodadasAfetadas) {
+      await pool.query(
+        `UPDATE rodada SET finalizada = true
+           WHERE id = $1
+             AND EXISTS (SELECT 1 FROM partida WHERE rodada_id = $1)
+             AND (SELECT COUNT(*) FROM partida WHERE rodada_id = $1 AND resultado IS NOT NULL)
+                 = (SELECT COUNT(*) FROM partida WHERE rodada_id = $1)`,
+        [rid]
+      );
+    }
+    return res.json({ ok: true, campeonato_id: campeonatoId, rodadas_criadas: criadas, jogos_criados: jogosCriados, jogos_atualizados: jogosAtualizados, jogos_ignorados: jogosIgnorados });
   } catch (err) {
     console.error('Erro upload-jogos-pdf:', err);
     return res.status(500).json({ erro: 'Falha ao processar PDF.' });
