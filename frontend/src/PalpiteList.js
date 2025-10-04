@@ -151,12 +151,21 @@ export default function ApostarRodada() {
       // Ordena por id ASC para previsibilidade
       const ordenadas = [...lista].sort((a,b) => Number(a.id) - Number(b.id));
       setRodadas(ordenadas);
-      // Seleciona a rodada aberta (não finalizada) de MAIOR id
+      // Preferir rodada-atual do backend (timezone São Paulo)
+      try {
+        const r = await api.get('/bolao/rodada-atual');
+        const atualSrv = r?.data?.id ? String(r.data.id) : '';
+        if (atualSrv) {
+          setRodadaAtualId(atualSrv);
+          if (!rodadaId) setRodadaId(atualSrv);
+          return;
+        }
+      } catch {}
+      // Fallback: rodada aberta (não finalizada) de MAIOR id, senão a maior id
       const abertas = ordenadas.filter(r => !r.finalizada && !r.finalizado);
       const naoFinal = abertas.length
         ? abertas.reduce((acc, cur) => (Number(cur.id) > Number(acc.id) ? cur : acc), abertas[0])
         : null;
-      // Se todas finalizadas, usa a de maior id como referência atual
       const maior = ordenadas.length
         ? ordenadas.reduce((acc, cur) => (Number(cur.id) > Number(acc.id) ? cur : acc), ordenadas[0])
         : null;

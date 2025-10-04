@@ -15,6 +15,39 @@ router.get('/campeonatos-todos', async (req, res) => {
   }
 });
 
+// Rodada atual baseada em datas das partidas (horário de São Paulo)
+router.get('/rodada-atual', async (req, res) => {
+  try {
+    const sql = `
+      WITH ranges AS (
+        SELECT r.id,
+               r.nome,
+               MIN(p.data_partida) AS start_at,
+               MAX(p.data_partida) AS end_at,
+               COUNT(p.id) AS total
+          FROM rodada r
+          LEFT JOIN partida p ON p.rodada_id = r.id
+         GROUP BY r.id
+      )
+      SELECT id, nome
+        FROM ranges
+    ORDER BY CASE
+               WHEN start_at IS NULL THEN 3
+               WHEN (now() AT TIME ZONE 'America/Sao_Paulo') BETWEEN start_at AND end_at THEN 0
+               WHEN (now() AT TIME ZONE 'America/Sao_Paulo') < start_at THEN 1
+               ELSE 2
+             END,
+             start_at NULLS LAST,
+             id ASC
+       LIMIT 1`;
+    const { rows } = await pool.query(sql);
+    if (!rows.length) return res.json({ id: null, nome: null });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao calcular rodada atual', detalhes: err.message });
+  }
+});
+
 // Excluir partida (apenas admin)
 router.delete('/partida/:id', exigirAutenticacao, exigirRole('admin'), async (req, res) => {
   const { id } = req.params;
