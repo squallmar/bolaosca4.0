@@ -152,11 +152,12 @@
 /* Inputs com ícones dentro */
 .input-with-icon {
   position: relative;
+  width: 100%;
 }
 
 .input-with-icon .auth-input {
-  padding-left: 42px;  /* espaço para ícone à esquerda */
-  padding-right: 42px; /* espaço para olho à direita */
+  padding-left: 42px;   /* espaço p/ ícone esquerdo */
+  padding-right: 42px;  /* espaço p/ olho direito */
 }
 
 .input-with-icon .icon-left {
@@ -169,19 +170,16 @@
   align-items: center;
 }
 
-.input-with-icon .icon-left svg {
-  width: 18px;
-  height: 18px;
-}
-
 .input-with-icon .icon-right-btn {
   position: absolute;
-  right: 10px;
+  right: 12px;           /* dentro do input */
   top: 50%;
   transform: translateY(-50%);
+  height: 32px;          /* clique confortável */
+  width: 32px;
   border: 0;
   background: transparent;
-  padding: 4px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;

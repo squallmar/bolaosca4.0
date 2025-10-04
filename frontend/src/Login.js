@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
+import './Auth.css';
 import { useNavigate, Link } from 'react-router-dom';
 import api from './services/api';
 import { useAuth } from './authContext';
-import './Auth.css';
 
 function IconMail(props) {
   return (
@@ -93,32 +93,34 @@ function Login() {
           <span style={{ width: 74 }} />
         </div>
         <form onSubmit={handleLogin} className="auth-form">
+          {/* E-mail */}
           <div className="form-group">
             <div className="input-with-icon">
               <span className="icon-left"><IconMail /></span>
               <input
                 type="email"
+                className="auth-input"
                 placeholder="Email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="auth-input"
+                onChange={(e) => setEmail(e.target.value)}
                 autoComplete="username"
+                required
               />
             </div>
           </div>
 
+          {/* Senha com olho DENTRO do input */}
           <div className="form-group">
             <div className="input-with-icon">
               <span className="icon-left"><IconLock /></span>
               <input
                 type={showPwd ? 'text' : 'password'}
+                className="auth-input"
                 placeholder="Senha"
                 value={senha}
-                onChange={e => setSenha(e.target.value)}
-                required
-                className="auth-input"
+                onChange={(e) => setSenha(e.target.value)}
                 autoComplete="current-password"
+                required
               />
               <button
                 type="button"
@@ -133,15 +135,8 @@ function Login() {
           </div>
 
           {erro && <div className="error-message">{erro}</div>}
-          <button
-            type="submit"
-            className="auth-button"
-            onClick={(e) => {
-              if (e && typeof e.preventDefault === 'function') e.preventDefault();
-              handleLogin(e);
-            }}
-            disabled={loading}
-          >
+
+          <button type="submit" className="auth-button" disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
