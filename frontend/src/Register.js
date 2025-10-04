@@ -149,7 +149,9 @@ const Register = () => {
               className={errors.senha ? 'error' : ''}
               placeholder="Crie uma senha"
               autoComplete="new-password"
+              maxLength={8}
             />
+            <small style={{display:'block', marginTop:4, color:'#666'}}>Use de 4 a 8 caracteres. Especiais são permitidos. ({formData.senha.length}/8)</small>
             {errors.senha && <span className="error-text">{errors.senha}</span>}
           </div>
           <div className="form-group">
@@ -163,7 +165,9 @@ const Register = () => {
               className={errors.confirmarSenha ? 'error' : ''}
               placeholder="Confirme sua senha"
               autoComplete="new-password"
+              maxLength={8}
             />
+            <small style={{display:'block', marginTop:4, color:'#666'}}>Repita a senha (4 a 8 caracteres). ({formData.confirmarSenha.length}/8)</small>
             {errors.confirmarSenha && <span className="error-text">{errors.confirmarSenha}</span>}
           </div>
           <div className="form-group">

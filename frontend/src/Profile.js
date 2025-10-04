@@ -253,11 +253,13 @@ export default function Profile() {
           <form className="profile-password" onSubmit={onChangePassword}>
             <div className="field">
               <label>Senha atual</label>
-              <input type="password" value={senhaAtual} onChange={(e)=>setSenhaAtual(e.target.value)} />
+              <input type="password" value={senhaAtual} onChange={(e)=>setSenhaAtual(e.target.value)} maxLength={32} />
+              <div className="helper">Digite sua senha atual.</div>
             </div>
             <div className="field">
               <label>Nova senha</label>
-              <input type="password" value={novaSenha} onChange={(e)=>setNovaSenha(e.target.value)} />
+              <input type="password" value={novaSenha} onChange={(e)=>setNovaSenha(e.target.value)} maxLength={8} />
+              <div className="helper">Use de 4 a 8 caracteres. ({novaSenha.length}/8)</div>
             </div>
             <button type="submit" className="btn" disabled={loading}>Alterar senha</button>
           </form>
