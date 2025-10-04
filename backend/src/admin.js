@@ -41,6 +41,7 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
   const bin = fs.readFileSync(caminhoPDF);
   const data = new Uint8Array(bin);
   const jogosExtraidos = [];
+  const linhasTodasPaginas = [];
 
   // Primeira tentativa: pdfjs (melhor preservação de linhas)
   try {
@@ -73,6 +74,8 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
         ultimaY = y;
       });
       if (linhaAtual.trim()) linhas.push(linhaAtual.trim());
+      // Guarda linhas agregadas para tentativa multi-linha posterior
+      linhas.forEach(l => linhasTodasPaginas.push(l));
 
       const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
       const time = '(?:\\d{2}[:h\\.]\\d{2}|\\d{2}h?)';
@@ -145,6 +148,52 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
           }
         }
       });
+    }
+    // Se nada encontrado até agora, tenta modo multi-linha (layout em cartões/tabela)
+    if (jogosExtraidos.length === 0 && linhasTodasPaginas.length) {
+      if (debug) console.warn('[PDF] Tentando parser multi-linha baseado em Data:/às ...');
+      const metaRe = /^(Ref:|Rodada:|Local:|Transmiss[oã]o:|Transmissao:|Est[aá]dio:|Estadio:)/i;
+      const soPlacarRe = /^\s*\d+\s*[xX\-]\s*\d+\s*$/;
+      function isMeta(s){ return metaRe.test(s); }
+      function cleanTeam(s){ return String(s||'').replace(/\s+-\s+.*$/, '').trim(); }
+      for (let idx = 0; idx < linhasTodasPaginas.length; idx++) {
+        const raw = linhasTodasPaginas[idx] || '';
+        const l = raw.replace(/\s+/g,' ').trim();
+        // Ex.: "Data: 01/10/2025 - quarta-feira às 19h00"
+        const m = l.match(/Data:\s*(\d{2}\/\d{2}(?:\/(?:\d{2}|\d{4}))?).*?(?:às|as)\s+(\d{1,2}(?::|\.|h)?\d{2}|\d{2}h?)/i);
+        if (!m) continue;
+        const dataJogo = m[1];
+        let horaJogo = m[2] || '';
+        // Procura times nas linhas anteriores próximas
+        const candidatos = [];
+        for (let k = idx - 1; k >= 0 && k >= idx - 8; k--) {
+          const s = (linhasTodasPaginas[k] || '').trim();
+          if (!s) continue;
+          if (isMeta(s)) continue;
+          if (soPlacarRe.test(s)) continue; // ignora linha só com placar
+          // evita reaproveitar outra Data ou cabeçalho
+          if (/^Data:/i.test(s)) continue;
+          candidatos.push(s);
+          if (candidatos.length >= 4) break; // coletar no máx. 4 para heurística
+        }
+        if (candidatos.length < 2) continue;
+        // Heurística: as duas mais próximas da linha de Data tendem a ser os times
+        // Por padrão, usamos ordem: casa = candidatos[1], fora = candidatos[0]
+        let casa = candidatos[1] || candidatos[candidatos.length-1];
+        let fora = candidatos[0];
+        casa = cleanTeam(casa);
+        fora = cleanTeam(fora);
+        if (!casa || !fora) continue;
+        // Normaliza hora
+        if (/^\d{1,2}h\d{2}$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':');
+        if (/^\d{1,2}h$/i.test(horaJogo)) horaJogo = horaJogo.replace('h', ':00');
+        if (/^\d{1,2}\.\d{2}$/.test(horaJogo)) horaJogo = horaJogo.replace('.', ':');
+        if (/^\d{1,2}$/.test(horaJogo)) horaJogo = horaJogo.padStart(2,'0') + ':00';
+        jogosExtraidos.push({ time_casa: casa, time_fora: fora, data: String(dataJogo).trim(), hora: String(horaJogo).trim() });
+      }
+      if (debug && jogosExtraidos.length === 0) {
+        console.warn('[PDF] Parser multi-linha também não encontrou jogos. Amostra:', linhasTodasPaginas.slice(0,30));
+      }
     }
   } catch (e) {
     if (debug) console.warn('pdfjs falhou, tentando pdf-parse', e.message);
