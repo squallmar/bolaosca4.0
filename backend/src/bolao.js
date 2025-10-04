@@ -93,6 +93,65 @@ router.get('/rodada-atual', async (req, res) => {
   }
 });
 
+// Jogos atuais (janela em horas, horário de São Paulo)
+router.get('/jogos-atuais', async (req, res) => {
+  try {
+    const janelaHoras = req.query?.janelaHoras ? Number(req.query.janelaHoras) : 48;
+    const campeonatoId = req.query?.campeonatoId ? Number(req.query.campeonatoId) : null;
+    const j = (!Number.isFinite(janelaHoras) || janelaHoras <= 0 || janelaHoras > 336) ? 48 : Math.floor(janelaHoras);
+    // Constrói janela em America/Sao_Paulo usando AT TIME ZONE para evitar drift
+    const params = [];
+    let where = 'WHERE 1=1';
+    if (campeonatoId) {
+      where += ' AND r.campeonato_id = $1';
+      params.push(campeonatoId);
+    }
+    const sql = `
+      WITH base AS (
+        SELECT 
+          p.id, p.rodada_id, p.time1, p.time2, p.resultado,
+          p.data_partida,
+          p.local, p.transmissao, p.placar,
+          COALESCE(p.finalizada,false) AS finalizada,
+          r.campeonato_id,
+          t1.escudo_url AS time1_escudo,
+          t2.escudo_url AS time2_escudo
+        FROM partida p
+        JOIN rodada r ON r.id = p.rodada_id
+        LEFT JOIN time t1 ON t1.nome = p.time1
+        LEFT JOIN time t2 ON t2.nome = p.time2
+        ${where}
+      )
+      SELECT * FROM base
+      WHERE data_partida IS NOT NULL
+        AND (data_partida AT TIME ZONE 'America/Sao_Paulo') >= (NOW() AT TIME ZONE 'America/Sao_Paulo')
+        AND (data_partida AT TIME ZONE 'America/Sao_Paulo') <= ((NOW() AT TIME ZONE 'America/Sao_Paulo') + INTERVAL '${j} hours')
+      ORDER BY data_partida ASC, id ASC`;
+    const { rows } = await pool.query(sql, params);
+
+    // Fallback de escudo por slug quando faltar
+    const precisa = rows.some(r => !r.time1_escudo || !r.time2_escudo);
+    if (precisa) {
+      const times = await safeQuery(pool, `SELECT nome, escudo_url FROM time WHERE COALESCE(ativo,true)=true`, []);
+      const map = new Map(times.map(t => [slugifyLocal(t.nome), t.escudo_url]));
+      for (const r of rows) {
+        if (!r.time1_escudo && r.time1) r.time1_escudo = map.get(slugifyLocal(r.time1)) || r.time1_escudo || null;
+        if (!r.time2_escudo && r.time2) r.time2_escudo = map.get(slugifyLocal(r.time2)) || r.time2_escudo || null;
+      }
+    }
+
+    const enriched = rows.map(r => ({
+      ...r,
+      data_jogo: r.data_partida, // alias para compatibilidade
+      escudo1: r.time1_escudo || null,
+      escudo2: r.time2_escudo || null
+    }));
+    res.json({ janelaHoras: j, items: enriched });
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao buscar jogos atuais', detalhes: err.message });
+  }
+});
+
 // Excluir partida (apenas admin)
 router.delete('/partida/:id', exigirAutenticacao, exigirRole('admin'), async (req, res) => {
   const { id } = req.params;
