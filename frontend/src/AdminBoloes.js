@@ -3,6 +3,7 @@ import api from './services/api';
 import { useNavigate } from 'react-router-dom';
 import AdminSubMenu from './AdminSubMenu';
 import { API_BASE, API_BASE as IMG_BASE } from './config';
+import { formatBR, toInputValue, fromInputValue } from './utils/formatBR';
 
 // Função para baixar relatório PDF do campeonato
 async function baixarRelatorioCampeonato(campeonatoId, nome) {
@@ -25,31 +26,7 @@ async function baixarRelatorioCampeonato(campeonatoId, nome) {
   }
 }
 
-// Função para formatar a data para o input datetime-local (formato brasileiro)
-function formatDateForInput(dateString) {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  
-  // Ajusta para o timezone de Brasília
-  const timezoneOffset = date.getTimezoneOffset() * 60000;
-  const localDate = new Date(date.getTime() - timezoneOffset);
-  
-  return localDate.toISOString().slice(0, 16);
-}
-
-// Função para formatar a data para exibição amigável
-function formatDateForDisplay(dateString) {
-  if (!dateString) return 'Data não definida';
-  const date = new Date(dateString);
-  return date.toLocaleString('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
+// Substituídas por utils sem fuso: formatBR/toInputValue/fromInputValue
 
 // Função para criar um input personalizado para data/hora
 function promptDateTime(mensagem, valorPadrao = '') {
@@ -234,8 +211,8 @@ async function getPartidasPorRodada(rodadaId, timesMap = {}) {
       time2,
       escudo1,
       escudo2,
-      // NOVO: Inclui data_jogo se disponível
-      data_jogo: p.data_jogo || p.dataJogo || null,
+  // Unifica o campo de data vinda da API
+  data_jogo: p.data_jogo || p.dataJogo || p.data_partida || p.dataPartida || null,
     };
   });
 }
@@ -591,7 +568,7 @@ export default function AdminBoloes() {
                                                   onClick={async () => {
                                                     const novaData = await promptDateTime(
                                                       'Nova data e hora do jogo:', 
-                                                      p.data_jogo ? formatDateForInput(p.data_jogo) : ''
+                                                      p.data_jogo ? toInputValue(p.data_jogo) : ''
                                                     );
                                                     
                                                     if (novaData === null) return; // Usuário cancelou
@@ -600,7 +577,7 @@ export default function AdminBoloes() {
                                                       p.id,
                                                       prompt('Novo time 1:', p.time1) || p.time1,
                                                       prompt('Novo time 2:', p.time2) || p.time2,
-                                                      novaData || '' // Se o usuário apagar a data, envia string vazia
+                                                      novaData ? fromInputValue(novaData) : '' // Se o usuário apagar a data, envia string vazia
                                                     );
                                                   }}
                                                   className="btn btn-primary btn-sm"
@@ -619,7 +596,7 @@ export default function AdminBoloes() {
                                           {p.data_jogo && (
                                             <div className="partida-info">
                                               <small>
-                                                <strong>Data do jogo:</strong> {formatDateForDisplay(p.data_jogo)}
+                                                <strong>Data do jogo:</strong> {formatBR(p.data_jogo)}
                                               </small>
                                             </div>
                                           )}

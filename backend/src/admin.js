@@ -77,22 +77,17 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
       // Guarda linhas agregadas para tentativa multi-linha posterior
   linhas.forEach(l => linhasTodasPaginas.push(l));
 
-      const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
-      const time = '(?:\\d{2}[:h\\.]\\d{2}|\\d{2}h?)';
+      // Padrões: prioriza ano com 4 dígitos
+      const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{4}|\\d{2}))?)';
+      const time = '(?:\\d{2}[:hH\\.]\\d{2}|\\d{1,2}h?)';
       const sep = '(?:x|X|vs\\.?)';
       const placar = '(?:\\d+\\s*[xX]\\s*\\d+|\\-\\s*[xX]\\s*\\-|-)';
       const patterns = [
-        // Linhas com placar entre os times: data hora CASA 2 x 1 FORA
         new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+${placar}\\s+(.+)$`, 'i'),
-        // Ordem invertida com placar e data/hora no fim
         new RegExp(`^(.+?)\\s+${placar}\\s+(.+?)\\s+(${date})\\s+(${time})$`, 'i'),
-        // Hora no início, depois times com placar, e data no fim
         new RegExp(`^(${time})\\s+(.+?)\\s+${placar}\\s+(.+?)\\s+(${date})$`, 'i'),
-        // Formatos antigos sem placar explícito
         new RegExp(`^(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
-        new RegExp(`^(${date})\\s*-\\s*(${time})\\s*-\\s*(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
-        new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s*-\\s*(${time})\\s*-\\s*(${date})$`, 'i'),
-        new RegExp(`^[A-Za-zçÇéÉáÁíÍõÕúÚâÂêÊôÔ]{2,}\\s+(${date})\\s+(${time})\\s+(.+?)\\s+(${sep})\\s+(.+)$`, 'i'),
+        new RegExp(`^(.+?)\\s+(${sep})\\s+(.+?)\\s+(${date})\\s+(${time})$`, 'i'),
         new RegExp(`^(${time})\\s+(.+?)\\s+(${sep})\\s+(.+?)\\s+(${date})$`, 'i'),
       ];
       linhas.forEach(linha => {
@@ -150,7 +145,7 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
         }
       });
     }
-    // Nova passagem: parser orientado a rodadas, varrendo sequencialmente as linhas
+    // Parser orientado a rodadas
     if (linhasTodasPaginas.length) {
       let rodadaAtualNum = null;
       const metaRe = /^(Ref:|Local:|Transmiss[oã]o:|Transmissao:|Est[aá]dio:|Estadio:)/i;
@@ -160,9 +155,13 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
       for (let idx = 0; idx < linhasTodasPaginas.length; idx++) {
         const raw = linhasTodasPaginas[idx] || '';
         const l = raw.replace(/\s+/g,' ').trim();
-        const rMatch = l.match(/Rodada:\s*(\d{1,3})/i);
-        if (rMatch) { rodadaAtualNum = parseInt(rMatch[1], 10); continue; }
-        const m = l.match(/Data:\s*(\d{2}\/\d{2}(?:\/(?:\d{2}|\d{4}))?).*?(?:às|as)\s+(\d{1,2}(?::|\.|h)?\d{2}|\d{1,2}h?)/i);
+
+        // => usa helper (pega "Rodada: 27", "27ª Rodada" e "Rodada 27")
+        const rn = parseRodadaNumero(l);
+        if (rn) { rodadaAtualNum = rn; continue; }
+
+        // Data: dd/mm(/yyyy) ... às hh[h][mm] (prioriza yyyy)
+        const m = l.match(/Data:\s*(\d{2}\/\d{2}(?:\/(?:\d{4}|\d{2}))?).*?(?:às|as)\s+(\d{1,2}(?::|\.|[hH])?\d{2}|\d{1,2}[hH]?)/i);
         if (!m) continue;
         const dataJogo = m[1];
         let horaJogo = m[2] || '';
@@ -207,7 +206,7 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
         const raw = linhasTodasPaginas[idx] || '';
         const l = raw.replace(/\s+/g,' ').trim();
         // Ex.: "Data: 01/10/2025 - quarta-feira às 19h00"
-        const m = l.match(/Data:\s*(\d{2}\/\d{2}(?:\/(?:\d{2}|\d{4}))?).*?(?:às|as)\s+(\d{1,2}(?::|\.|h)?\d{2}|\d{2}h?)/i);
+        const m = l.match(/Data:\s*(\d{2}\/\d{2}(?:\/(?:\d{4}|\d{2}))?).*?(?:às|as)\s+(\d{1,2}(?::|\.|[hH])?\d{2}|\d{2}h?)/i);
         if (!m) continue;
         const dataJogo = m[1];
         let horaJogo = m[2] || '';
@@ -251,8 +250,8 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
     const parsed = await pdfParseFn(Buffer.from(bin));
     const texto = parsed.text || '';
     const linhas = texto.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-    const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
-    const time = '(?:\\d{2}[:h\\.]\\d{2}|\\d{2}h?)';
+    const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{4}|\\d{2}))?)'; // 4 dígitos primeiro
+    const time = '(?:\\d{2}[:hH\\.]\\d{2}|\\d{1,2}h?)';
     const sep = '(?:x|X|vs\\.?)';
     const placar = '(?:\\d+\\s*[xX]\\s*\\d+|\\-\\s*[xX]\\s*\\-|-)';
     const patterns = [
@@ -275,7 +274,7 @@ async function extrairJogosDoPDF(caminhoPDF, opts = {}) {
           let dataJogo, horaJogo, casa, fora;
           if (re === patterns[0]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[4]; }
           else if (re === patterns[1]) { casa = m[1]; fora = m[2]; dataJogo = m[3]; horaJogo = m[4]; }
-          else if (re === patterns[2]) { horaJogo = m[1]; casa = m[2]; fora = m[3]; dataJogo = m[4]; }
+          else if (re === patterns[2) { horaJogo = m[1]; casa = m[2]; fora = m[3]; dataJogo = m[4]; }
           else if (re === patterns[3]) { dataJogo = m[1]; horaJogo = m[2]; casa = m[3]; fora = m[5]; }
           else if (re === patterns[4]) { casa = m[1]; fora = m[3]; dataJogo = m[4]; horaJogo = m[5]; }
           else if (re === patterns[5]) { horaJogo = m[1]; casa = m[2]; fora = m[4]; dataJogo = m[5]; }
@@ -303,8 +302,8 @@ function extrairJogosDoTexto(texto) {
   const jogos = [];
   if (!texto || typeof texto !== 'string') return jogos;
   const linhas = texto.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-  const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{2}|\\d{4}))?)';
-  const time = '(?:\\d{2}[:h\\.]\\d{2}|\\d{2}h?)';
+  const date = '(?:\\d{2}\\/\\d{2}(?:\\/(?:\\d{4}|\\d{2}))?)';
+  const time = '(?:\\d{2}[:hH\\.]\\d{2}|\\d{1,2}h?)';
   const sep = '(?:x|X|vs\\.?)';
   const placar = '(?:\\d+\\s*[xX]\\s*\\d+|\\-\\s*[xX]\\s*\\-|-)';
   const patterns = [
@@ -433,14 +432,15 @@ router.post('/upload-jogos-pdf', isAdmin, upload.single('pdf'), async (req, res)
         let hh = '00', min = '00';
         const t = String(h || '').trim();
         if (t) {
-          const norm = t.replace('h', ':').replace('.', ':');
-          let mt = norm.match(/^(\d{2}):(\d{2})$/);
+          const norm = t.replace(/h/i, ':').replace('.', ':');
+          let mt = norm.match(/^(\d{1,2}):(\d{2})$/);
           if (mt) { hh = mt[1]; min = mt[2]; }
           else {
-            mt = norm.match(/^(\d{2})$/);
+            mt = norm.match(/^(\d{1,2})$/);
             if (mt) { hh = mt[1]; min = '00'; }
           }
         }
+        hh = hh.padStart(2,'0'); dd = dd.padStart(2,'0'); mm = mm.padStart(2,'0');
         return `${yy}-${mm}-${dd} ${hh}:${min}`; // YYYY-MM-DD HH:mm
       } catch (e) {
         return null;
@@ -540,7 +540,7 @@ router.post('/upload-jogos-texto', isAdmin, async (req, res) => {
         let hh = '00', min = '00';
         const t = String(h || '').trim();
         if (t) {
-          const norm = t.replace('h', ':').replace('.', ':');
+          const norm = t.replace(/h/i, ':').replace('.', ':');
           let mt = norm.match(/^(\d{1,2}):(\d{2})$/);
           if (mt) { hh = mt[1]; min = mt[2]; }
           else {
@@ -548,7 +548,7 @@ router.post('/upload-jogos-texto', isAdmin, async (req, res) => {
             if (mt) { hh = mt[1]; min = '00'; }
           }
         }
-        if (hh.length === 1) hh = '0' + hh;
+        hh = hh.padStart(2,'0'); dd = dd.padStart(2,'0'); mm = mm.padStart(2,'0');
         return `${yy}-${mm}-${dd} ${hh}:${min}`;
       } catch (e) {
         return null;
@@ -1025,3 +1025,16 @@ router.post('/reset-campeonato', isAdmin, async (req, res) => {
     return res.status(500).json({ erro: 'Falha ao resetar campeonato' });
   }
 });
+
+// Helper para detectar número da rodada em várias formas
+function parseRodadaNumero(line) {
+  const rx = [
+    /rodada[:\s]+(\d{1,2})\b/i,      // "Rodada: 27" | "Rodada 27"
+    /\b(\d{1,2})\s*ª?\s*rodada\b/i   // "27ª Rodada"
+  ];
+  for (const r of rx) {
+    const m = String(line || '').match(r);
+    if (m) return parseInt(m[1], 10);
+  }
+  return null;
+}
