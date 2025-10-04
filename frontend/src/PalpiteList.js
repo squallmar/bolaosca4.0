@@ -1268,12 +1268,12 @@ export default function ApostarRodada() {
         
         .team-name {
           font-weight: 700;
-          font-size: 15px;
+          font-size: 12px;
           text-align: center;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          max-width: 110px;
+          max-width: 100px;
           margin: 0 auto;
         }
         
