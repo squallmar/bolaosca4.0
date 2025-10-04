@@ -92,8 +92,11 @@ export default function ApostarRodada() {
   const shortName = useCallback((nome) => {
     if (!nome) return '';
     let n = String(nome).trim();
-    // Remove sufixos comuns
-    n = n.replace(/\bSAF\b/gi, '').replace(/\s{2,}/g, ' ').trim();
+    // Remove sufixos comuns de clubes (SAF, EC, FC, FR, CR, SC)
+    n = n
+      .replace(/\b(SAF|EC|FC|FR|CR|SC)\b/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
     // Mapeia alguns nomes longos para versões curtas
     const map = new Map([
       ['ATLÉTICO MINEIRO', 'ATLÉTICO-MG'],
@@ -131,9 +134,10 @@ export default function ApostarRodada() {
     // Tenta o match exato primeiro
     const exact = map.get(n.toUpperCase());
     if (exact) return exact;
-    // Heurística: transforma "NOME UF" em "NOME-UF"
+    // Heurística: transforma "NOME UF" em "NOME-UF" apenas para UFs válidas do Brasil
+    const UFs = new Set(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']);
     const uf = n.match(/\b([A-Z]{2})\b/);
-    if (uf) {
+    if (uf && UFs.has(uf[1])) {
       const base = n.replace(/\b([A-Z]{2})\b/, '').trim().replace(/\s{2,}/g, ' ');
       if (base.length <= 14) return `${base}-${uf[1]}`;
     }
@@ -193,7 +197,9 @@ export default function ApostarRodada() {
         let ts = null;
         try { if (ymdhm) ts = new Date(ymdhm.replace(' ', 'T')).getTime(); } catch {}
         const started = ts && !isNaN(ts) ? ts <= now : false;
-        return { ...p, _started: started, _data_str: ymdhm };
+        // Considera provavelmente encerrado (sem resultado ainda) se passaram 2h
+        const likelyFinished = started && ts && (now - ts) > (2 * 60 * 60 * 1000);
+        return { ...p, _started: started, _likelyFinished: likelyFinished, _data_str: ymdhm };
       });
       setPartidas(norm);
       // Carrega status de bloqueio para as partidas
@@ -447,7 +453,7 @@ export default function ApostarRodada() {
                   {p._started && !p.resultado && (
                     <div className="status-badge started">
                       <span className="badge-icon">⏰</span>
-                      Jogo em andamento - Apostas bloqueadas
+                      {p._likelyFinished ? 'Aguardando resultado - Apostas bloqueadas' : 'Jogo em andamento - Apostas bloqueadas'}
                     </div>
                   )}
                   {partidaLockStatus.matchLocked && !p._started && !p.resultado && (
