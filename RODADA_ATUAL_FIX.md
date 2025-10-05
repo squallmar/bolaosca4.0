@@ -103,12 +103,22 @@ Fallback inteligente quando backend falha:
 ## Deployment
 
 As mudanças estão commitadas e em produção:
-- `b5068f11`: Backend melhorado
-- `5ca1a943`: Frontend melhorado
+- `b5068f11`: Backend melhorado  
+- `5ca1a943`: Frontend PalpiteList melhorado
+- `c4b9a850`: Análise de concentração temporal implementada
+- `f0cc44a0`: **Lógica unificada em todas as páginas**
+
+### Páginas Atualizadas:
+✅ `/palpite` - PalpiteList.js  
+✅ `/ranking` - RankingList.js  
+✅ `/lancar-resultado` - LancarResultado.js  
+
+Todas agora usam `utils/rodadaAtual.js` com lógica consistente.
 
 Para verificar funcionamento:
-1. Acesse `/palpite` e veja se cai na rodada correta
-2. Admins podem usar `/api/bolao/diagnostico-rodadas` para debug
+1. Acesse qualquer página e veja se cai na rodada correta
+2. Verifique se todas as páginas mostram a mesma rodada atual  
+3. Admins podem usar `/api/bolao/diagnostico-rodadas` para debug
 
 ## Teste Manual
 
