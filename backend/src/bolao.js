@@ -15,79 +15,141 @@ router.get('/campeonatos-todos', async (req, res) => {
   }
 });
 
+// Diagnóstico de rodadas para admin verificar cálculo
+router.get('/diagnostico-rodadas', async (req, res) => {
+  try {
+    const campeonatoId = req.query?.campeonatoId ? Number(req.query.campeonatoId) : null;
+    
+    // 1. Busca todas as rodadas com estatísticas de finalização
+    const sql = `
+      SELECT r.id, r.nome, r.campeonato_id,
+             COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) AS total_partidas,
+             COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) AS partidas_finalizadas,
+             MIN(p.data_partida) AS primeira_partida,
+             MAX(p.data_partida) AS ultima_partida,
+             CASE 
+               WHEN COUNT(p.id) > 0 
+                    AND COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) = COUNT(p.id) 
+               THEN true ELSE false 
+             END AS completa
+        FROM rodada r
+        LEFT JOIN partida p ON p.rodada_id = r.id
+        ${campeonatoId ? 'WHERE r.campeonato_id = $1' : ''}
+        GROUP BY r.id
+        ORDER BY r.id ASC`;
+    
+    const params = campeonatoId ? [campeonatoId] : [];
+    const { rows: rodadas } = await pool.query(sql, params);
+    
+    // 2. Identifica rodada atual baseada em data
+    const agora = new Date();
+    const agoraSP = agora.toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+    
+    let rodadaAtualPorData = null;
+    let rodadaAtualPorLogica = null;
+    
+    // Por data: primeira rodada com partidas futuras ou em andamento
+    for (const r of rodadas) {
+      if (r.total_partidas > 0 && r.primeira_partida) {
+        const inicioSP = new Date(r.primeira_partida).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+        const ultimaSP = r.ultima_partida ? new Date(r.ultima_partida).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }) : inicioSP;
+        
+        // Se a rodada ainda não começou OU está em andamento (não está completa)
+        if (inicioSP >= agoraSP || (!r.completa && ultimaSP >= agoraSP)) {
+          rodadaAtualPorData = r;
+          break;
+        }
+      }
+    }
+    
+    // Por lógica atual: próxima após a última completa
+    const completasComPartidas = rodadas.filter(r => r.completa && r.total_partidas > 0);
+    if (completasComPartidas.length > 0) {
+      const ultimaCompleta = completasComPartidas[completasComPartidas.length - 1];
+      const proximaIdx = rodadas.findIndex(r => r.id > ultimaCompleta.id);
+      if (proximaIdx !== -1) {
+        rodadaAtualPorLogica = rodadas[proximaIdx];
+      }
+    } else if (rodadas.length > 0) {
+      // Se nenhuma está completa, pega a primeira com partidas
+      rodadaAtualPorLogica = rodadas.find(r => r.total_partidas > 0) || rodadas[0];
+    }
+    
+    return res.json({
+      agora_sao_paulo: agoraSP,
+      total_rodadas: rodadas.length,
+      rodadas_completas: completasComPartidas.length,
+      rodada_atual_por_data: rodadaAtualPorData,
+      rodada_atual_por_logica: rodadaAtualPorLogica,
+      todas_rodadas: rodadas
+    });
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro no diagnóstico', detalhes: err.message });
+  }
+});
+
 // Rodada atual baseada em datas das partidas (horário de São Paulo)
 router.get('/rodada-atual', async (req, res) => {
   try {
     const campeonatoId = req.query?.campeonatoId ? Number(req.query.campeonatoId) : null;
-    // Regra: rodada atual = próxima depois da última rodada COMPLETA (todas partidas com resultado/placar)
+    
+    // NOVA LÓGICA: Prioriza datas das partidas em timezone São Paulo
+    const agora = new Date();
+    const agoraSP = agora.toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+    
+    // Busca rodadas com suas estatísticas de data e finalização
     const sql = `
-      WITH rodadas AS (
-        SELECT r.id, r.nome, r.campeonato_id,
-               COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) AS total,
-               COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) AS finalizadas,
-               MIN(p.data_partida) AS start_at
-          FROM rodada r
-          LEFT JOIN partida p ON p.rodada_id = r.id
-         ${campeonatoId ? 'WHERE r.campeonato_id = $1' : ''}
-         GROUP BY r.id
-      ), ultima_completa AS (
-        SELECT id, nome, campeonato_id, start_at
-          FROM rodadas
-         WHERE total > 0 AND finalizadas = total
-         ORDER BY start_at DESC NULLS LAST, id DESC
-         LIMIT 1
-      )
-      SELECT r.id, r.nome
+      SELECT r.id, r.nome, r.campeonato_id,
+             COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) AS total_partidas,
+             COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) AS partidas_finalizadas,
+             MIN(p.data_partida) AS primeira_partida,
+             MAX(p.data_partida) AS ultima_partida,
+             CASE 
+               WHEN COUNT(p.id) > 0 
+                    AND COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) = COUNT(p.id) 
+               THEN true ELSE false 
+             END AS completa
         FROM rodada r
-        JOIN (${campeonatoId ? 'SELECT * FROM rodada WHERE campeonato_id = $1' : 'SELECT * FROM rodada'}) rr ON rr.id = r.id
-       WHERE r.campeonato_id = COALESCE((SELECT campeonato_id FROM ultima_completa), r.campeonato_id)
-       ORDER BY r.id ASC`;
+        LEFT JOIN partida p ON p.rodada_id = r.id
+        ${campeonatoId ? 'WHERE r.campeonato_id = $1' : ''}
+        GROUP BY r.id
+        ORDER BY r.id ASC`;
+    
     const params = campeonatoId ? [campeonatoId] : [];
-    const { rows: all } = await pool.query(sql, params);
-    if (!all.length) return res.json({ id: null, nome: null });
-    // encontra a próxima depois da última completa
-    let lastCompleteIdx = -1;
-    if (campeonatoId) {
-      const { rows: lc } = await pool.query(
-        `SELECT id FROM rodada r
-          WHERE r.campeonato_id = $1 AND EXISTS (
-            SELECT 1 FROM partida p WHERE p.rodada_id = r.id
-          )
-          ORDER BY r.id ASC`, [campeonatoId]
-      );
-      // pega a última do conjunto que está completa
-      const compRows = await pool.query(
-        `SELECT r.id
-           FROM rodada r
-           JOIN partida p ON p.rodada_id = r.id
-          WHERE r.campeonato_id = $1
-          GROUP BY r.id
-         HAVING COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) > 0
-            AND COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) = COUNT(p.id)
-          ORDER BY r.id ASC`, [campeonatoId]
-      );
-      if (compRows.rows.length) {
-        const lastCompleteId = compRows.rows[compRows.rows.length - 1].id;
-        lastCompleteIdx = all.findIndex(r => r.id === lastCompleteId);
-      }
-    } else {
-      // sem filtro: detecta globalmente
-      const { rows: comp } = await pool.query(
-        `SELECT r.id
-           FROM rodada r
-           JOIN partida p ON p.rodada_id = r.id
-          GROUP BY r.id
-         HAVING COUNT(p.id) FILTER (WHERE p.id IS NOT NULL) > 0
-            AND COUNT(p.id) FILTER (WHERE (p.resultado IS NOT NULL OR p.placar IS NOT NULL)) = COUNT(p.id)
-          ORDER BY r.id ASC`
-      );
-      if (comp.length) {
-        const lastCompleteId = comp[comp.length - 1].id;
-        lastCompleteIdx = all.findIndex(r => r.id === lastCompleteId);
+    const { rows: rodadas } = await pool.query(sql, params);
+    
+    if (!rodadas.length) return res.json({ id: null, nome: null });
+    
+    // CRITÉRIO 1: Primeira rodada com partidas futuras ou em andamento (não completa)
+    for (const r of rodadas) {
+      if (r.total_partidas > 0 && r.primeira_partida) {
+        const inicioSP = new Date(r.primeira_partida).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+        const ultimaSP = r.ultima_partida ? new Date(r.ultima_partida).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }) : inicioSP;
+        
+        // Se a rodada ainda não começou OU está em andamento (não está completa)
+        if (inicioSP >= agoraSP || (!r.completa && ultimaSP >= agoraSP)) {
+          return res.json({ id: r.id, nome: r.nome });
+        }
       }
     }
-    const nextIdx = Math.min(all.length - 1, Math.max(0, lastCompleteIdx + 1));
-    return res.json(all[nextIdx]);
+    
+    // CRITÉRIO 2 (fallback): Próxima após a última completa
+    const completasComPartidas = rodadas.filter(r => r.completa && r.total_partidas > 0);
+    if (completasComPartidas.length > 0) {
+      const ultimaCompleta = completasComPartidas[completasComPartidas.length - 1];
+      const proximaIdx = rodadas.findIndex(r => r.id > ultimaCompleta.id);
+      if (proximaIdx !== -1) {
+        return res.json({ id: rodadas[proximaIdx].id, nome: rodadas[proximaIdx].nome });
+      }
+    }
+    
+    // CRITÉRIO 3 (último fallback): Primeira rodada com partidas ou primeira disponível
+    const primeiraComPartidas = rodadas.find(r => r.total_partidas > 0);
+    if (primeiraComPartidas) {
+      return res.json({ id: primeiraComPartidas.id, nome: primeiraComPartidas.nome });
+    }
+    
+    return res.json({ id: rodadas[0].id, nome: rodadas[0].nome });
   } catch (err) {
     res.status(500).json({ erro: 'Erro ao calcular rodada atual', detalhes: err.message });
   }
