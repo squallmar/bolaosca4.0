@@ -4,6 +4,7 @@ import api from './services/api';
 
 // Backend base para imagens e API
 import { API_BASE as API } from './config';
+import { carregarRodadasComDeteccaoAtual } from './utils/rodadaAtual';
 
 // gera slug e monta URL no backend/uploads/escudos/<slug>.png
 function slugify(nome = '') {
@@ -45,20 +46,14 @@ export default function LancarResultado() {
   const carregarRodadas = useCallback(async () => {
     setErro('');
     try {
-  const { data } = await api.get('/bolao/rodadas-todas');
-      const lista = Array.isArray(data) ? data : (data?.rodadas || []);
+      const { rodadas: lista, rodadaAtualId: atual } = await carregarRodadasComDeteccaoAtual();
       const norm = lista.map(r => ({ ...r, finalizada: (r.finalizada ?? r.finalizado) || false }));
       setRodadas(norm);
-
-      // Seleciona a rodada "atual" de forma inteligente
-      if (norm.length > 0) {
-        const byFlag = norm.find(r => r.atual || r.isCurrent);
-        const firstOpen = norm.find(r => !r.finalizada);
-        const selected = byFlag?.id ?? firstOpen?.id ?? norm[norm.length - 1].id;
-        if (!rodadaId) setRodadaId(selected);
-      }
+      
+      // Usa a detecção inteligente da rodada atual
+      if (!rodadaId && atual) setRodadaId(atual);
     } catch (err) {
-      console.error('GET /bolao/rodadas-todas erro:', err?.response || err);
+      console.error('Erro ao carregar rodadas:', err?.response || err);
       const msg = err?.response?.data?.erro || err?.message || 'Erro ao carregar rodadas';
       const status = err?.response?.status ? ` ${err.response.status}` : '';
       setErro(`${msg}${status}`);

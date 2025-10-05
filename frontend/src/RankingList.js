@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import api from './services/api';
 import './RankingList.css'; // Vamos mover os estilos para um arquivo separado
 import { API_BASE } from './config';
+import { carregarRodadasComDeteccaoAtual } from './utils/rodadaAtual';
 
 // Componente auxiliar para exibir o avatar de forma robusta
 function UserAvatar({ user, size = 56 }) {
@@ -235,22 +236,13 @@ export default function RankingList() {
     if (sel?.ano) setAno(String(sel.ano));
   }, [campeonatosDoBolao]);
 
-  // Carrega rodadas
+  // Carrega rodadas com detecção inteligente da rodada atual
   useEffect(() => {
     (async () => {
       setErro('');
       try {
-        const { data } = await api.get('/bolao/rodadas-todas');
-        const lista = Array.isArray(data) ? data : (data?.rodadas || []);
+        const { rodadas: lista, rodadaAtualId: atual } = await carregarRodadasComDeteccaoAtual();
         setRodadas(lista);
-        // escolhe a rodada atual como a de MAIOR id ainda não finalizada
-        const abertas = lista.filter(r => !r.finalizada && !r.finalizado);
-        const naoFinal = abertas.length
-          ? abertas.reduce((acc, cur) => (Number(cur.id) > Number(acc.id) ? cur : acc), abertas[0])
-          : null;
-        // se todas finalizadas pega a de maior id
-        const maior = lista.length ? lista.reduce((acc, cur) => (Number(cur.id) > Number(acc.id) ? cur : acc), lista[0]) : null;
-        const atual = (naoFinal?.id ?? maior?.id) || '';
         setRodadaAtualId(atual);
         if (!rodadaId && atual) setRodadaId(atual);
       } catch (e) {
