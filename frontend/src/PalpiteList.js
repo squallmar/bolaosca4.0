@@ -201,30 +201,30 @@ export default function ApostarRodada() {
         
         if (partidas.length === 0) continue;
         
-        // Verifica se todas as partidas têm resultado/placar (rodada completa)
-        const todasFinalizadas = partidas.every(p => p.resultado || p.placar);
+        let temPartidaFutura = false;
+        let temPartidaSemResultado = false;
         
-        // Se não está completa, verifica se tem partidas futuras ou em andamento
-        if (!todasFinalizadas) {
-          const temPartidaFutura = partidas.some(p => {
-            if (!p.data_jogo) return false;
-            const dataPartida = new Date(String(p.data_jogo).replace('T', ' ').replace('Z', ''));
-            const dataPartidaSP = new Date(dataPartida.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-            return dataPartidaSP >= agoraSP;
-          });
-          
-          const temPartidaRecente = partidas.some(p => {
-            if (!p.data_jogo) return false;
-            const dataPartida = new Date(String(p.data_jogo).replace('T', ' ').replace('Z', ''));
-            const dataPartidaSP = new Date(dataPartida.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-            const diffHoras = (agoraSP - dataPartidaSP) / (1000 * 60 * 60);
-            return diffHoras >= 0 && diffHoras <= 48; // Partida foi nas últimas 48h
-          });
-          
-          // Se tem partida futura ou partida recente sem resultado, esta é a rodada atual
-          if (temPartidaFutura || temPartidaRecente) {
-            return String(rodada.id);
+        // Analisa cada partida da rodada
+        for (const p of partidas) {
+          // Verifica se não tem resultado nem placar
+          if (!p.resultado && !p.placar) {
+            temPartidaSemResultado = true;
           }
+          
+          // Verifica se a data é futura
+          if (p.data_jogo) {
+            const dataPartida = new Date(String(p.data_jogo).replace('T', ' ').replace('Z', ''));
+            const dataPartidaSP = new Date(dataPartida.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+            if (dataPartidaSP >= agoraSP) {
+              temPartidaFutura = true;
+            }
+          }
+        }
+        
+        // Rodada é atual se tem partida futura OU sem resultado
+        // (cobre jogos atrasados como Palmeiras vs Juventude)
+        if (temPartidaFutura || temPartidaSemResultado) {
+          return String(rodada.id);
         }
       } catch (e) {
         // Se erro ao buscar partidas, continua para próxima rodada

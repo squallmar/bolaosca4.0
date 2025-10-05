@@ -48,15 +48,56 @@ router.get('/diagnostico-rodadas', async (req, res) => {
     let rodadaAtualPorData = null;
     let rodadaAtualPorLogica = null;
     
-    // Por data: primeira rodada com partidas futuras ou em andamento
+    // Por data: rodadas com partidas futuras ou sem resultado (incluindo jogos atrasados)
     for (const r of rodadas) {
-      if (r.total_partidas > 0 && r.primeira_partida) {
-        const inicioSP = new Date(r.primeira_partida).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' });
-        const ultimaSP = r.ultima_partida ? new Date(r.ultima_partida).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }) : inicioSP;
+      if (r.total_partidas > 0) {
+        // Busca partidas específicas desta rodada
+        const { rows: partidas } = await pool.query(
+          `SELECT data_partida, resultado, placar 
+           FROM partida 
+           WHERE rodada_id = $1 
+           ORDER BY data_partida ASC NULLS LAST`,
+          [r.id]
+        );
         
-        // Se a rodada ainda não começou OU está em andamento (não está completa)
-        if (inicioSP >= agoraSP || (!r.completa && ultimaSP >= agoraSP)) {
-          rodadaAtualPorData = r;
+        let temPartidaFutura = false;
+        let temPartidaSemResultado = false;
+        let partidasMaisAntigaERecente = { antiga: null, recente: null };
+        
+        for (const p of partidas) {
+          // Analisa resultado/placar
+          if (!p.resultado && !p.placar) {
+            temPartidaSemResultado = true;
+          }
+          
+          // Analisa datas
+          if (p.data_partida) {
+            const dataPartidaSP = new Date(p.data_partida).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+            if (dataPartidaSP >= agoraSP) {
+              temPartidaFutura = true;
+            }
+            
+            // Track range de datas
+            if (!partidasMaisAntigaERecente.antiga || dataPartidaSP < partidasMaisAntigaERecente.antiga) {
+              partidasMaisAntigaERecente.antiga = dataPartidaSP;
+            }
+            if (!partidasMaisAntigaERecente.recente || dataPartidaSP > partidasMaisAntigaERecente.recente) {
+              partidasMaisAntigaERecente.recente = dataPartidaSP;
+            }
+          }
+        }
+        
+        // Adiciona informações extras para debugging
+        const rodadaInfo = {
+          ...r,
+          tem_partida_futura: temPartidaFutura,
+          tem_partida_sem_resultado: temPartidaSemResultado,
+          range_datas: partidasMaisAntigaERecente,
+          eh_candidata_atual: temPartidaFutura || temPartidaSemResultado
+        };
+        
+        if (temPartidaFutura || temPartidaSemResultado) {
+          rodadaAtualPorData = rodadaInfo;
           break;
         }
       }
@@ -120,14 +161,39 @@ router.get('/rodada-atual', async (req, res) => {
     
     if (!rodadas.length) return res.json({ id: null, nome: null });
     
-    // CRITÉRIO 1: Primeira rodada com partidas futuras ou em andamento (não completa)
+    // CRITÉRIO 1: Rodada com partidas futuras ou sem resultado (inclui jogos atrasados)
     for (const r of rodadas) {
-      if (r.total_partidas > 0 && r.primeira_partida) {
-        const inicioSP = new Date(r.primeira_partida).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' });
-        const ultimaSP = r.ultima_partida ? new Date(r.ultima_partida).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }) : inicioSP;
+      if (r.total_partidas > 0) {
+        // Busca partidas específicas desta rodada para análise detalhada
+        const { rows: partidas } = await pool.query(
+          `SELECT data_partida, resultado, placar 
+           FROM partida 
+           WHERE rodada_id = $1 
+           ORDER BY data_partida ASC NULLS LAST`,
+          [r.id]
+        );
         
-        // Se a rodada ainda não começou OU está em andamento (não está completa)
-        if (inicioSP >= agoraSP || (!r.completa && ultimaSP >= agoraSP)) {
+        let temPartidaFutura = false;
+        let temPartidaSemResultado = false;
+        
+        for (const p of partidas) {
+          // Verifica se não tem resultado nem placar
+          if (!p.resultado && !p.placar) {
+            temPartidaSemResultado = true;
+          }
+          
+          // Verifica se a data é futura
+          if (p.data_partida) {
+            const dataPartidaSP = new Date(p.data_partida).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+            if (dataPartidaSP >= agoraSP) {
+              temPartidaFutura = true;
+            }
+          }
+        }
+        
+        // Rodada é atual se tem partida futura OU partida sem resultado
+        // (cobre jogos atrasados e rodadas em andamento)
+        if (temPartidaFutura || temPartidaSemResultado) {
           return res.json({ id: r.id, nome: r.nome });
         }
       }
