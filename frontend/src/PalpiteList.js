@@ -188,10 +188,13 @@ export default function ApostarRodada() {
     }
   }, [rodadaId]);
 
-  // Função auxiliar para encontrar rodada atual baseada em datas das partidas
+  // Função auxiliar para encontrar rodada atual baseada em concentração temporal
   const findCurrentRoundByDate = async (rodadas) => {
     const agora = new Date();
     const agoraSP = new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const mesAtual = agoraSP.toISOString().substring(0, 7); // "2025-10"
+    
+    const candidatas = [];
     
     for (const rodada of rodadas) {
       try {
@@ -203,6 +206,10 @@ export default function ApostarRodada() {
         
         let temPartidaFutura = false;
         let temPartidaSemResultado = false;
+        let jogosNoMesAtual = 0;
+        let jogosComData = 0;
+        let primeiraData = null;
+        let ultimaData = null;
         
         // Analisa cada partida da rodada
         for (const p of partidas) {
@@ -215,16 +222,49 @@ export default function ApostarRodada() {
           if (p.data_jogo) {
             const dataPartida = new Date(String(p.data_jogo).replace('T', ' ').replace('Z', ''));
             const dataPartidaSP = new Date(dataPartida.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+            const dataPartidaStr = dataPartidaSP.toISOString().substring(0, 19).replace('T', ' ');
+            jogosComData++;
+            
             if (dataPartidaSP >= agoraSP) {
               temPartidaFutura = true;
+            }
+            
+            // Conta jogos no mês atual
+            if (dataPartidaStr.substring(0, 7) === mesAtual) {
+              jogosNoMesAtual++;
+            }
+            
+            // Track range de datas
+            if (!primeiraData || dataPartidaStr < primeiraData) {
+              primeiraData = dataPartidaStr;
+            }
+            if (!ultimaData || dataPartidaStr > ultimaData) {
+              ultimaData = dataPartidaStr;
             }
           }
         }
         
-        // Rodada é atual se tem partida futura OU sem resultado
-        // (cobre jogos atrasados como Palmeiras vs Juventude)
+        // Só considera se tem partida futura OU sem resultado
         if (temPartidaFutura || temPartidaSemResultado) {
-          return String(rodada.id);
+          // Calcula range em dias
+          let rangeEmDias = 0;
+          if (primeiraData && ultimaData) {
+            const diff = new Date(ultimaData) - new Date(primeiraData);
+            rangeEmDias = Math.ceil(diff / (1000 * 60 * 60 * 24));
+          }
+          
+          // Calcula score de concentração temporal
+          const percentualNoMesAtual = jogosComData > 0 ? (jogosNoMesAtual / jogosComData) : 0;
+          const concentracaoTemporal = rangeEmDias > 0 ? Math.max(0, 1 - (rangeEmDias / 365)) : 1;
+          const scoreConcentracao = (percentualNoMesAtual * 0.7) + (concentracaoTemporal * 0.3);
+          
+          candidatas.push({
+            rodadaId: String(rodada.id),
+            scoreConcentracao,
+            jogosNoMesAtual,
+            jogosComData,
+            rangeEmDias
+          });
         }
       } catch (e) {
         // Se erro ao buscar partidas, continua para próxima rodada
@@ -232,7 +272,10 @@ export default function ApostarRodada() {
       }
     }
     
-    return null;
+    // Ordena por score de concentração (maior = melhor)
+    candidatas.sort((a, b) => b.scoreConcentracao - a.scoreConcentracao);
+    
+    return candidatas.length > 0 ? candidatas[0].rodadaId : null;
   };
 
   const carregarPartidas = useCallback(async (rid) => {

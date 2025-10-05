@@ -23,15 +23,24 @@ A lógica de detecção da "rodada atual" estava baseada apenas em:
 - Considera timezone America/Sao_Paulo
 
 #### Melhorada: `/bolao/rodada-atual`
-Nova lógica com 3 critérios prioritários:
+Nova lógica com **Análise de Concentração Temporal**:
 
-1. **Critério Principal (Data)**: Primeira rodada com:
-   - Partidas futuras (ainda não começaram) OU
-   - Partidas em andamento (começaram mas não estão completas)
+1. **Critério Principal (Concentração Temporal)**: 
+   - Analisa todos os jogos de cada rodada candidata
+   - Calcula % de jogos no mês atual (peso 70%)
+   - Calcula concentração temporal (1 - range_dias/365) (peso 30%)
+   - **Score final**: (% mês atual * 0.7) + (concentração * 0.3)
+   - **Prioriza** rodadas com jogos concentrados no período atual
 
-2. **Critério Fallback**: Próxima rodada após última completa
+2. **Critério Candidata**: Rodada deve ter:
+   - Partidas com data futura OU
+   - Partidas sem resultado/placar
 
-3. **Critério Final**: Primeira rodada com partidas disponíveis
+3. **Ordenação**: Por score de concentração temporal (maior = atual)
+
+#### Exemplo Prático (05/10/2025):
+- **Rodada 12**: 8 jogos em julho + 2 jogos em outubro → Score baixo (dispersa)
+- **Rodada 27**: 10 jogos em outubro → Score alto (concentrada) → **ATUAL**
 
 #### Timezone Handling
 - Usa `America/Sao_Paulo` para comparações de data/hora
@@ -81,10 +90,12 @@ Fallback inteligente quando backend falha:
 ### Final de Rodada
 - Ex: Segunda após fim dos jogos, mas sem resultados lançados → rodada atual
 
-### **Jogos Atrasados (NOVO)**
-- Ex: Rodada 12 com maioria dos jogos em junho, mas Palmeiras vs Juventude em 11/10/2025
-- Sistema detecta que ainda há jogo futuro na rodada → rodada 12 é considerada atual
-- Resolve casos de adiamentos por Copa do Mundo, conflitos de calendário, etc.
+### **Jogos Atrasados vs Rodada Atual (REFINADO)**
+- Ex: **Cenário 05/10/2025**:
+  - **Rodada 12**: 8 jogos em julho + Palmeiras vs Juventude em 11/10 → Score baixo (dispersa temporalmente)
+  - **Rodada 27**: Todos os 10 jogos em outubro → Score alto (concentrada) → **RODADA ATUAL**
+- **Sistema prioriza concentração temporal** vs apenas existência de jogos futuros
+- **Resolve adiamentos** sem confundir com rodada realmente atual
 
 ### Entre Rodadas
 - Ex: Todos jogos acabaram e resultados lançados → próxima rodada
