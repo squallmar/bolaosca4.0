@@ -152,6 +152,7 @@ export default function ApostarRodada() {
       // Ordena por id ASC para previsibilidade
       const ordenadas = [...lista].sort((a,b) => Number(a.id) - Number(b.id));
       setRodadas(ordenadas);
+      
       // Preferir rodada-atual do backend (timezone São Paulo)
       try {
         const r = await api.get('/bolao/rodada-atual');
@@ -162,7 +163,16 @@ export default function ApostarRodada() {
           return;
         }
       } catch {}
-      // Fallback: rodada aberta (não finalizada) de MAIOR id, senão a maior id
+      
+      // Fallback inteligente: busca rodada por análise de datas das partidas
+      const rodadaBasedOnDate = await findCurrentRoundByDate(ordenadas);
+      if (rodadaBasedOnDate) {
+        setRodadaAtualId(rodadaBasedOnDate);
+        if (!rodadaId) setRodadaId(rodadaBasedOnDate);
+        return;
+      }
+      
+      // Fallback tradicional: rodada aberta (não finalizada) de MAIOR id, senão a maior id
       const abertas = ordenadas.filter(r => !r.finalizada && !r.finalizado);
       const naoFinal = abertas.length
         ? abertas.reduce((acc, cur) => (Number(cur.id) > Number(acc.id) ? cur : acc), abertas[0])
@@ -177,6 +187,53 @@ export default function ApostarRodada() {
       setErro('Erro ao carregar rodadas');
     }
   }, [rodadaId]);
+
+  // Função auxiliar para encontrar rodada atual baseada em datas das partidas
+  const findCurrentRoundByDate = async (rodadas) => {
+    const agora = new Date();
+    const agoraSP = new Date(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    
+    for (const rodada of rodadas) {
+      try {
+        // Busca partidas da rodada
+        const { data } = await api.get(`/bolao/rodada/${rodada.id}/partidas`);
+        const partidas = Array.isArray(data) ? data : [];
+        
+        if (partidas.length === 0) continue;
+        
+        // Verifica se todas as partidas têm resultado/placar (rodada completa)
+        const todasFinalizadas = partidas.every(p => p.resultado || p.placar);
+        
+        // Se não está completa, verifica se tem partidas futuras ou em andamento
+        if (!todasFinalizadas) {
+          const temPartidaFutura = partidas.some(p => {
+            if (!p.data_jogo) return false;
+            const dataPartida = new Date(String(p.data_jogo).replace('T', ' ').replace('Z', ''));
+            const dataPartidaSP = new Date(dataPartida.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+            return dataPartidaSP >= agoraSP;
+          });
+          
+          const temPartidaRecente = partidas.some(p => {
+            if (!p.data_jogo) return false;
+            const dataPartida = new Date(String(p.data_jogo).replace('T', ' ').replace('Z', ''));
+            const dataPartidaSP = new Date(dataPartida.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+            const diffHoras = (agoraSP - dataPartidaSP) / (1000 * 60 * 60);
+            return diffHoras >= 0 && diffHoras <= 48; // Partida foi nas últimas 48h
+          });
+          
+          // Se tem partida futura ou partida recente sem resultado, esta é a rodada atual
+          if (temPartidaFutura || temPartidaRecente) {
+            return String(rodada.id);
+          }
+        }
+      } catch (e) {
+        // Se erro ao buscar partidas, continua para próxima rodada
+        continue;
+      }
+    }
+    
+    return null;
+  };
 
   const carregarPartidas = useCallback(async (rid) => {
     if (!rid) return;
