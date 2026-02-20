@@ -266,6 +266,7 @@ import timesRouter from './timesRouter.js';
 import blogRouter from './blog.js';
 import apoioRouter from './apoio.js';
 import regrasRouter from './regras.js';
+import despesasRouter from './despesas.js';
 import pool from './db.js';
 import bcrypt from 'bcrypt';
 
@@ -327,6 +328,7 @@ app.use(['/blog','/blog/*'], (req,res,next)=>{
 app.use('/blog', blogRouter);
 app.use('/apoio', apoioRouter);
 app.use('/regras', regrasRouter);
+app.use('/despesas', despesasRouter);
 
 // servir arquivos
 // servir arquivos com CORS liberado
