@@ -167,6 +167,17 @@ CREATE TABLE IF NOT EXISTS login_blocked_ip (
   tentativas INTEGER DEFAULT 1
 );
 
+CREATE TABLE IF NOT EXISTS despesa (
+  id         SERIAL PRIMARY KEY,
+  descricao  VARCHAR(255) NOT NULL,
+  valor      NUMERIC(10,2) NOT NULL,
+  data       DATE NOT NULL,
+  recorrente BOOLEAN NOT NULL DEFAULT FALSE,
+  frequencia VARCHAR(20),
+  usuario_id INTEGER REFERENCES usuario(id) ON DELETE CASCADE,
+  criado_em  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Criar índice para melhor performance nas consultas
 CREATE INDEX IF NOT EXISTS idx_partida_times ON partida(time1, time2);
 CREATE INDEX IF NOT EXISTS idx_palpite_usuario ON palpite(usuario_id);

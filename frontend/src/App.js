@@ -36,6 +36,7 @@ import ApoioUser from './ApoioUser';
 import AnunciosTV from './AnunciosTV';
 import ChatWindow from './ChatWindow';
 import AdminBlockedIPs from './AdminBlockedIPs';
+import Despesas from './Despesas';
 
 // Componente para renderizar os links do menu
 // A propriedade 'onLinkClick' é usada para fechar o menu mobile após o clique
@@ -115,6 +116,7 @@ function Menu() {
         { to: '/lancar-resultado', label: 'Resultados', icon: '✅' },
         { to: '/palpite', label: 'Apostar', icon: '⚽' },
         { to: '/ranking', label: 'Ranking', icon: '📊' },
+        { to: '/despesas', label: 'Despesas', icon: '💰' },
         { to: '/blog', label: 'Blog', icon: '📝' },
         { to: '/', label: 'Sair', icon: '🚪', onClick: logout }
       ];
@@ -380,6 +382,7 @@ function App() {
           <Route path="/admin/times" element={<AdminTeams />} />
           <Route path="/admin/boloes" element={<AdminBoloes />} />
           <Route path="/admin/blocked-ips" element={<AdminBlockedIPs />} />
+          <Route path="/despesas" element={<RequireAuth><Despesas /></RequireAuth>} />
           <Route path="/blog" element={<BlogList />} />
           <Route path="/blog/novo" element={<RequireAuth><BlogNew /></RequireAuth>} />
           <Route path="/blog/:id" element={<BlogDetail />} />
